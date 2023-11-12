@@ -1,0 +1,48 @@
+<mxfile host="Electron" modified="2023-11-12T15:39:08.732Z" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/22.0.3 Chrome/114.0.5735.289 Electron/25.8.4 Safari/537.36" etag="1W58DVanmpuQvJqtsJ6P" version="22.0.3" type="device">
+  <diagram name="Page-1" id="K8KW4vwD4JgNdaVP8Y5X">
+    <mxGraphModel dx="1404" dy="825" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="deYWN7nRonNA7hmP1JP--10" value="&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;Running in Browser with WebGL&lt;/span&gt;&lt;/div&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;dashed=1;dashPattern=8 8;align=right;" vertex="1" parent="1">
+          <mxGeometry x="290" y="170" width="130" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="deYWN7nRonNA7hmP1JP--2" value="" style="shape=actor;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="120" y="220" width="40" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="deYWN7nRonNA7hmP1JP--3" value="Flexatar&lt;br&gt;Storage" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="1">
+          <mxGeometry x="330" y="420" width="60" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="deYWN7nRonNA7hmP1JP--4" value="Flexatar&lt;br&gt;Rendering Core" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="320" y="230" width="80" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="deYWN7nRonNA7hmP1JP--5" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" target="deYWN7nRonNA7hmP1JP--4">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="170" y="260" as="sourcePoint" />
+            <mxPoint x="290" y="300" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="deYWN7nRonNA7hmP1JP--6" value="audio track" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="deYWN7nRonNA7hmP1JP--5">
+          <mxGeometry x="-0.2585" y="4" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="deYWN7nRonNA7hmP1JP--7" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="deYWN7nRonNA7hmP1JP--3" target="deYWN7nRonNA7hmP1JP--4">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="480" y="630" as="sourcePoint" />
+            <mxPoint x="530" y="580" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="deYWN7nRonNA7hmP1JP--8" value="WebRTC&lt;br&gt;SFU/MCU" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="600" y="230" width="80" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="deYWN7nRonNA7hmP1JP--9" value="AUDIO+VIDEO tracks&lt;br&gt;over ICE" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="deYWN7nRonNA7hmP1JP--4" target="deYWN7nRonNA7hmP1JP--8">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="450" y="280" as="sourcePoint" />
+            <mxPoint x="500" y="230" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
