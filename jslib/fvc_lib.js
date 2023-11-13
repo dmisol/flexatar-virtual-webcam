@@ -1688,7 +1688,7 @@ function connectFlexatarToCanvas(flxCanvas,flexatarData,micSrc,audioContext){
 
     // const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     
-    audioContext.audioWorklet.addModule("audio_processor.js").then(() => {
+    audioContext.audioWorklet.addModule("https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam/jslib/audio_processor.min.js").then(() => {
 
         makeFlexatar(flxCanvas,flexatarData).then(eng => {
             processorNode = new AudioWorkletNode(audioContext,"my-audio-processor",);
