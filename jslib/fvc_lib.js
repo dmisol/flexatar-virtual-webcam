@@ -10,9 +10,12 @@ class SpeechNN{
     }
     async loadNetworks(){
         
-        this.wav2melModel = await tf.loadLayersModel('/file/wav2mel/model.json');
-        this.mel2phonModel = await tf.loadLayersModel('/file/mel2phon/model.json');
-        this.phon2avecModel = await tf.loadLayersModel('/file/phon2avec/model.json');
+        this.wav2melModel = await tf.loadLayersModel('https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/wav2mel/model.json');
+//        this.wav2melModel = await tf.loadLayersModel('/file/wav2mel/model.json');
+        this.mel2phonModel = await tf.loadLayersModel('https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/mel2phon/model.json');
+//        this.mel2phonModel = await tf.loadLayersModel('/file/mel2phon/model.json');
+        this.phon2avecModel = await tf.loadLayersModel('https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/phon2avec/model.json');
+//        this.phon2avecModel = await tf.loadLayersModel('/file/phon2avec/model.json');
 
         const inputData = tf.tensor2d([new Float32Array(800)]);
         const melPredicted = this.wav2melModel.predict(inputData);
@@ -719,7 +722,7 @@ class FlexatarCommonData {
     makeGpuBuffers(dataDict){
         this.uvGlBuffer = dataDict["uv"];
         this.idxGlBuffer = dataDict["idx"];
-        this.animationPattern = dataDict["anim2"];
+        this.animationPattern = dataDict["anim1"];
         this.animationPatternLen = this.animationPattern.length/10;
 
         this.speechBshp = repackSpeechBlendshapes(dataDict["speech_bsh"]);
@@ -1629,7 +1632,8 @@ class RenderEngine{
 
 let flexatarCommon;
 async function loadCommonData(){
-    flexatarCommon = new FlexatarCommonData("/file/flexatars/static.p");
+    flexatarCommon = new FlexatarCommonData("https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flx_static.p");
+//    flexatarCommon = new FlexatarCommonData("/file/flexatars/static.p");
 }
 loadCommonData();
 
