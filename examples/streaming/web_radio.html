@@ -11,12 +11,15 @@
 </head>
 <body>
     <h1>Web Radio Processor</h1>
-    <button id="processButton">Process and Play Radio</button>
+    <div id="2hide">
+        <input type="text" id="url2play" value="https://radio.talkradio.co.uk/stream"/>
+        <button id="processButton">Process and Play Radio</button>
+    </div>
     <video id="videoElement" width="240" height="320" autoplay></video>
     <script>
         document.getElementById('processButton').addEventListener('click', function() {
-            const radioUrl = 'https://radio.talkradio.co.uk/stream'; // Replace with your web radio URL
-            const radioStreamUrl = 'http://example.com/stream';
+            document.getElementById("2hide").style.display = 'none'
+            const radioUrl = document.getElementById('url2play').value
 
             // Step 1: Create an AudioContext
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
