@@ -3,21 +3,27 @@
 <head>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@alexanderolsen/libsamplerate-js"></script>
-    <!-- <script src="https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam/jslib/fvc_lib.min.js"></script> -->
-    <script src="file:///home/naospennikov/workspace/flexatar-virtual-webcam/jslib/flx_render.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam/jslib/fvc_lib.min.js"></script>
+    <!-- <script src="file:///home/naospennikov/workspace/flexatar-virtual-webcam/jslib/flx_render.js"></script> -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web Radio Processor</title>
 </head>
 <body>
     <h1>Web Radio Processor</h1>
-    <button id="processButton">Process and Play Radio</button>
+    <div id="2hide">
+        <input type="text" id="url2play" value="https://radio.talkradio.co.uk/stream"/>
+        <button id="processButton">Process and Play Radio</button>
+    </div>
     <video id="videoElement" width="240" height="320" autoplay></video>
     <script>
-        const previousUrl = "../raw/flexatars/gangster.p" 
+        const previousUrl = "https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flexatars/flx2.p" 
         // const previousUrl = "https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flexatars/flx1.p" 
         const flexatar = new Flexatar(previousUrl,"token")
         document.getElementById('processButton').addEventListener('click', function() {
+            document.getElementById("2hide").style.display = 'none'
+            const radioUrl = document.getElementById('url2play').value
+
             const flexatarAnimator = new FlexatarAnimator();
             flexatar.connectTo(flexatarAnimator);
             flexatar.setToSlot(0,flexatarAnimator);
@@ -31,18 +37,8 @@
             videoElement.setAttribute('playsinline', '')
             videoElement.srcObject = mediaStream;
 
-            /*
-            flexatarAnimator.useFlexatars(null);
 
-            flexatarAnimator.getMediaStream().then(mediaStream =>{
-                var videoElement = document.getElementById('videoElement');
-                videoElement.autoplay = true
-                videoElement.controls = true
-                videoElement.setAttribute('playsinline', '')
-                videoElement.srcObject = mediaStream;
-            });
-*/
-            const radioUrl = 'https://radio.talkradio.co.uk/stream'; // Replace with your web radio URL
+            // const radioUrl = 'https://radio.talkradio.co.uk/stream'; // Replace with your web radio URL
             flexatarAnimator.addAuidoTrack(radioUrl);
 
             
