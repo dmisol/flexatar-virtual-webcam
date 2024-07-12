@@ -2,7 +2,8 @@
 <head>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@alexanderolsen/libsamplerate-js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam/jslib/fvc_lib.min.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam/jslib/fvc_lib.min.js"></script> -->
+    <script src="file:///home/naospennikov/workspace/flexatar-virtual-webcam/jslib/flx_render.js"></script>
 <!--    <script src="fvc_lib.js"></script>-->
 
     <meta charset="UTF-8"/>
@@ -25,18 +26,29 @@ if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     .getUserMedia({audio: true,},)
     .then((stream) => {
        
+        const flexatarAnimator = new FlexatarAnimator("token");
+        flexatarAnimator.useFlexatars(null);
         
-
-        const fvcStream = flexatarVirtualCameraStream("https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flexatars/flx1.p",240,320,stream);
-        //const fvcStream = flexatarVirtualCameraStream("/file/flexatars/flx1.p",240,320,stream);
-
-        startButton.onclick = function(){
+        flexatarAnimator.getMediaStream().then(mediaStream =>{
             var videoElement = document.getElementById('videoElement');
             videoElement.autoplay = true
             videoElement.controls = true
             videoElement.setAttribute('playsinline', '')
-            videoElement.srcObject = fvcStream;
-        }
+            videoElement.srcObject = mediaStream;
+        });
+       
+        
+
+        // const fvcStream = flexatarVirtualCameraStream("https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flexatars/flx1.p",240,320,stream);
+        // //const fvcStream = flexatarVirtualCameraStream("/file/flexatars/flx1.p",240,320,stream);
+
+        // startButton.onclick = function(){
+        //     var videoElement = document.getElementById('videoElement');
+        //     videoElement.autoplay = true
+        //     videoElement.controls = true
+        //     videoElement.setAttribute('playsinline', '')
+        //     videoElement.srcObject = fvcStream;
+        // }
             
 
         

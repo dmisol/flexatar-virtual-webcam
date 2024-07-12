@@ -3,8 +3,8 @@
 <head>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@alexanderolsen/libsamplerate-js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam/jslib/fvc_lib.min.js"></script>
-
+    <!-- <script src="https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam/jslib/fvc_lib.min.js"></script> -->
+    <script src="file:///home/naospennikov/workspace/flexatar-virtual-webcam/jslib/flx_render.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web Radio Processor</title>
@@ -14,42 +14,38 @@
     <button id="processButton">Process and Play Radio</button>
     <video id="videoElement" width="240" height="320" autoplay></video>
     <script>
+        const previousUrl = "../raw/flexatars/gangster.p" 
+        // const previousUrl = "https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flexatars/flx1.p" 
+        const flexatar = new Flexatar(previousUrl,"token")
         document.getElementById('processButton').addEventListener('click', function() {
-            const radioUrl = 'https://radio.talkradio.co.uk/stream'; // Replace with your web radio URL
-            const radioStreamUrl = 'http://example.com/stream';
+            const flexatarAnimator = new FlexatarAnimator();
+            flexatar.connectTo(flexatarAnimator);
+            flexatar.setToSlot(0,flexatarAnimator);
+          
+            flexatarAnimator.start()
 
-            // Step 1: Create an AudioContext
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const mediaStream = flexatarAnimator.getMediaStream();
+            var videoElement = document.getElementById('videoElement');
+            videoElement.autoplay = true
+            videoElement.controls = true
+            videoElement.setAttribute('playsinline', '')
+            videoElement.srcObject = mediaStream;
 
-            // Step 2: Create an audio element
-            const audioElement = new Audio(radioUrl);
+            /*
+            flexatarAnimator.useFlexatars(null);
 
-            // Ensure the audio element can be played without user interaction
-            audioElement.crossOrigin = 'anonymous';
-            audioElement.autoplay = true;
-
-            // Step 3: Create a MediaElementAudioSourceNode from the audio element
-            const sourceNode = audioContext.createMediaElementSource(audioElement);
-
-            // Step 4: Create a MediaStreamAudioDestinationNode
-            const destination = audioContext.createMediaStreamDestination();
-
-            // Connect the source node to the destination node
-            sourceNode.connect(destination);
-
-            // Step 5: Get the MediaStream from the destination node
-            const mediaStream = destination.stream;
-
-            // Now you have a MediaStream with audio that you can use as needed
-            audioElement.oncanplaythrough = () => {
-                console.log(mediaStream);
-                const fvcStream = flexatarVirtualCameraStream("https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flexatars/flx1.p",240,320,mediaStream);
+            flexatarAnimator.getMediaStream().then(mediaStream =>{
                 var videoElement = document.getElementById('videoElement');
                 videoElement.autoplay = true
                 videoElement.controls = true
                 videoElement.setAttribute('playsinline', '')
-                videoElement.srcObject = fvcStream;
-            }
+                videoElement.srcObject = mediaStream;
+            });
+*/
+            const radioUrl = 'https://radio.talkradio.co.uk/stream'; // Replace with your web radio URL
+            flexatarAnimator.addAuidoTrack(radioUrl);
+
+            
         });
     </script>
 </body>

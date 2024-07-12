@@ -791,6 +791,7 @@ class FlexatarCommonData {
 
 class Texture{
     constructor(gl,image){
+        
         this.gl = gl;
         this.texture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, this.texture);
