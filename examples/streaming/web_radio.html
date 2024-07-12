@@ -3,7 +3,7 @@
 <head>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@alexanderolsen/libsamplerate-js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam/jslib/fvc_lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam/jslib/flx_render.js"></script>
     <!-- <script src="file:///home/naospennikov/workspace/flexatar-virtual-webcam/jslib/flx_render.js"></script> -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,16 +17,19 @@
     </div>
     <video id="videoElement" width="240" height="320" autoplay></video>
     <script>
-        const previousUrl = "https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flexatars/flx2.p" 
-        // const previousUrl = "https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flexatars/flx1.p" 
-        const flexatar = new Flexatar(previousUrl,"token")
+        const url1 = "https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flexatars/flx2.p" 
+        const url2 = "https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flexatars/flx1.p" 
+        const flexatar1 = new Flexatar(url1,"token")
+        const flexatar2 = new Flexatar(url2,"token")
         document.getElementById('processButton').addEventListener('click', function() {
             document.getElementById("2hide").style.display = 'none'
             const radioUrl = document.getElementById('url2play').value
 
             const flexatarAnimator = new FlexatarAnimator();
-            flexatar.connectTo(flexatarAnimator);
-            flexatar.setToSlot(0,flexatarAnimator);
+            flexatar1.connectTo(flexatarAnimator);
+            flexatar2.connectTo(flexatarAnimator);
+            flexatar1.setToSlot(0,flexatarAnimator);
+            flexatar2.setToSlot(1,flexatarAnimator);
           
             flexatarAnimator.start()
 

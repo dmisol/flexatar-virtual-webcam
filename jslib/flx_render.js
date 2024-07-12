@@ -2148,9 +2148,14 @@ class RenderEngine{
             if (slotIdx == 0) {
                 this.flexatarUnits.head0 = flexatarUnit;
                 this.heads.head0 = gpuBuffers;
+                this.setupHeads();
+            }else{
+                this.flexatarUnits.head1 = flexatarUnit;
+                this.heads.head1 = gpuBuffers;
+                this.setupHead1();
             }
             // console.log(gpuBuffers)
-            this.setupHeads();
+            
         })
         
     }
@@ -2174,7 +2179,7 @@ class RenderEngine{
             this.heads.head0 = this.newHeadBuffers;
             this.setupHeads();
             setTimeout(()=>{
-                this.destroyHead1(this.headBuffersToDestroy);
+                this.setupHead1(this.headBuffersToDestroy);
             }, 100);
 
         
@@ -2260,21 +2265,22 @@ class RenderEngine{
         this.mouthMixProgram.attribute("coordinates",head.uvBufferMouth,2);
         this.mouthMixProgram.attribute("index",head.idxGlBufferMouth,null);
 
-        if (this.heads.head1) {
-            this.headMixProgram.use();
-
-            // this.headMixProgram.attribute("blinkBshp",head.blinkGpuBuff,2);
-            for (let i = 0; i < 5; i++) {
-                this.headMixProgram.attribute("bshp"+i.toString()+"o",this.heads.head1.headMandalaBshpGLBuffers[i],4);
-            }
-            this.headMixProgram.textureArray(this.heads.head1.mandalaTextureArrayHead,"uSampler1",5);
-            
         
-            this.mouthMixProgram.use()
-            this.mouthMixProgram.textureArray(this.heads.head1.mandalaTextureArrayMouth,"uSampler1",5);
-            for (let i = 0; i < 5; i++) {
-                this.mouthMixProgram.attribute("bshp"+i.toString()+"o",this.heads.head1.mandalaBshpGlMouth[i],2);
-            }
+    }
+    setupHead1(){
+        this.headMixProgram.use();
+
+        // this.headMixProgram.attribute("blinkBshp",head.blinkGpuBuff,2);
+        for (let i = 0; i < 5; i++) {
+            this.headMixProgram.attribute("bshp"+i.toString()+"o",this.heads.head1.headMandalaBshpGLBuffers[i],4);
+        }
+        this.headMixProgram.textureArray(this.heads.head1.mandalaTextureArrayHead,"uSampler1",5);
+        
+    
+        this.mouthMixProgram.use()
+        this.mouthMixProgram.textureArray(this.heads.head1.mandalaTextureArrayMouth,"uSampler1",5);
+        for (let i = 0; i < 5; i++) {
+            this.mouthMixProgram.attribute("bshp"+i.toString()+"o",this.heads.head1.mandalaBshpGlMouth[i],2);
         }
     }
     destroyMixTimer(){
@@ -2327,7 +2333,7 @@ class RenderEngine{
         
     }
     setHybridEffect(){
-        if (this.headCounter>1){
+        // if (this.headCounter>1){
             this.destroyMixTimer();
             this.effectRendering = true;
             this.effectID = 1;
@@ -2342,7 +2348,7 @@ class RenderEngine{
                 
                 }
             }, 1000/30);
-        }
+        // }
     }
 
 
@@ -2426,7 +2432,7 @@ class RenderEngine{
             // return;
         }
         
-        if (this.heads.head0 && this.headCtrl != null && this.renderIsOn){
+        if (this.heads.head0 && this.heads.head1 && this.headCtrl != null && this.renderIsOn){
             const hc = this.headCtrl;
             const gl = this.gl;
             const canvas = this.canvas;
@@ -2920,9 +2926,7 @@ class Flexatar{
         console.log(gpuBuffers)
         resolve([flexatarUnit,gpuBuffers]);
     }
-    activateOnSlot(slotId){
-
-    }
+    
 
 }
 
@@ -3025,6 +3029,7 @@ class FlexatarAnimator {
         this.#renderer.then(renderer => {
             this.#rendererInstance = renderer
             renderer.start()
+            renderer.setHybridEffect()
             var animFrameCounter = 0;
             function animationTimer(){
                 animFrameCounter += 1;
