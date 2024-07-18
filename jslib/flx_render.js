@@ -1001,7 +1001,7 @@ class FlexatarMouthUnit{
             const blob = new Blob([body], { type: 'image/png' });
             const url = URL.createObjectURL(blob);
             const img = new Image();
-
+            img.crossOrigin = "anonymous"
             img.onload = () => resolve([img,url]);
             img.src = url;
             });
@@ -1193,7 +1193,7 @@ class FlexatarUnit{
                         const blob = new Blob([body], { type: 'image/png' });
                         const url = URL.createObjectURL(blob);
                         const img = new Image();
-
+                        img.crossOrigin = "anonymous"
                         img.onload = () => resolve([img,url]);
                         img.src = url;
                      });
@@ -1259,7 +1259,7 @@ class FlexatarUnit{
                     const blob = new Blob([body], { type: 'image/png' });
                     const url = URL.createObjectURL(blob);
                     const img = new Image();
-
+                    img.crossOrigin = "anonymous"
                     img.onload = () => resolve([img,url]);
                     img.src = url;
                     });
@@ -2290,6 +2290,12 @@ class RenderEngine{
         }
         this.nextHead = null;
     }
+    #effectFn = null
+    setEffect(effect){
+        // console.log("Effect rend" + effect)
+        this.#effectFn = effect.fn;
+        // console.log("Effect rend" + effect.fn)
+    }
     setNoEffect(){
         this.destroyMixTimer();
         this.isTransition = false;
@@ -2414,6 +2420,7 @@ class RenderEngine{
         }
 
     }
+    #startTime = null
     render(){
         // while(this.reloadFuncs.length > 0) {
         //     this.reloadFuncs.pop()();
@@ -2432,7 +2439,14 @@ class RenderEngine{
             // return;
         }
         
-        if (this.heads.head0 && this.heads.head1 && this.headCtrl != null && this.renderIsOn){
+        const endTime = window.performance.now();
+        const elapsedTime = (endTime - this.#startTime) / 1000;
+        // console.log("eff fun " + this.#effectFn)
+        // if (this.#effectFn)
+        
+        
+        if (this.heads.head0 && this.heads.head1 && this.headCtrl != null && this.renderIsOn && this.#effectFn!=null){
+            const effect = this.#effectFn(elapsedTime)
             const hc = this.headCtrl;
             const gl = this.gl;
             const canvas = this.canvas;
@@ -2452,15 +2466,15 @@ class RenderEngine{
             const extraRotMatrix = m4.multiply(m4.yRotation(this.extraRot[0]),m4.xRotation(this.extraRot[1]))
 
             var keyVtx;
-            if (this.effectRendering){
+            if (effect.mode !=0){
                 
                 const keyVtx0 = this.calcKeyVtx(zRotMat,extraRotMatrix,this.flexatarUnits.head0.keyVtx);
                 const keyVtx1 = this.calcKeyVtx(zRotMat,extraRotMatrix,this.flexatarUnits.head1.keyVtx);
-                if (this.effectID == 1){
-                    this.mouthMixWeight =  this.calcWeightByKeyUv(this.flexatarCustom.keyUV);
+                if (effect.mode == 2){
+                    this.mouthMixWeight =  this.calcWeightByKeyUv(this.flexatarCustom.keyUV,effect.parameter);
 
                 }else{
-                    this.mouthMixWeight = this.mixWeight;
+                    this.mouthMixWeight = effect.parameter;
                 }
                 
 
@@ -2495,7 +2509,7 @@ class RenderEngine{
             
 
 //            ----HEAD RENDER BLOCK-----
-            if (this.effectRendering){
+            if (effect.mode != 0){
                 this.mouthMixProgram.use();
                 this.mouthMixProgram.bind();
                 this.mouthMixProgram.uniform4fv("parSet0",parSet0);
@@ -2518,14 +2532,18 @@ class RenderEngine{
                 gl.getError();
                 this.headMixProgram.use();
                 this.headMixProgram.bind();
-                this.headMixProgram.uniform1f("mixWeight", this.mixWeight);
+                this.headMixProgram.uniform1f("mixWeight", effect.parameter);
                 this.headMixProgram.uniform4fv("parSet0", parSet0);
                 this.headMixProgram.uniform4fv("parSet1", parSet1);
                 this.headMixProgram.uniform4fv("parSet2", parSet2);
                 this.headMixProgram.uniform4fv("parSet3", parSet3);
                 this.headMixProgram.uniformMatrix4fv("zRotMatrix", zRotMat);
                 this.headMixProgram.uniformMatrix4fv("extraRotMatrix", extraRotMatrix);
-                this.headMixProgram.uniform1i("effectId", this.effectID);
+                if (effect.mode == 1){
+                    this.headMixProgram.uniform1i("effectId", 0);
+                }else{
+                    this.headMixProgram.uniform1i("effectId", 1);
+                }
                 
                 gl.drawElements(gl.TRIANGLES, this.flexatarCustom.idxGlBuffer.length, gl.UNSIGNED_SHORT,0);
                 gl.getError();
@@ -2588,6 +2606,7 @@ class RenderEngine{
 
     }
     start(){
+        this.#startTime = window.performance.now();
         this.renderIsOn = true;
         const self = this;
         function renderLoop(){
@@ -2646,9 +2665,9 @@ class RenderEngine{
         }
 
     }
-    calcWeightByKeyUv(keyUV){
+    calcWeightByKeyUv(keyUV,mixWeight){
         const kuv = keyUV[0];
-        const theta = this.mixWeight*6.28;
+        const theta = mixWeight*6.28;
         const linePoint = [Math.sin(theta),Math.cos(theta),1.0];
         const curPoint = [kuv[0],kuv[1]-0.15,1.0];
         const s = v3.dot(v3.cross(linePoint,curPoint),[0.0,0.0,1.0]);
@@ -2814,6 +2833,38 @@ class FlexatarClient{
         return new Flexatar(flexatarLink,token);
     }
 }
+function getAllSupportedMimeTypes(...mediaTypes) {
+    if (!mediaTypes.length) mediaTypes.push('video', 'audio')
+    const CONTAINERS = ['webm', 'ogg', 'mp3', 'mp4', 'x-matroska', '3gpp', '3gpp2', '3gp2', 'quicktime', 'mpeg', 'aac', 'flac', 'x-flac', 'wave', 'wav', 'x-wav', 'x-pn-wav', 'not-supported']
+    const CODECS = ['vp9', 'vp9.0', 'vp8', 'vp8.0', 'avc1', 'av1', 'h265', 'h.265', 'h264', 'h.264', 'opus', 'vorbis', 'pcm', 'aac', 'mpeg', 'mp4a', 'rtx', 'red', 'ulpfec', 'g722', 'pcmu', 'pcma', 'cn', 'telephone-event', 'not-supported']
+    
+    return [...new Set(
+      CONTAINERS.flatMap(ext =>
+          mediaTypes.flatMap(mediaType => [
+            `${mediaType}/${ext}`,
+          ]),
+      ),
+    ), ...new Set(
+      CONTAINERS.flatMap(ext =>
+        CODECS.flatMap(codec =>
+          mediaTypes.flatMap(mediaType => [
+            // NOTE: 'codecs:' will always be true (false positive)
+            `${mediaType}/${ext};codecs=${codec}`,
+          ]),
+        ),
+      ),
+    ), ...new Set(
+      CONTAINERS.flatMap(ext =>
+        CODECS.flatMap(codec1 =>
+        CODECS.flatMap(codec2 =>
+          mediaTypes.flatMap(mediaType => [
+            `${mediaType}/${ext};codecs="${codec1}, ${codec2}"`,
+          ]),
+        ),
+        ),
+      ),
+    )].filter(variation => MediaRecorder.isTypeSupported(variation))
+  }
 
 class Flexatar{
     #signalFlexatarReady = null;
@@ -2960,10 +3011,44 @@ class FlexatarAnimator {
         // this.renderer.useEffect(effect)
     }
 
+    addMediaStream(mediaStream){
+        return new Promise(resolve =>{
+
+        
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            let micSrc = audioContext.createMediaStreamSource(mediaStream);
+            audioContext.audioWorklet.addModule("js/audio_processor.js").then(() => {
+            // audioContext.audioWorklet.addModule("https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam/jslib/audio_processor.min.js").then(() => {
+                const processorNode = new AudioWorkletNode(audioContext,"my-audio-processor",);
+                micSrc.connect(processorNode);
+                processorNode.port.postMessage(true);
+                processorNode.port.onmessage = (event) => {
+                    if (event.data){
+                        if (this.#rendererInstance){
+                            const speechState = animCalc.getAnim(event.data)
+                            this.#rendererInstance.speechState = speechState;
+                        }
+                    
+                    }
+                }
+                var delayNode = audioContext.createDelay(1);
+                delayNode.delayTime.value = 0.5;
+                micSrc.connect(delayNode);
+                const flxAudioStreamSource = audioContext.createMediaStreamDestination();
+                delayNode.connect(flxAudioStreamSource);
+                const flxStreamAudio = flxAudioStreamSource.stream;
+                let audioTrack = flxStreamAudio.getAudioTracks()[0];
+                this.#videoStream.addTrack(audioTrack);
+                resolve()
+            });
+        })
+        // this.#videoStream.addTrack(audioTrack);
+        
+    }
     
     addAuidoTrack(url){
         // Step 1: Create an AudioContext
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
 
         // Step 2: Create an audio element
         const audioElement = new Audio(url);
@@ -3013,12 +3098,18 @@ class FlexatarAnimator {
                     let audioTrack = flxStreamAudio.getAudioTracks()[0];
                     this.#videoStream.addTrack(audioTrack);
                 });
-                // this.#videoStream.addTrack(audioTrack);
+                
             };
        
     }
     getRenderer(){
         return this.#renderer;
+    }
+    setEffect(effect){
+        this.#renderer.then(renderer => {
+            renderer.setEffect(effect)
+            // console.log("Effect flxaninator"+effect)
+        })
     }
     // setFlexatar1(flexatarConnection){
     //     this.#renderer.then(renderer => {
@@ -3029,7 +3120,7 @@ class FlexatarAnimator {
         this.#renderer.then(renderer => {
             this.#rendererInstance = renderer
             renderer.start()
-            renderer.setHybridEffect()
+            // renderer.setHybridEffect()
             var animFrameCounter = 0;
             function animationTimer(){
                 animFrameCounter += 1;
@@ -3050,14 +3141,60 @@ class FlexatarAnimator {
             renderer.timerId = setInterval(animationTimer, 1000/30);
         })
     }
+    pause(){
+        this.#renderer.then(renderer => {
+            renderer.pause()
+            // console.log("Effect flxaninator"+effect)
+        })
+    }
     // starts a+v streaming from the input audio
     getMediaStream() {
-        this.#videoStream = this.#canvas.captureStream(60)
+        this.#videoStream = this.#canvas.captureStream(30)
         return this.#videoStream;
     }
+
+    recordedChunks = [];
+    mediaRecorder = null;
+    onstop = null;
+    currentRecordingType = null
+    record(){
+        this.currentRecordingType = getAllSupportedMimeTypes()
+        const options = { mimeType: this.currentRecordingType[0] };
+        console.log(this.currentRecordingType);
+        this.mediaRecorder = new MediaRecorder(this.#videoStream, options);
+        this.mediaRecorder.ondataavailable = event =>{
+            console.log("data-available");
+            if (event.data.size > 0) {
+                this.recordedChunks.push(event.data);
+                console.log(event.data);
+                
+            }
+        }
+        this.mediaRecorder.onerror = e => {
+            console.log(e);
+        }
+        this.mediaRecorder.start();
+        this.mediaRecorder.onstop = () => {
+            const blob = new Blob(this.recordedChunks, { type: this.currentRecordingType[0] });
+            const url = URL.createObjectURL(blob);
+            const file = new File([blob], 'recorded_video.mp4', { type: this.currentRecordingType[0] });
+            if (this.onstop != null ){
+                this.onstop(url,file)
+            }
+           
+
+        };
+    }
+    
+    stopRecord(){
+        this.mediaRecorder.stop();
+
+    }
+
+
     // free gpu resources
     destroy() {
-        this.renderer.destroy()
+        this.#renderer.destroy()
     }
 }
 
@@ -3074,15 +3211,44 @@ class Effect {
         //} 
     }
 
-    static mix(mixWeight) {
+    static no() {
+        
+        return new Effect(function calc(time) {
+            return {mode:0,parameter:0}
+          });
+        // return (time => {
+        //     return {mode:0,parameter:0}
+        // })
+    }
 
+    static mix(mixWeight) {
+        return new Effect(function calc(time) {
+            return {mode:1,parameter:mixWeight}
+        });
     }
 
     static morph(duration) {
+        
+        return new Effect(function calc(time) {
+            const periods = time/duration
+            const periodCounter = Math.floor(periods)
+            const weight = periods - periodCounter
+            if (periodCounter%2 == 0){
+                return {mode:1,parameter:weight}
+            }else{
+                return {mode:1,parameter:1 - weight}
+            }
+            
+        });
 
     }
 
     static hybrid(duration) {
-
+        return new Effect(function calc(time) {
+            const periods = time/duration
+            const periodCounter = Math.floor(periods)
+            const weight = periods - periodCounter
+            return {mode:2,parameter:weight}
+         });
     }
 }

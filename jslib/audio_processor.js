@@ -51,14 +51,16 @@ class MyAudioProcessor extends AudioWorkletProcessor {
     return true;
   }
   addBuffer(buffer,onBufferReady){
-    this.collector.push(new Float32Array(buffer));
-    if ((this.collector.length - 1) * buffer.length +  this.collector[0].length >this.windowSize) {
-        const audioBuffer = concatenateFloat32Arrays(this.collector);
+    if (buffer){
+      this.collector.push(new Float32Array(buffer));
+      if ((this.collector.length - 1) * buffer.length +  this.collector[0].length >this.windowSize) {
+          const audioBuffer = concatenateFloat32Arrays(this.collector);
 
-        onBufferReady(audioBuffer.subarray(0,this.windowSize));
-        this.collector = [];
-        const tail = audioBuffer.subarray(this.windowSize,audioBuffer.length);
-        this.collector.push(tail);
+          onBufferReady(audioBuffer.subarray(0,this.windowSize));
+          this.collector = [];
+          const tail = audioBuffer.subarray(this.windowSize,audioBuffer.length);
+          this.collector.push(tail);
+      }
     }
   }
 }

@@ -2,58 +2,125 @@
 <head>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@alexanderolsen/libsamplerate-js"></script>
-    <!-- <script src="https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam/jslib/fvc_lib.min.js"></script> -->
     <script src="file:///home/naospennikov/workspace/flexatar-virtual-webcam/jslib/flx_render.js"></script>
-<!--    <script src="fvc_lib.js"></script>-->
+
+<!-- <script src="js/flx_render.js"></script> -->
 
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Virtual camera demo</title>
-
+    <a id="downloadLink" style="display: none;">Download Video</a>
+    
 </head>
 <body>
 
 
 
 <video id="videoElement" width="240" height="320" autoplay></video>
+<p id="statusLabel">Waiting</p>
 <button id="start"  >Start</button>
-
+<button id="share">Share Video</button>
 <script>
-let startButton = document.getElementById("start");
 
-if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    navigator.mediaDevices
-    .getUserMedia({audio: true,},)
-    .then((stream) => {
-       
-        const flexatarAnimator = new FlexatarAnimator("token");
-        flexatarAnimator.useFlexatars(null);
-        
-        flexatarAnimator.getMediaStream().then(mediaStream =>{
-            var videoElement = document.getElementById('videoElement');
-            videoElement.autoplay = true
-            videoElement.controls = true
-            videoElement.setAttribute('playsinline', '')
-            videoElement.srcObject = mediaStream;
+
+
+const url1 = "https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flexatars/flx1.p" 
+const url2 = "https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flexatars/flx2.p" 
+const flexatar2 = new Flexatar(url2,"token")
+const flexatar1 = new Flexatar(url1,"token")
+
+const shareButton = document.getElementById('share');
+const flexatarAnimator = new FlexatarAnimator();
+flexatar1.connectTo(flexatarAnimator);
+flexatar2.connectTo(flexatarAnimator);
+flexatar1.setToSlot(0,flexatarAnimator);
+flexatar2.setToSlot(1,flexatarAnimator);
+flexatarAnimator.setEffect(Effect.no());
+flexatarAnimator.start()
+const mediaStream = flexatarAnimator.getMediaStream();
+
+flexatarAnimator.onstop = (url,file )=> {
+    statusLabel.textContent = "Ready"
+    shareButton.addEventListener('click', async () => {
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Recorded Video',
+                        text: 'Check out this recorded video!',
+                    });
+                } catch (error) {
+                    console.error('Error sharing video:', error);
+                }
+            } else {
+                console.error('Web Share API is not supported or cannot share the file.');
+            }
         });
-       
-        
 
-        // const fvcStream = flexatarVirtualCameraStream("https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flexatars/flx1.p",240,320,stream);
-        // //const fvcStream = flexatarVirtualCameraStream("/file/flexatars/flx1.p",240,320,stream);
+    videoElement.srcObject = null;
+    videoElement.src = url;
+    videoElement.loop = true;
 
-        // startButton.onclick = function(){
-        //     var videoElement = document.getElementById('videoElement');
-        //     videoElement.autoplay = true
-        //     videoElement.controls = true
-        //     videoElement.setAttribute('playsinline', '')
-        //     videoElement.srcObject = fvcStream;
-        // }
-            
-
-        
-    });
+    downloadLink.href = url;
+    downloadLink.download = 'recorded_video.webm';
+    downloadLink.style.display = 'block';
 }
+
+
+var videoElement = document.getElementById('videoElement');
+videoElement.autoplay = true
+videoElement.controls = true
+videoElement.setAttribute('playsinline', '')
+videoElement.srcObject = mediaStream;
+videoElement.muted = true;
+
+
+let startButton = document.getElementById("start");
+let statusLabel = document.getElementById("statusLabel");
+var isRecording = false
+var isPlayingRecorded = false
+const downloadLink = document.getElementById('downloadLink');
+var track = null;
+startButton.onclick = function(){
+    if (isPlayingRecorded){
+        isPlayingRecorded = false
+        startButton.textContent = "Start"
+    }
+    
+    if (!isRecording){
+        statusLabel.textContent = "Preparing"
+        isRecording = true
+        
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices
+            .getUserMedia({audio: true,},)
+            .then((stream) => {
+                track = stream.getTracks()[0];
+                
+                flexatarAnimator.addMediaStream(stream).then(()=>{
+                    flexatarAnimator.record()
+                    statusLabel.textContent = "Speek"
+                    startButton.textContent = "Stop"
+                })
+            });
+        }
+               
+    }else{
+        isPlayingRecorded = true
+        startButton.textContent = "Again"
+        console.log("stop recording");
+        isRecording = false
+        flexatarAnimator.stopRecord()
+        track.stop()
+        flexatarAnimator.pause()
+        
+    }
+   
+}
+
+
+
+
 </script>
 </body>
 </html>
