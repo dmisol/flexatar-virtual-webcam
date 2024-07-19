@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Play Web Radio with HLS.js</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+  <video id="video" controls></video>
+
+  <script>
+    // URL of the HLS stream (web radio stream in HLS format)
+    const hlsUrl = 'https://radio.talkradio.co.uk/stream';
+    const video = document.getElementById('video');
+
+    if (Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(hlsUrl);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play();
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = hlsUrl;
+      video.addEventListener('canplay', () => {
+        video.play();
+      });
+    } else {
+      console.error('HLS not supported in this browser.');
+    }
+  </script>
+</body>
+</html>

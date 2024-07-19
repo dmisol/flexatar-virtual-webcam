@@ -1,3 +1,4 @@
+
 class SpeechNN{
     constructor() {
         this.wav2melModel = null;
@@ -907,6 +908,7 @@ class Texture{
         );
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     }
     bind(textureUnit,shaderProgram,samplerName){
@@ -1103,13 +1105,13 @@ class FlexatarUnit{
 
         const uint8Array = new Uint8Array(arrayBuffer);
         var blocks = unpackToBlocks(uint8Array);
-
+        this.mouthPackage  = new FlexatarMouthUnit(flexatarCommon)
         if (this.checkIfNeedInsertMouth(blocks)){
 
-            this.mouthPackage  = new FlexatarMouthUnit(flexatarCommon).loadDefault()
+            this.mouthPackage  = this.mouthPackage.loadDefault()
             // const mouthBlocks = unpackToBlocks(flexatarCommon.mouthDefault);
             // blocks = this.repackWithMouth(blocks,mouthBlocks)
-            console.log("Mouth inserted")
+            // console.log("Mouth inserted")
         }
 
         this.makeFlxData(blocks,null);
@@ -1252,8 +1254,11 @@ class FlexatarUnit{
                 const jsonObject = JSON.parse(text);
                 isFirstFlexatar = false;
                 delimiterName = jsonObject["type"]
+                console.log("delimiterName",delimiterName)
             }
             if (delimiterName === "mouth"){
+                this.mouthPackage.addPackagePart(header,body)
+                /*
                 if (header["type"] === "mandalaTexture"){
                     const imgPromise = new Promise((resolve, reject) => {
                     const blob = new Blob([body], { type: 'image/png' });
@@ -1261,6 +1266,9 @@ class FlexatarUnit{
                     const img = new Image();
                     img.crossOrigin = "anonymous"
                     img.onload = () => resolve([img,url]);
+                    img.onerror = () =>{
+                        console.log("delimage load error")
+                    }
                     img.src = url;
                     });
                     this.mandalaMouthTexturesPromise.push(imgPromise);
@@ -1308,6 +1316,7 @@ class FlexatarUnit{
                     const yRatio =  fi["camFovX"]/fi["camFovY"]*fi["bbox"][3]/fi["bbox"][2];
                     this.mouthRatio = 1.0/yRatio;
                 }
+                    */
             }
         }
     }
@@ -1396,6 +1405,7 @@ const mouthShaderCode = {
     'uniform vec4 parSet1;' +
     'uniform vec4 parSet2;' +
     'uniform vec4 parSet3;' +
+    
     'uniform mat4 zRotMatrix;' +
 
     'void main(void) {' +
@@ -1430,8 +1440,8 @@ const mouthShaderCode = {
 
 
 
-       ' result *= -1.0;' +
-       ' result.y *= mouthRatio;' +
+       
+       ' result.y *= -mouthRatio;' +
        ' result *= mouthScale;' +
        ' result = (zRotMatrix*vec4(result,0.0,1.0)).xy;' +
          ' result.y *= screenRatio;' +
@@ -1449,6 +1459,7 @@ const mouthShaderCode = {
     'uniform highp vec4 parSet0;' +
     'uniform highp vec4 parSet1;' +
     'uniform highp vec4 parSet3;' +
+    'uniform highp vec4 parSet4;' +
     'uniform int isTop;' +
     'void main(void) {' +
     ' highp float weights[5];' +
@@ -1459,6 +1470,7 @@ const mouthShaderCode = {
     ' weights[4] = parSet1.x;' +
     ' highp float teethTopKeyPointY = parSet3.z;' +
     ' highp float teethBotKeyPointY = parSet3.w;' +
+    ' highp float alpha = parSet4.x;' +
     ' highp vec4 result = vec4(0);' +
     ' for (int i = 0; i < 5; i++) {' +
     '     result += weights[i]*texture2D(uSampler[i], uv).bgra;' +
@@ -1473,7 +1485,11 @@ const mouthShaderCode = {
     ' }' +
     ' highp float xDarken = pow(cos((uv.x-0.5)*3.14),3.0);' +
     ' result.xyz*=xDarken;' +
+    
+    
+    ' result.a *= alpha;' +
     ' gl_FragColor = result;' +
+    
     '}'
 };
 
@@ -1664,7 +1680,7 @@ const headShaderCode = {
        ' result = vmMatrix*result;' +
        ' result.x = atan(result.x/result.z)*5.0;' +
        ' result.y = atan(result.y/result.z)*5.0;' +
-       ' result.z = (1.0 - result.z)*0.01 +0.21;' +
+       ' result.z = 0.5;' +
 
 
        ' result.y -= 4.0;' +
@@ -1675,6 +1691,9 @@ const headShaderCode = {
        ' result.y -= yPos;' +
        ' result.xy *= 0.8+scale;' +
        ' result.y *= -screenRatio;' +
+       ' result.x *= -1.0;' +
+      
+
 
        ' uv = (coordinates*vec2(1.0,-1.0) + vec2(1.0,1.0))*vec2(0.5,0.5);' +
        ' gl_Position = result;' +
@@ -1821,6 +1840,7 @@ const headMixShaderCode = {
        ' result.y -= yPos;' +
        ' result.xy *= 0.8+scale;' +
        ' result.y *= -screenRatio;' +
+       ' result.x *= -1.0;' +
 
        ' uv = (coordinates*vec2(1.0,-1.0) + vec2(1.0,1.0))*vec2(0.5,0.5);' +
        ' gl_Position = result;' +
@@ -1993,6 +2013,8 @@ class ShaderProgram{
 
 }
 class RenderEngine{
+    #effectFn = null
+    #startTime = null
     constructor(canvas,gl,flexatarCustom){
 
         var maxVertexAttribs = gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
@@ -2043,9 +2065,9 @@ class RenderEngine{
         this.eyebrowGpuBuff = new VtxBuffer(gl,flexatarCustom.eyebrowBshp);
         this.uvGlBufferHead = new VtxBuffer(gl,flexatarCustom.uvGlBuffer);
         this.idxGlBufferHead = new IdxBuffer(gl,flexatarCustom.idxGlBuffer);
-
-        
-
+      
+        this.#effectFn = Effect.no().fn
+      
         const scaleMat = m4.scaling(1,-1,1);
         const viewMat = m4.translation(0,0,-2.5);
         this.viewModelMatrix = m4.multiply(viewMat,scaleMat);
@@ -2072,10 +2094,10 @@ class RenderEngine{
         
         this.mouthStaticBindings(this.mouthProgram)
 
-        this.mouthMixProgram = new ShaderProgram(gl,mouthMixShaderCode);
+        this.mouthMixProgram = new ShaderProgram(gl,mouthShaderCode);
         
-        this.mouthStaticBindings(this.mouthMixProgram)
-        this.mouthMixProgram.addUniform1f('mixWeight');
+        this.mouthStaticBindings(this.mouthProgram)
+        // this.mouthMixProgram.addUniform1f('mixWeight');
 
         
         // this.setHead(flexatarUnit,"head0");
@@ -2111,6 +2133,7 @@ class RenderEngine{
         program.addUniform4fv('parSet1');
         program.addUniform4fv('parSet2');
         program.addUniform4fv('parSet3');
+        program.addUniform4fv('parSet4');
         program.addUniform1i('isTop');
         program.addUniformMatrix4fv('zRotMatrix');
     }
@@ -2227,8 +2250,7 @@ class RenderEngine{
         };
     }
     setupHeads(){
-        // console.log("setupHead0")
-        // console.log(head.blinkGpuBuff)
+
         const head = this.heads.head0;
         this.headProgram.reset();
         this.headProgram.use();
@@ -2256,8 +2278,29 @@ class RenderEngine{
         }
         this.headMixProgram.textureArray(head.mandalaTextureArrayHead,"uSampler",0);
 
+        // this.mouthMixProgram.reset();
+        // this.mouthMixProgram.use();
+        // this.mouthMixProgram.textureArray(head.mandalaTextureArrayMouth,"uSampler",0);
+        // for (let i = 0; i < 5; i++) {
+        //     this.mouthMixProgram.attribute("bshp"+i.toString(),head.mandalaBshpGlMouth[i],2);
+        // }
+        // this.mouthMixProgram.attribute("coordinates",head.uvBufferMouth,2);
+        // this.mouthMixProgram.attribute("index",head.idxGlBufferMouth,null);
+
+        
+    }
+    setupHead1(){
+        this.headMixProgram.use();
+        const head = this.heads.head1
+        // this.headMixProgram.attribute("blinkBshp",head.blinkGpuBuff,2);
+        for (let i = 0; i < 5; i++) {
+            this.headMixProgram.attribute("bshp"+i.toString()+"o",head.headMandalaBshpGLBuffers[i],4);
+        }
+        this.headMixProgram.textureArray(head.mandalaTextureArrayHead,"uSampler1",5);
+        
+    
         this.mouthMixProgram.reset();
-        this.mouthMixProgram.use();
+        this.mouthMixProgram.use()
         this.mouthMixProgram.textureArray(head.mandalaTextureArrayMouth,"uSampler",0);
         for (let i = 0; i < 5; i++) {
             this.mouthMixProgram.attribute("bshp"+i.toString(),head.mandalaBshpGlMouth[i],2);
@@ -2265,23 +2308,11 @@ class RenderEngine{
         this.mouthMixProgram.attribute("coordinates",head.uvBufferMouth,2);
         this.mouthMixProgram.attribute("index",head.idxGlBufferMouth,null);
 
-        
-    }
-    setupHead1(){
-        this.headMixProgram.use();
-
-        // this.headMixProgram.attribute("blinkBshp",head.blinkGpuBuff,2);
-        for (let i = 0; i < 5; i++) {
-            this.headMixProgram.attribute("bshp"+i.toString()+"o",this.heads.head1.headMandalaBshpGLBuffers[i],4);
-        }
-        this.headMixProgram.textureArray(this.heads.head1.mandalaTextureArrayHead,"uSampler1",5);
-        
-    
-        this.mouthMixProgram.use()
-        this.mouthMixProgram.textureArray(this.heads.head1.mandalaTextureArrayMouth,"uSampler1",5);
-        for (let i = 0; i < 5; i++) {
-            this.mouthMixProgram.attribute("bshp"+i.toString()+"o",this.heads.head1.mandalaBshpGlMouth[i],2);
-        }
+        // this.mouthMixProgram.use()
+        // this.mouthMixProgram.textureArray(this.heads.head1.mandalaTextureArrayMouth,"uSampler1",5);
+        // for (let i = 0; i < 5; i++) {
+        //     this.mouthMixProgram.attribute("bshp"+i.toString()+"o",this.heads.head1.mandalaBshpGlMouth[i],2);
+        // }
     }
     destroyMixTimer(){
         if (this.mixTimer){
@@ -2290,7 +2321,7 @@ class RenderEngine{
         }
         this.nextHead = null;
     }
-    #effectFn = null
+    
     setEffect(effect){
         // console.log("Effect rend" + effect)
         this.#effectFn = effect.fn;
@@ -2312,32 +2343,7 @@ class RenderEngine{
         }
     }
     
-    setMorphEffect(){
-        this.destroyMixTimer();
-        var mixChange = 0.005;
-        this.effectID = 0;
-        this.effectRendering = true;
-        this.mixWeight = 0.0
-        this.mixTimer = setInterval(() =>{
-            this.mixWeight += mixChange
-            if (this.mixWeight>=1){
-                
-                this.mixWeight = 1.0;
-                clearInterval(this.mixTimer);
-                this.mixTimer = null
-                this.effectRendering = false;
-                if (this.nextHead){
-                    const flx = this.nextHead;
-                    this.nextHead = null;
-                    this.addFlexatarModel(flx);
-                    this.setMorphEffect();
-                }
-                
-            
-            }
-        }, 1000/30);
-        
-    }
+  
     setHybridEffect(){
         // if (this.headCounter>1){
             this.destroyMixTimer();
@@ -2420,49 +2426,78 @@ class RenderEngine{
         }
 
     }
-    #startTime = null
+    
+    renderMouth(shaderProgram,parSet0,keyVtx,headUnit,zRotMatMouth,alpha){
+        const hc = this.headCtrl
+        const gl = this.gl
+        const [topMPivot,botMPivot,lipSize] = this.calcMouthPivot(headUnit);
+        const mouthScale = -(keyVtx[5][0]-keyVtx[4][0])/lipSize;
+        const parSet1M = new Float32Array([hc[4],this.ratio,keyVtx[3][0],keyVtx[2][1]]);
+        const parSet2Mouth = new Float32Array([topMPivot[0],botMPivot[1],botMPivot[0],botMPivot[1]]);
+        const parSet3Mouth = new Float32Array([headUnit.mouthRatio,mouthScale,headUnit.teethGap[0],headUnit.teethGap[1]]);
+        const parSet4Mouth = new Float32Array([alpha,0.0,0,0]);
+       
+
+        shaderProgram.use();
+        shaderProgram.bind();
+        shaderProgram.uniform4fv("parSet0",parSet0);
+        shaderProgram.uniform4fv("parSet1",parSet1M);
+        shaderProgram.uniform4fv("parSet2",parSet2Mouth);
+        shaderProgram.uniform4fv("parSet3",parSet3Mouth);
+        shaderProgram.uniform4fv("parSet4",parSet4Mouth);
+
+        shaderProgram.uniformMatrix4fv("zRotMatrix",zRotMatMouth);
+        shaderProgram.uniform1i("isTop",0);
+
+        gl.drawElements(gl.TRIANGLES, this.heads.head0.idxGlBufferMouth.length, gl.UNSIGNED_SHORT,0);
+       
+        const parSet2MouthTop = new Float32Array([topMPivot[0],topMPivot[1],botMPivot[0],botMPivot[1]]);
+        const parSet1MTop = new Float32Array([hc[4],this.ratio,keyVtx[1][0],keyVtx[0][1]]);
+        shaderProgram.uniform4fv("parSet1",parSet1MTop);
+        shaderProgram.uniform4fv("parSet2",parSet2MouthTop);
+        shaderProgram.uniform1i("isTop",1);
+        gl.drawElements(gl.TRIANGLES, this.heads.head0.idxGlBufferMouth.length, gl.UNSIGNED_SHORT,0);
+ 
+    }
     render(){
-        // while(this.reloadFuncs.length > 0) {
-        //     this.reloadFuncs.pop()();
+
+        // if (this.commitRenderThreadCommands){
+        //     for (const func of this.reloadFuncs){
+        //         func();
+        //     }
+        //     this.reloadFuncs = [];
+        //     this.commitRenderThreadCommands = false;
+
         // }
-        // if (this.skipFrame){
-        //     this.skipFrame = false;
-        //     return;
-        // }
-        if (this.commitRenderThreadCommands){
-            for (const func of this.reloadFuncs){
-                func();
-            }
-            this.reloadFuncs = [];
-            this.commitRenderThreadCommands = false;
-            // this.skipFrame = true;
-            // return;
-        }
         
         const endTime = window.performance.now();
         const elapsedTime = (endTime - this.#startTime) / 1000;
-        // console.log("eff fun " + this.#effectFn)
-        // if (this.#effectFn)
-        
-        
-        if (this.heads.head0 && this.heads.head1 && this.headCtrl != null && this.renderIsOn && this.#effectFn!=null){
-            const effect = this.#effectFn(elapsedTime)
+        if (this.heads.head0 && this.headCtrl != null && this.renderIsOn ){
+            
+            var effect = this.#effectFn(elapsedTime)
+
+            if (this.heads.head1 == null){
+                effect.mode = 0
+            }
+            
+
             const hc = this.headCtrl;
             const gl = this.gl;
             const canvas = this.canvas;
+            // gl.colorMask(false, false, false, true);
             gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
             gl.clear(gl.COLOR_BUFFER_BIT);
             
             gl.viewport(this.marg,0,this.vpWidth,canvas.height);
 
-
+            // this.speechState[2] = -1
             const parSet0 = new Float32Array([hc[0],hc[1],hc[2],hc[3]]);
             const parSet1 = new Float32Array([hc[4],this.ratio,this.position[0],this.position[1]]);
             const parSet2 = new Float32Array([this.position[2],this.speechState[0],this.speechState[1],this.speechState[2]]);
             const parSet3 = new Float32Array([this.speechState[3],this.speechState[4],this.position[4],this.position[5]]);
             const zRotMat = m4.zRotation(-this.position[3]);
-            const zRotMatMouth = m4.zRotation(this.position[3]);
+            const zRotMatMouth = zRotMat;
             const extraRotMatrix = m4.multiply(m4.yRotation(this.extraRot[0]),m4.xRotation(this.extraRot[1]))
 
             var keyVtx;
@@ -2490,8 +2525,8 @@ class RenderEngine{
             }
             
             
-            const [topMPivot,botMPivot,lipSize] = this.calcMouthPivot();
-            const mouthScale = (keyVtx[5][0]-keyVtx[4][0])/lipSize;
+            // const [topMPivot,botMPivot,lipSize] = this.calcMouthPivot();
+            // const mouthScale = -(keyVtx[5][0]-keyVtx[4][0])/lipSize;
 
 
 //------------MOUTH RENDER BLOCK------------
@@ -2500,36 +2535,20 @@ class RenderEngine{
           
             // this.mandalaTextureArrayMouth.bind(0);
 
-            const parSet1M = new Float32Array([hc[4],this.ratio,keyVtx[3][0],keyVtx[2][1]]);
+            // const parSet1M = new Float32Array([hc[4],this.ratio,keyVtx[3][0],keyVtx[2][1]]);
 
 
-            const parSet2Mouth = new Float32Array([topMPivot[0],botMPivot[1],botMPivot[0],botMPivot[1]]);
-            const parSet3Mouth = new Float32Array([this.flexatarUnits.head0.mouthRatio,mouthScale,this.flexatarUnits.head0.teethGap[0],this.flexatarUnits.head0.teethGap[1]]);
+            // const parSet2Mouth = new Float32Array([topMPivot[0],botMPivot[1],botMPivot[0],botMPivot[1]]);
+            // const parSet3Mouth = new Float32Array([this.flexatarUnits.head0.mouthRatio,mouthScale,this.flexatarUnits.head0.teethGap[0],this.flexatarUnits.head0.teethGap[1]]);
 
             
 
 //            ----HEAD RENDER BLOCK-----
             if (effect.mode != 0){
-                this.mouthMixProgram.use();
-                this.mouthMixProgram.bind();
-                this.mouthMixProgram.uniform4fv("parSet0",parSet0);
-                this.mouthMixProgram.uniform4fv("parSet1",parSet1M);
-                this.mouthMixProgram.uniform4fv("parSet2",parSet2Mouth);
-                this.mouthMixProgram.uniform4fv("parSet3",parSet3Mouth);
-                this.mouthMixProgram.uniform1f("mixWeight",this.mouthMixWeight);
 
-                this.mouthMixProgram.uniformMatrix4fv("zRotMatrix",zRotMatMouth);
-                this.mouthMixProgram.uniform1i("isTop",0);
-    
-                gl.drawElements(gl.TRIANGLES, this.heads.head0.idxGlBufferMouth.length, gl.UNSIGNED_SHORT,0);
-                gl.getError();
-                const parSet2MouthTop = new Float32Array([topMPivot[0],topMPivot[1],botMPivot[0],botMPivot[1]]);
-                const parSet1MTop = new Float32Array([hc[4],this.ratio,keyVtx[1][0],keyVtx[0][1]]);
-                this.mouthMixProgram.uniform4fv("parSet1",parSet1MTop);
-                this.mouthMixProgram.uniform4fv("parSet2",parSet2MouthTop);
-                this.mouthMixProgram.uniform1i("isTop",1);
-                gl.drawElements(gl.TRIANGLES, this.heads.head0.idxGlBufferMouth.length, gl.UNSIGNED_SHORT,0);
-                gl.getError();
+                this.renderMouth(this.mouthProgram,parSet0,keyVtx,this.flexatarUnits.head0,zRotMatMouth,1.0);
+                this.renderMouth(this.mouthMixProgram,parSet0,keyVtx,this.flexatarUnits.head1,zRotMatMouth,this.mouthMixWeight);
+                
                 this.headMixProgram.use();
                 this.headMixProgram.bind();
                 this.headMixProgram.uniform1f("mixWeight", effect.parameter);
@@ -2548,25 +2567,9 @@ class RenderEngine{
                 gl.drawElements(gl.TRIANGLES, this.flexatarCustom.idxGlBuffer.length, gl.UNSIGNED_SHORT,0);
                 gl.getError();
             }else{
-                // console.log("render no mix")
-                this.mouthProgram.use();
-                this.mouthProgram.bind();
-                this.mouthProgram.uniform4fv("parSet0",parSet0);
-                this.mouthProgram.uniform4fv("parSet1",parSet1M);
-                this.mouthProgram.uniform4fv("parSet2",parSet2Mouth);
-                this.mouthProgram.uniform4fv("parSet3",parSet3Mouth);
+             
 
-                this.mouthProgram.uniformMatrix4fv("zRotMatrix",zRotMatMouth);
-                this.mouthProgram.uniform1i("isTop",0);
-
-                gl.drawElements(gl.TRIANGLES, this.heads.head0.idxGlBufferMouth.length, gl.UNSIGNED_SHORT,0);
-
-                const parSet2MouthTop = new Float32Array([topMPivot[0],topMPivot[1],botMPivot[0],botMPivot[1]]);
-                const parSet1MTop = new Float32Array([hc[4],this.ratio,keyVtx[1][0],keyVtx[0][1]]);
-                this.mouthProgram.uniform4fv("parSet1",parSet1MTop);
-                this.mouthProgram.uniform4fv("parSet2",parSet2MouthTop);
-                this.mouthProgram.uniform1i("isTop",1);
-                gl.drawElements(gl.TRIANGLES, this.heads.head0.idxGlBufferMouth.length, gl.UNSIGNED_SHORT,0);
+                this.renderMouth(this.mouthProgram,parSet0,keyVtx,this.flexatarUnits.head0,zRotMatMouth,1);
 
                 this.headProgram.use();
                 this.headProgram.bind();
@@ -2621,48 +2624,31 @@ class RenderEngine{
     pause(){
         this.renderIsOn = false;
     }
-    calcMouthPivot(){
-        function calc(vecList,weightList,sizeList){
-            var topPivotf = [0,0];
-            var botPivotf = [0,0];
-            var lipSizef = 0
-            for (let i = 0; i < 5; i++) {
-                topPivotf = v2.add(v2.mulScalar(vecList[i][0],weightList[i]),topPivotf);
-                botPivotf = v2.add(v2.mulScalar(vecList[i][1],weightList[i]),botPivotf);
-                lipSizef += weightList[i] * sizeList[i];
-            }
-            return [topPivotf,botPivotf,lipSizef];
+    calcMouthPivot(head){
+        // function calc(vecList,weightList,sizeList){
+        //     var topPivotf = [0,0];
+        //     var botPivotf = [0,0];
+        //     var lipSizef = 0
+        //     for (let i = 0; i < 5; i++) {
+        //         topPivotf = v2.add(v2.mulScalar(vecList[i][0],weightList[i]),topPivotf);
+        //         botPivotf = v2.add(v2.mulScalar(vecList[i][1],weightList[i]),botPivotf);
+        //         lipSizef += weightList[i] * sizeList[i];
+        //     }
+        //     return [topPivotf,botPivotf,lipSizef];
+        // }
+
+        const la = head.lipAnchors;
+        const hc = this.headCtrl;
+        var topPivot = [0,0];
+        var botPivot = [0,0];
+        var lipSize = 0
+        for (let i = 0; i < 5; i++) {
+
+            topPivot = v2.add(v2.mulScalar(la[i][0],hc[i]),topPivot);
+            botPivot = v2.add(v2.mulScalar(la[i][1],hc[i]),botPivot);
+            lipSize += hc[i] * head.lipSize[i];
         }
-        // if (false){
-        if (this.effectRendering){
-            const la0 = this.flexatarUnits.head0.lipAnchors;
-            const la1 = this.flexatarUnits.head1.lipAnchors;
-            const ls0 = this.flexatarUnits.head0.lipSize;
-            const ls1 = this.flexatarUnits.head1.lipSize;
-            const hc = this.headCtrl;
-            const [topPivot0,botPivot0,lipSize0] = calc(la0,hc,ls0);
-            const [topPivot1,botPivot1,lipSize1] = calc(la1,hc,ls1);
-            const topPivot = v2.add(v2.mulScalar(topPivot0,this.mouthMixWeight),v2.mulScalar(topPivot1,1.0-this.mouthMixWeight));
-            const botPivot = v2.add(v2.mulScalar(botPivot0,this.mouthMixWeight),v2.mulScalar(botPivot1,1.0-this.mouthMixWeight));
-            const lipSize = this.mouthMixWeight * lipSize0 + (1.0 - this.mouthMixWeight) * lipSize1;
-
-
-            return [topPivot,botPivot,lipSize];
-        }else{
-            const la = this.flexatarUnits.head0.lipAnchors;
-            const hc = this.headCtrl;
-            var topPivot = [0,0];
-            var botPivot = [0,0];
-            var lipSize = 0
-            for (let i = 0; i < 5; i++) {
-
-                topPivot = v2.add(v2.mulScalar(la[i][0],hc[i]),topPivot);
-                botPivot = v2.add(v2.mulScalar(la[i][1],hc[i]),botPivot);
-                lipSize += hc[i] * this.flexatarUnits.head0.lipSize[i];
-            }
-
-            return [topPivot,botPivot,lipSize]; 
-        }
+        return [topPivot,botPivot,lipSize];
 
     }
     calcWeightByKeyUv(keyUV,mixWeight){
@@ -2714,6 +2700,7 @@ class RenderEngine{
             vtx[0] *= 0.8 + p[2];
             vtx[1] *= 0.8 + p[2];
             vtx[1] *= -this.ratio;
+            vtx[0] *= -1;
             calculatedVtx.push(vtx);
             cntr += 1;
 
@@ -2722,9 +2709,6 @@ class RenderEngine{
     }
     stop(){
         this.renderIsOn = false;
-        return new Promise((resolve, reject) => {
-            this.stopFunction = resolve;
-        });
     }
     destroy(){
         clearInterval(this.timerId)
@@ -2734,7 +2718,7 @@ class RenderEngine{
         this.spGpuBuff1.destroy();
         this.spGpuBuff2.destroy();
         this.eyebrowGpuBuff.destroy();
-        this.blinkGpuBuff.destroy();
+        this.blinkGpuBuffer.destroy();
         this.uvGlBufferHead.destroy();
         this.idxGlBufferHead.destroy(); 
         this.headMandalaBshpGLBuffers.forEach(function(buffer) {
@@ -2746,15 +2730,11 @@ class RenderEngine{
         this.uvBufferMouth.destroy(); 
         this.idxGlBufferMouth.destroy(); 
         const gl = this.gl;
-        // this.shaders.forEach(function(shder) {
-        //     gl.deleteShader(shder);
-        // });
+
         this.headProgram.destroy();
         this.mouthProgram.destroy();
         this.shaderProgramOverlay.destroy();
-        // this.gl.deleteProgram(this.headProgram);
-        // this.gl.deleteProgram(this.mouthProgram);
-        // this.gl.deleteProgram(this.shaderProgramOverlay);
+
         this.overlayUV.destroy();
         for (const overlay of this.overlays) {
             const [vtxBuffer,texture] = overlay;
@@ -2771,44 +2751,6 @@ class RenderEngine{
 
 }
 
-let flexatarCommon;
-async function loadCommonData(){
-    flexatarCommon = new FlexatarCommonData("https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flx_static.p");
-//    flexatarCommon = new FlexatarCommonData("/file/flexatars/static.p");
-}
-// loadCommonData();
-
-async function makeFlexatar(canvas,url,flxCommon){
-
-    // await flxCommon.awaitResources();
-
-    const flexatar = new FlexatarUnit(url,flxCommon);
-    await flexatar.awaitResources();
-    const gl = canvas.getContext('webgl');
-
-    const rEngine = new RenderEngine(canvas,gl,flxCommon,flexatar);
-    rEngine.addFlexatarModel(flexatar);
-    rEngine.applyChanges();
-
-    var animFrameCounter = 0;
-    function animationTimer(){
-        animFrameCounter += 1;
-
-        const animationFrame = flxCommon.getAnimationFrame(animFrameCounter);
-
-        const rx = (animationFrame[3]-0.5)*1.0 + 0.5;
-        const ry = (animationFrame[4]-0.45)*1.0 + 0.45;
-        const interU = flexatar.makeInterUnit([rx,ry]);
-        rEngine.headCtrl = interU[0];
-        rEngine.extraRot = interU[1];
-        rEngine.position = [animationFrame[0],animationFrame[1],animationFrame[2],animationFrame[5],animationFrame[6],animationFrame[8]];
-
-    }
-
-    rEngine.timerId = setInterval(animationTimer, 1000/30);
-    return rEngine;
-
-}
 var flexatarStaicUrl = "https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flx_static.p"
 
 const speechNN = new SpeechNN();
@@ -2825,12 +2767,21 @@ function fetchArrayBuffer(url){
 }
 
 class FlexatarClient{
+    #token = null
+    static route = "/"
     constructor(token) {
-
+       this.#token = token
+      
     }
 
     getFlexatar(flexatarLink){
-        return new Flexatar(flexatarLink,token);
+        
+        const data = {
+            token: this.#token,
+            ftar: flexatarLink
+        };
+        
+        return new Flexatar(data);
     }
 }
 function getAllSupportedMimeTypes(...mediaTypes) {
@@ -2872,19 +2823,29 @@ class Flexatar{
         this.#signalFlexatarReady = resolve;
     });
     #bufferStorage = {};
-    constructor(flexatarLink,token) {
+    constructor(flexatarLink) {
         Flexatar.initiateStaticPackageDownload()
-        fetchArrayBuffer(flexatarLink).then(flexatarPackage => {
-            Flexatar.#staticPackageReady.then(()=>{
-                const flexatarUnit = new FlexatarUnit(flexatarPackage,Flexatar.#staticPackage);
-                flexatarUnit.awaitResources().then(()=>{
-                    this.#signalFlexatarReady(flexatarUnit);
+        const options = {
+            method: 'POST', // Use 'POST', 'PUT', or 'PATCH' instead of 'GET'
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(flexatarLink) // Convert the data object to a JSON string
+        };
+            fetch(FlexatarClient.route+"ftar", options)
+                .then(response => {
+                    return response.arrayBuffer();
+                    
+                }).then(flexatarPackage =>{
+                    Flexatar.#staticPackageReady.then(()=>{
+                        const flexatarUnit = new FlexatarUnit(flexatarPackage,Flexatar.#staticPackage);
+                        flexatarUnit.awaitResources().then(()=>{
+                            this.#signalFlexatarReady(flexatarUnit);
+                        })
+                    });
                 })
-            });
-        });
-        
-        
-        // flexatar.awaitResources();
+            
+       
     }
 
     static #staticPackage = null
@@ -2932,10 +2893,14 @@ class Flexatar{
             })
         });
         this.#bufferStorage[flexatarAnimator.id] = gpuBuffers
+        if (flexatarAnimator.currentEmptySlot!=2){
+            this.setToSlot(flexatarAnimator.currentEmptySlot,flexatarAnimator)
+        }
     }
     setToSlot(slotIdx,flexatarAnimator){
         flexatarAnimator.getRenderer().then(renderer =>{
             renderer.setToSlot(slotIdx,this.#bufferStorage[flexatarAnimator.id])
+            flexatarAnimator.currentEmptySlot += 1
         })
     }
     #makeGlBuffers(gl,flexatarUnit,resolve){
@@ -3003,22 +2968,22 @@ class FlexatarAnimator {
                     resolve(new RenderEngine(this.#canvas,this.gl,staticPackage));
                 })
             })
+        this.currentEmptySlot = 0
         
        
     }
     
-    useEffect(effect) {
-        // this.renderer.useEffect(effect)
-    }
-
     addMediaStream(mediaStream){
         return new Promise(resolve =>{
-
+            let audioTracks =  this.#videoStream.getAudioTracks()
+            if (audioTracks.length>0){
+                this.#videoStream.removeTrack(audioTracks[0]);
+            }
         
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             let micSrc = audioContext.createMediaStreamSource(mediaStream);
-            audioContext.audioWorklet.addModule("js/audio_processor.js").then(() => {
-            // audioContext.audioWorklet.addModule("https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam/jslib/audio_processor.min.js").then(() => {
+            // audioContext.audioWorklet.addModule("js/audio_processor.js").then(() => {
+            audioContext.audioWorklet.addModule("https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam/jslib/audio_processor.min.js").then(() => {
                 const processorNode = new AudioWorkletNode(audioContext,"my-audio-processor",);
                 micSrc.connect(processorNode);
                 processorNode.port.postMessage(true);
@@ -3116,6 +3081,7 @@ class FlexatarAnimator {
     //         renderer.setFlexatar1(flexatarConnection)
     //     })
     // }
+    #timerId = null
     start(){
         this.#renderer.then(renderer => {
             this.#rendererInstance = renderer
@@ -3139,11 +3105,13 @@ class FlexatarAnimator {
             }
 
             renderer.timerId = setInterval(animationTimer, 1000/30);
+            this.#timerId = renderer.timerId 
         })
     }
     pause(){
         this.#renderer.then(renderer => {
             renderer.pause()
+            clearInterval(this.#timerId)
             // console.log("Effect flxaninator"+effect)
         })
     }
@@ -3155,7 +3123,7 @@ class FlexatarAnimator {
 
     recordedChunks = [];
     mediaRecorder = null;
-    onstop = null;
+    onRecordStop = null;
     currentRecordingType = null
     record(){
         this.currentRecordingType = getAllSupportedMimeTypes()
@@ -3178,8 +3146,8 @@ class FlexatarAnimator {
             const blob = new Blob(this.recordedChunks, { type: this.currentRecordingType[0] });
             const url = URL.createObjectURL(blob);
             const file = new File([blob], 'recorded_video.mp4', { type: this.currentRecordingType[0] });
-            if (this.onstop != null ){
-                this.onstop(url,file)
+            if (this.onRecordStop != null ){
+                this.onRecordStop(url,file)
             }
            
 
@@ -3228,9 +3196,13 @@ class Effect {
     }
 
     static morph(duration) {
-        
+        var dur
+        if (duration){
+            dur = duration
+        }
+        dur = 6
         return new Effect(function calc(time) {
-            const periods = time/duration
+            const periods = time/dur
             const periodCounter = Math.floor(periods)
             const weight = periods - periodCounter
             if (periodCounter%2 == 0){
@@ -3244,8 +3216,13 @@ class Effect {
     }
 
     static hybrid(duration) {
+        var dur
+        if (duration){
+            dur = duration
+        }
+        dur = 6
         return new Effect(function calc(time) {
-            const periods = time/duration
+            const periods = time/dur
             const periodCounter = Math.floor(periods)
             const weight = periods - periodCounter
             return {mode:2,parameter:weight}

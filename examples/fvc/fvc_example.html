@@ -2,81 +2,146 @@
 <head>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@alexanderolsen/libsamplerate-js"></script>
-    <script src="file:///home/naospennikov/workspace/flexatar-virtual-webcam/jslib/flx_render.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam/jslib/flx_render.js"></script>
 
 <!-- <script src="js/flx_render.js"></script> -->
 
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Virtual camera demo</title>
-    <a id="downloadLink" style="display: none;">Download Video</a>
+    <style>
+        
+        button {
+            display: block;
+            margin: 10 auto;
+            padding: 15px 32px;
+            font-size: 16px;
+            
+        }
+        video {
+            display: block;
+            margin: 0 auto;
+        }
+        p {
+            text-align: center;
+        }
+    </style>
     
 </head>
 <body>
 
-
+<a id="downloadLink" style="display: none;">Download Video</a>
+<div>
+<button id="ShowFlexatar" >ShowFlexatar</button>
+</div>
 
 <video id="videoElement" width="240" height="320" autoplay></video>
+</div>
+<div>
 <p id="statusLabel">Waiting</p>
+</div>
+<div>
 <button id="start"  >Start</button>
+
+<div>
 <button id="share">Share Video</button>
+</div>
+<div>
+<button id="download">Download Video</button>
+</div>
+
 <script>
+let jsonToBackend = {token:"sometoken",ftar:"dexter.p"}
+// let jsonToBackend = {token:"sometoken",ftar:"ftar_endpoint"}
+FlexatarClient.route = "/" // apigw route
+let client = new FlexatarClient(jsonToBackend.token)
+const flexatar1 = client.getFlexatar(jsonToBackend.ftar)
 
 
+var recordedVideoUrl = null
 
-const url1 = "https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flexatars/flx1.p" 
-const url2 = "https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flexatars/flx2.p" 
-const flexatar2 = new Flexatar(url2,"token")
-const flexatar1 = new Flexatar(url1,"token")
+const RECOCORD_CAPTION = "Record Audio"
+const STOP_CAPTION = "Stop Record"
+const AGAIN_CAPTION = "Do Again"
+const STATUS_SHOW_FLEXATAR = "Showing Flexatar"
+const STATUS_SHOW_RECORDED = "Playing Recorded"
+const STATUS_SPEAK = "Speak"
 
-const shareButton = document.getElementById('share');
-const flexatarAnimator = new FlexatarAnimator();
-flexatar1.connectTo(flexatarAnimator);
-flexatar2.connectTo(flexatarAnimator);
-flexatar1.setToSlot(0,flexatarAnimator);
-flexatar2.setToSlot(1,flexatarAnimator);
-flexatarAnimator.setEffect(Effect.no());
-flexatarAnimator.start()
-const mediaStream = flexatarAnimator.getMediaStream();
+let showButton = document.getElementById("ShowFlexatar");
+let startButton = document.getElementById("start");
+let statusLabel = document.getElementById("statusLabel");
+let videoElement = document.getElementById('videoElement');
+let shareButton = document.getElementById('share');
+let downloadButton = document.getElementById('download');
 
-flexatarAnimator.onstop = (url,file )=> {
-    statusLabel.textContent = "Ready"
-    shareButton.addEventListener('click', async () => {
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                try {
-                    await navigator.share({
-                        files: [file],
-                        title: 'Recorded Video',
-                        text: 'Check out this recorded video!',
-                    });
-                } catch (error) {
-                    console.error('Error sharing video:', error);
+startButton.textContent = RECOCORD_CAPTION
+statusLabel.textContent = STATUS_SHOW_FLEXATAR
+startButton.style.display = 'none';
+statusLabel.style.display = 'none';
+videoElement.style.display = 'none';
+shareButton.style.display = 'none';
+downloadButton.style.display = 'none';
+shareButton.disabled = true
+downloadButton.disabled = true
+
+
+var flexatarAnimator = null;
+var mediaStream  = null;
+
+
+showButton.onclick = () => {
+    
+    showButton.style.display = 'none';
+    startButton.style.display = 'block';
+    statusLabel.style.display = 'block';
+    videoElement.style.display = 'block';
+    shareButton.style.display = 'block';
+    downloadButton.style.display = 'block';
+
+    flexatarAnimator = new FlexatarAnimator();
+    flexatar1.connectTo(flexatarAnimator);
+    flexatarAnimator.start()
+    flexatarAnimator.onRecordStop = (url,file )=> {
+        statusLabel.textContent = STATUS_SHOW_RECORDED
+        shareButton.addEventListener('click', async () => {
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({
+                            files: [file],
+                            title: 'Flexatar Video',
+                        });
+                    } catch (error) {
+                        console.error('Error sharing video:', error);
+                    }
+                } else {
+                    console.error('Web Share API is not supported or cannot share the file.');
+                    alert("Sharing is not supported.");
                 }
-            } else {
-                console.error('Web Share API is not supported or cannot share the file.');
-            }
-        });
+            });
 
-    videoElement.srcObject = null;
-    videoElement.src = url;
-    videoElement.loop = true;
+        videoElement.srcObject = null;
+        videoElement.src = url;
 
-    downloadLink.href = url;
-    downloadLink.download = 'recorded_video.webm';
-    downloadLink.style.display = 'block';
+        recordedVideoUrl = url
+        downloadLink.href = url;
+        downloadLink.download = 'recorded_video.mp4';
+        shareButton.disabled = false
+        downloadButton.disabled = false
+    }
+    mediaStream = flexatarAnimator.getMediaStream();
+    videoElement.autoplay = true
+    videoElement.controls = false
+    videoElement.setAttribute('playsinline', '')
+    videoElement.srcObject = mediaStream;
+    videoElement.muted = true;
 }
 
 
-var videoElement = document.getElementById('videoElement');
-videoElement.autoplay = true
-videoElement.controls = true
-videoElement.setAttribute('playsinline', '')
-videoElement.srcObject = mediaStream;
-videoElement.muted = true;
+downloadButton.onclick = ()=>{
+    downloadLink.click()
+}
 
 
-let startButton = document.getElementById("start");
-let statusLabel = document.getElementById("statusLabel");
 var isRecording = false
 var isPlayingRecorded = false
 const downloadLink = document.getElementById('downloadLink');
@@ -84,7 +149,17 @@ var track = null;
 startButton.onclick = function(){
     if (isPlayingRecorded){
         isPlayingRecorded = false
-        startButton.textContent = "Start"
+        statusLabel.textContent = STATUS_SHOW_FLEXATAR
+        startButton.textContent = RECOCORD_CAPTION
+        videoElement.srcObject = null;
+        videoElement.src = null;
+        videoElement.srcObject = mediaStream;
+        flexatarAnimator.start()
+        videoElement.controls = false
+        videoElement.muted = true;
+        shareButton.disabled = false
+        downloadButton.disabled = false
+        return;
     }
     
     if (!isRecording){
@@ -99,20 +174,27 @@ startButton.onclick = function(){
                 
                 flexatarAnimator.addMediaStream(stream).then(()=>{
                     flexatarAnimator.record()
-                    statusLabel.textContent = "Speek"
-                    startButton.textContent = "Stop"
+                    statusLabel.textContent = STATUS_SPEAK
+                    startButton.textContent = STOP_CAPTION
                 })
             });
         }
                
     }else{
-        isPlayingRecorded = true
-        startButton.textContent = "Again"
         console.log("stop recording");
         isRecording = false
-        flexatarAnimator.stopRecord()
-        track.stop()
-        flexatarAnimator.pause()
+        isPlayingRecorded = true
+        videoElement.controls = true
+        videoElement.muted = false;
+        startButton.textContent = AGAIN_CAPTION
+        
+        setTimeout(()=>{
+            flexatarAnimator.stopRecord()
+            track.stop()
+            flexatarAnimator.pause()
+        },500)
+        
+        
         
     }
    
