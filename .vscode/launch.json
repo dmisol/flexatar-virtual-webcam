@@ -6,6 +6,7 @@
     "configurations": [
 
 
+
         {
             "name": "Attach to Chrome",
             "port": 9222,
@@ -24,7 +25,7 @@
             "type": "chrome",
             "request": "launch",
             "name": "Launch web radio example",
-            "url": "file:///home/naospennikov/workspace/flexatar-virtual-webcam/examples/streaming/web_radio.html",
+            "url": "https://127.0.0.1:8080/",
             "webRoot": "${workspaceFolder}"
         }
     ]

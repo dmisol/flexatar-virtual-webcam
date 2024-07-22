@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@alexanderolsen/libsamplerate-js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam@latest/jslib/flx_render.js"></script>
+
+<!-- <script src="/js/flx_render.js"></script> -->
+
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Virtual camera demo</title>
+    <style>
+        
+        button {
+            display: block;
+            margin: 10 auto;
+            padding: 15px 32px;
+            font-size: 16px;
+            
+        }
+        video {
+            display: block;
+            margin: 0 auto;
+        }
+        p {
+            text-align: center;
+        }
+    </style>
+    
+</head>
+<body>
+    <canvas id="flexatarCanvas" width="240" height="320"></canvas>
+    <div>
+        <input type="checkbox" id="effect" name="effect" />
+        <label for="effect">Effect</label>
+        <input type="checkbox" id="animated" name="animated" />
+        <label for="effect">Animated</label>
+
+
+        <fieldset>
+            <legend>Choose Effect</legend>
+            <div>
+              <input type="radio" id="morph" name="effectType" value="morph" checked />
+              <label for="morph">Morph</label>
+            </div>
+            <div>
+              <input type="radio" id="hybrid" name="effectType" value="hybrid" />
+              <label for="hybrid">Hybrid</label>
+            </div>
+            <div>
+                <input type="range" min="1" max="100" value="50" class="slider" id="effectSlider">
+            </div>
+          </fieldset>
+          
+    </div>
+
+<script>
+const animatedCheckBox = document.getElementById('animated');
+const effectCheckBox = document.getElementById('effect');
+
+const typeChkBoxs = document.querySelectorAll("input[name='effectType']");
+const slider = document.getElementById("effectSlider");
+// console.log(typeChkBoxs.values())
+
+
+animatedCheckBox.checked = true
+effectCheckBox.checked = true
+
+const canvas = document.getElementById('flexatarCanvas');
+
+FlexatarClient.route = "/"
+const flexatarSDK = new FlexatarSDK("token",canvas)
+flexatarSDK.useFlexatars("aniston.p","bushemi.p")
+flexatarSDK.useEffect(Effect.morph())
+
+function setNotAnimatedEffect(){
+    const effect = new Effect(function(time){
+        return {mode:currentMode,parameter:slider.value/100}
+   })
+   flexatarSDK.useEffect(effect)
+}
+
+function setAnimatedEffect(){
+    flexatarSDK.useEffect(currentMode == 1 ? Effect.morph() : Effect.hybrid())
+}
+
+effectCheckBox.onclick = () => {
+   flexatarSDK.useFlexatars(FlexatarSDK.SAME,effectCheckBox.checked ? "bushemi.p" : null)
+}
+
+let currentMode = 1
+for (const chkBox of typeChkBoxs){
+    if (chkBox.value == "morph") chkBox.checked = true
+    chkBox.onclick = () => {
+        currentMode = chkBox.value == "hybrid" ? 2 : 1
+        
+        if (animatedCheckBox.checked){
+            setAnimatedEffect()
+        }else{
+            setNotAnimatedEffect()
+        }
+        
+
+    }
+}
+animatedCheckBox.onclick = () => {
+    if (animatedCheckBox.checked){
+        setAnimatedEffect()
+    }else{
+        setNotAnimatedEffect()
+    }
+}
+slider.oninput = () => {
+    animatedCheckBox.checked = false
+    setNotAnimatedEffect()
+}
+</script>
+</body>
+</html>

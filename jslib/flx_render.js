@@ -908,13 +908,14 @@ class Texture{
         );
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     }
     bind(textureUnit,shaderProgram,samplerName){
         const gl = this.gl;
         const samplerLoc = gl.getUniformLocation(shaderProgram, samplerName);
         gl.activeTexture(gl.TEXTURE0+textureUnit);
+        
         gl.bindTexture(gl.TEXTURE_2D, this.texture);
         gl.uniform1i(samplerLoc, textureUnit);
     }
@@ -938,6 +939,7 @@ class TextureArray{
         for (let i = 0; i < this.textureList.length; i++) {
             gl.activeTexture(gl.TEXTURE0+textureUnit+i);
             gl.bindTexture(gl.TEXTURE_2D, this.textureList[i].texture);
+            
             locations.push(textureUnit+i)
         }
         gl.uniform1iv(this.samplerLoc, locations);
@@ -981,6 +983,80 @@ function makeQuadUVArray(){
 
 }
 
+class FlexatarFaceUnit{
+    constructor(){
+        this.mandalaTexturesPromise = []
+        this.mandalaTextures = []
+        this.mandalaGLBshpBuffers = []
+        this.mandalaCheckpoints = null
+        this.mandalaFaces = null
+        this.mandalaBorderIdx = null
+        this.blinkBlendshape = null
+        this.keyVtx = null
+    }
+    addPackagePart(header,body){
+        if (header["type"] === "mandalaTextureBlurBkg"){
+            const imgPromise = new Promise((resolve, reject) => {
+                const blob = new Blob([body], { type: 'image/png' });
+                const url = URL.createObjectURL(blob);
+                const img = new Image();
+                img.crossOrigin = "anonymous"
+                img.onload = () => resolve([img,url]);
+                img.src = url;
+             });
+            this.mandalaTexturesPromise.push(imgPromise);
+        }else if (header["type"] === "mandalaBlendshapes"){
+
+            const floatBuffer = body.slice(0,body.length);
+            const floatsCount = floatBuffer.byteLength/4;
+            const vtxCount = floatsCount/4;
+            const perBshVtxCount = vtxCount/5;
+            const mandalaBlendshapes = new Float32Array(floatBuffer.buffer, floatBuffer.byteOffset, floatBuffer.byteLength/4);
+            const bshp = [];
+            for (let i = 0; i < 5; i++) {
+                bshp.push(new Float32Array(perBshVtxCount * 4));
+                for (let j = 0; j < perBshVtxCount; j++) {
+                    for (let k = 0; k < 4; k++) {
+                        const positionInRaw = k + i * 4 + j * 5 * 4;
+                        const positionInRepack = k + j * 4 ;
+                        bshp[i][positionInRepack] = accessByShape(mandalaBlendshapes,[-1,5,4],[j,i,k]);
+                    }
+                }
+            }
+
+            for (let i = 0; i < 5; i++) {
+                this.mandalaGLBshpBuffers.push(bshp[i]);
+            }
+
+        
+        }else if (header["type"] === "eyelidBlendshape"){
+            const floatBuffer = body.slice(0,body.length);
+            this.blinkBlendshape = new Float32Array(floatBuffer.buffer, floatBuffer.byteOffset, floatBuffer.byteLength/4);
+
+
+        }
+    }
+    async makeTextures(){
+        const images = await Promise.all(this.mandalaTexturesPromise);
+        for (const image of images) {
+            URL.revokeObjectURL(image[1]);
+            this.mandalaTextures.push(image[0])
+        }
+    }
+    makeKeyVertex(){
+        const keyVtxIdx = [88,97,50,43,54,46];
+        const keyVtx = [];
+        for (const idx of keyVtxIdx) {
+            const vtxBshpList = [];
+            keyVtx.push(vtxBshpList);
+            for (const vtxBuf of  this.mandalaGLBshpBuffers) {
+                const vtx = [vtxBuf[idx*4],vtxBuf[idx*4+1],vtxBuf[idx*4+2],vtxBuf[idx*4+3]];
+                vtxBshpList.push(vtx);
+            }
+        }
+        this.keyVtx = keyVtx;
+    }
+}
 
 class FlexatarMouthUnit{
     static #mouthDefault = null;
@@ -1102,6 +1178,7 @@ class FlexatarUnit{
         this.keyVtx = null;
         this.eyelidBlendshape = null;
         this.mouthPackage = null;
+        this.facePackages = {};
 
         const uint8Array = new Uint8Array(arrayBuffer);
         var blocks = unpackToBlocks(uint8Array);
@@ -1109,9 +1186,7 @@ class FlexatarUnit{
         if (this.checkIfNeedInsertMouth(blocks)){
 
             this.mouthPackage  = this.mouthPackage.loadDefault()
-            // const mouthBlocks = unpackToBlocks(flexatarCommon.mouthDefault);
-            // blocks = this.repackWithMouth(blocks,mouthBlocks)
-            // console.log("Mouth inserted")
+
         }
 
         this.makeFlxData(blocks,null);
@@ -1120,34 +1195,17 @@ class FlexatarUnit{
 
     }
     async makeTextures(){
-        const images = await Promise.all(this.mandalaTexturesPromise);
-        for (const image of images) {
-            URL.revokeObjectURL(image[1]);
-            this.mandalaTextures.push(image[0])
+       
+        for (const [key, value] of Object.entries(this.facePackages)) {
+            await value.makeTextures()
+            value.makeKeyVertex()
         }
-
-        const imagesMouth = await Promise.all(this.mandalaMouthTexturesPromise);
-        for (const image of imagesMouth) {
-            URL.revokeObjectURL(image[1]);
-            this.mandalaMouthTextures.push(image[0]);
-        }
+       
         await this.mouthPackage.makeTextures();
-        this.makeKeyVertex();
+        
         this.dataLoaded();
     }
-    makeKeyVertex(){
-        const keyVtxIdx = [88,97,50,43,54,46];
-        const keyVtx = [];
-        for (const idx of keyVtxIdx) {
-            const vtxBshpList = [];
-            keyVtx.push(vtxBshpList);
-            for (const vtxBuf of  this.mandalaGLBshpBuffers) {
-                const vtx = [vtxBuf[idx*4],vtxBuf[idx*4+1],vtxBuf[idx*4+2],vtxBuf[idx*4+3]];
-                vtxBshpList.push(vtx);
-            }
-        }
-        this.keyVtx = keyVtx;
-    }
+
     checkIfNeedInsertMouth(blocks){
         for (let i = 0; i < blocks[0].length; i++) {
                 const header = blocks[0][i];
@@ -1184,46 +1242,16 @@ class FlexatarUnit{
 
     makeFlxData(blocks){
         var isFirstFlexatar = true;
-        var delimiterName = "exp1";
+        var delimiterName = "exp-neu";
+        var currentFaceUnit = new FlexatarFaceUnit()
+        this.facePackages[delimiterName] = currentFaceUnit
         for (let i = 0; i < blocks[0].length; i++) {
             const header = blocks[0][i];
             const body = blocks[1][i];
-
+            currentFaceUnit.addPackagePart(header,body)
             if (isFirstFlexatar) {
-                if (header["type"] === "mandalaTextureBlurBkg"){
-                    const imgPromise = new Promise((resolve, reject) => {
-                        const blob = new Blob([body], { type: 'image/png' });
-                        const url = URL.createObjectURL(blob);
-                        const img = new Image();
-                        img.crossOrigin = "anonymous"
-                        img.onload = () => resolve([img,url]);
-                        img.src = url;
-                     });
-                    this.mandalaTexturesPromise.push(imgPromise);
-                }else if (header["type"] === "mandalaBlendshapes"){
-
-                    const floatBuffer = body.slice(0,body.length);
-                    const floatsCount = floatBuffer.byteLength/4;
-                    const vtxCount = floatsCount/4;
-                    const perBshVtxCount = vtxCount/5;
-                    const mandalaBlendshapes = new Float32Array(floatBuffer.buffer, floatBuffer.byteOffset, floatBuffer.byteLength/4);
-                    const bshp = [];
-                    for (let i = 0; i < 5; i++) {
-                        bshp.push(new Float32Array(perBshVtxCount * 4));
-                        for (let j = 0; j < perBshVtxCount; j++) {
-                            for (let k = 0; k < 4; k++) {
-                                const positionInRaw = k + i * 4 + j * 5 * 4;
-                                const positionInRepack = k + j * 4 ;
-                                bshp[i][positionInRepack] = accessByShape(mandalaBlendshapes,[-1,5,4],[j,i,k]);
-                            }
-                        }
-                    }
-
-                    for (let i = 0; i < 5; i++) {
-                        this.mandalaGLBshpBuffers.push(bshp[i]);
-                    }
-
-                }else if (header["type"] === "mandalaCheckpoints"){
+  
+                if (header["type"] === "mandalaCheckpoints"){
                     const floatBuffer = body.slice(0,body.length);
                     this.mandalaCheckpoints = new Float32Array(floatBuffer.buffer, floatBuffer.byteOffset, floatBuffer.byteLength/4);
                 }else if (header["type"] === "mandalaFaces"){
@@ -1241,12 +1269,8 @@ class FlexatarUnit{
                     for (let i = 0; i < int64Array.length/2; i++) {
                         this.mandalaBorderIdx[i] = int64Array[i*2];
                     }
-                }else if (header["type"] === "eyelidBlendshape"){
-                    const floatBuffer = body.slice(0,body.length);
-                    this.blinkBlendshape = new Float32Array(floatBuffer.buffer, floatBuffer.byteOffset, floatBuffer.byteLength/4);
-
-
                 }
+                
             }
 
             if (header["type"] === "Delimiter"){
@@ -1254,6 +1278,11 @@ class FlexatarUnit{
                 const jsonObject = JSON.parse(text);
                 isFirstFlexatar = false;
                 delimiterName = jsonObject["type"]
+                if (delimiterName.startsWith("exp")){
+                    currentFaceUnit = new FlexatarFaceUnit()
+                    this.facePackages[delimiterName] = currentFaceUnit
+
+                }
                 console.log("delimiterName",delimiterName)
             }
             if (delimiterName === "mouth"){
@@ -1923,7 +1952,7 @@ class ShaderProgram{
         const linkLog = gl.getProgramInfoLog(this.id);
         if (linkLog)
             console.log(linkLog);
-        this.textureArrays = [];
+        this.textureArrays = [null,null];
         this.attributes = {};
         this.uniform4fvDict = {};
         this.uniform1iDict = {};
@@ -1931,11 +1960,15 @@ class ShaderProgram{
         this.uniformMatrix4fvDict = {}
     }
     reset(){
-        this.textureArrays = []
+        this.textureArrays[0] = null
         // this.uniform4fvDict = {};
         // this.uniform1iDict = {};
         // this.uniform1fDict = {};
         // this.uniformMatrix4fvDict = {}
+    }
+    resetSlot1(){
+        this.textureArrays[1] = null
+       
     }
     use(){
         this.gl.useProgram(this.id);
@@ -1949,10 +1982,10 @@ class ShaderProgram{
         // console.log(this.attributes[name]);
 
     }
-    textureArray(textureArray,name,textureUnit){
+    textureArray(textureArray,name,textureUnit,slot){
         const location = this.gl.getUniformLocation(this.id, name);
         const textureElement = {location:location,textureArray:textureArray,textureUnit:textureUnit}
-        this.textureArrays.push(textureElement)
+        this.textureArrays[slot] = textureElement
     }
 
     addUniform4fv(name){
@@ -1995,13 +2028,16 @@ class ShaderProgram{
         // if (!blinkBshpFound) console.log("blinkBshpNotFound");
 
         for (const textureElement of this.textureArrays){
+            if (!textureElement) continue
             const locations = [];
             for (let i = 0; i < textureElement.textureArray.textureList.length; i++) {
                 gl.activeTexture(gl.TEXTURE0+textureElement.textureUnit+i);
                 gl.bindTexture(gl.TEXTURE_2D, textureElement.textureArray.textureList[i].texture);
+                
                 locations.push(textureElement.textureUnit+i)
             }
             gl.uniform1iv(textureElement.location, locations);
+            // console.log("bindtexture",locations.length)
         }
     }
     
@@ -2014,6 +2050,7 @@ class ShaderProgram{
 }
 class RenderEngine{
     #effectFn = null
+    expFn = null
     #startTime = null
     constructor(canvas,gl,flexatarCustom){
 
@@ -2034,7 +2071,7 @@ class RenderEngine{
         this.flexatarCustom = flexatarCustom;
         this.gl = gl;
         this.canvas = canvas;
-        this.vpWidth = canvas.height/1.2;
+        this.vpWidth = canvas.height;
         this.marg = (canvas.width - this.vpWidth)/2;
         this.ratio = this.vpWidth/canvas.height;
         this.heads = {head0:null,head1:null};
@@ -2072,6 +2109,11 @@ class RenderEngine{
         const viewMat = m4.translation(0,0,-2.5);
         this.viewModelMatrix = m4.multiply(viewMat,scaleMat);
         
+        this.faceProviderExp = null
+        this.faceProvider0 = null
+        this.mouthProvider0 = null
+        this.faceProvider1 = null
+        this.mouthProvider1 = null
       
         this.headProgram = new ShaderProgram(gl,headShaderCode);
         this.headProgram.use();
@@ -2159,15 +2201,9 @@ class RenderEngine{
         flexatarConnection.then(result => {
             const flexatarUnit = result[0]
             const gpuBuffers = result[1]
-            // console.log(flexatarUnit)
-            // console.log(gpuBuffers)
+
             this.headCounter+=1;
-            if (this.blinkGpuBuffer) 
-            {
-                this.blinkGpuBuffer.reload(flexatarUnit.blinkBlendshape);
-            }else{
-                this.blinkGpuBuffer = new VtxBuffer(this.gl,flexatarUnit.blinkBlendshape);
-            }
+           
             if (slotIdx == 0) {
                 this.flexatarUnits.head0 = flexatarUnit;
                 this.heads.head0 = gpuBuffers;
@@ -2177,118 +2213,61 @@ class RenderEngine{
                 this.heads.head1 = gpuBuffers;
                 this.setupHead1();
             }
-            // console.log(gpuBuffers)
             
         })
         
     }
-    addFlexatarModel(flexatarUnit){
-        console.log("addFlexatarModel")
-        this.headCounter+=1;
-        this.newHeadFlexatarUnit = flexatarUnit;
-        this.makeGlBuffersForNewHead();
-
-        if (this.blinkGpuBuffer) 
-        {
-            this.blinkGpuBuffer.reload(flexatarUnit.blinkBlendshape);
-        }else{
-            this.blinkGpuBuffer = new VtxBuffer(this.gl,flexatarUnit.blinkBlendshape);
-        }
-
-            this.flexatarUnits.head1 = this.flexatarUnits.head0;
-            this.headBuffersToDestroy = this.heads.head1;
-            this.heads.head1 = this.heads.head0;
-            this.flexatarUnits.head0 = this.newHeadFlexatarUnit;
-            this.heads.head0 = this.newHeadBuffers;
-            this.setupHeads();
-            setTimeout(()=>{
-                this.setupHead1(this.headBuffersToDestroy);
-            }, 100);
-
+    
+    activateExpressionSlot0(head){
         
-
-
-    }
-    applyChanges(){
-        // this.commitRenderThreadCommands = true;
-    }
-    makeGlBuffersForNewHead(){
-        const flexatarUnit = this.newHeadFlexatarUnit;
-        const gl = this.gl;
-        const headMandalaBshpGLBuffers = []
-        for (let i = 0; i < 5; i++) {
-            const headMandalaBshp = flexatarUnit.mandalaGLBshpBuffers[i];
-            const headMandalaBshpGLBuffer = new VtxBuffer(gl,headMandalaBshp)
-            headMandalaBshpGLBuffers.push(headMandalaBshpGLBuffer)
-        }
-
-        const mandalaGLTexturesHead = []
-        for (const image of flexatarUnit.mandalaTextures) {
-            mandalaGLTexturesHead.push(new Texture(gl,image));
-        }
-        const mandalaTextureArrayHead = new TextureArray(mandalaGLTexturesHead,gl);
-
-        const mandalaBshpGlMouth = [];
-        for (let i = 0; i < 5; i++) {
-            const gpuBuff = new VtxBuffer(gl,flexatarUnit.mouthBlendshapes[i]);
-            mandalaBshpGlMouth.push(gpuBuff);
-        }
-        const mouthTextures = []
-        for (const image of flexatarUnit.mandalaMouthTextures){
-            mouthTextures.push(new Texture(this.gl,image));
-        }
-        const mandalaTextureArrayMouth = new TextureArray(mouthTextures,gl);
-       
-        this.newHeadBuffers = {
-            // blinkGpuBuff:new VtxBuffer(gl,flexatarUnit.blinkBlendshape),
-            headMandalaBshpGLBuffers:headMandalaBshpGLBuffers,
-            mandalaTextureArrayHead:mandalaTextureArrayHead,
-            mandalaBshpGlMouth:mandalaBshpGlMouth,
-            uvBufferMouth:new VtxBuffer(gl,flexatarUnit.mouthUV),
-            mandalaTextureArrayMouth:mandalaTextureArrayMouth,
-            idxGlBufferMouth:new IdxBuffer(this.gl,flexatarUnit.mouthIdx)
-        };
-    }
-    setupHeads(){
-
-        const head = this.heads.head0;
+        let currentFace = head
         this.headProgram.reset();
         this.headProgram.use();
-        this.headProgram.attribute("blinkBshp",this.blinkGpuBuffer,2);
+        
+        this.headProgram.attribute("blinkBshp",currentFace.blinkGpuBuffer,2);
         for (let i = 0; i < 5; i++) {
-            this.headProgram.attribute("bshp"+i.toString(),head.headMandalaBshpGLBuffers[i],4);
+            this.headProgram.attribute("bshp"+i.toString(),currentFace.headMandalaBshpGLBuffers[i],4);
         }
-        this.headProgram.textureArray(head.mandalaTextureArrayHead,"uSampler",0);
-
-        this.mouthProgram.reset();
-        this.mouthProgram.use()
-        this.mouthProgram.textureArray(head.mandalaTextureArrayMouth,"uSampler",0);
-        for (let i = 0; i < 5; i++) {
-            this.mouthProgram.attribute("bshp"+i.toString(),head.mandalaBshpGlMouth[i],2);
-        }
-        this.mouthProgram.attribute("coordinates",head.uvBufferMouth,2);
-        this.mouthProgram.attribute("index",head.idxGlBufferMouth,null);
+        this.headProgram.textureArray(currentFace.mandalaTextureArrayHead,"uSampler",0,0);
 
         this.headMixProgram.reset();
         this.headMixProgram.use();
 
-        this.headMixProgram.attribute("blinkBshp",this.blinkGpuBuffer,2);
+        this.headMixProgram.attribute("blinkBshp",currentFace.blinkGpuBuffer,2);
         for (let i = 0; i < 5; i++) {
-            this.headMixProgram.attribute("bshp"+i.toString(),head.headMandalaBshpGLBuffers[i],4);
+            this.headMixProgram.attribute("bshp"+i.toString(),currentFace.headMandalaBshpGLBuffers[i],4);
         }
-        this.headMixProgram.textureArray(head.mandalaTextureArrayHead,"uSampler",0);
-
-        // this.mouthMixProgram.reset();
-        // this.mouthMixProgram.use();
-        // this.mouthMixProgram.textureArray(head.mandalaTextureArrayMouth,"uSampler",0);
-        // for (let i = 0; i < 5; i++) {
-        //     this.mouthMixProgram.attribute("bshp"+i.toString(),head.mandalaBshpGlMouth[i],2);
-        // }
-        // this.mouthMixProgram.attribute("coordinates",head.uvBufferMouth,2);
-        // this.mouthMixProgram.attribute("index",head.idxGlBufferMouth,null);
-
+        this.headMixProgram.textureArray(currentFace.mandalaTextureArrayHead,"uSampler",0,0);
         
     }
+    activateExpressionSlot1(head){
+        
+        let currentFace = head
+        this.headMixProgram.resetSlot1();
+        this.headMixProgram.use();
+        for (let i = 0; i < 5; i++) {
+            this.headMixProgram.attribute("bshp"+i.toString()+"o",currentFace.headMandalaBshpGLBuffers[i],4);
+        }
+        this.headMixProgram.textureArray(currentFace.mandalaTextureArrayHead,"uSampler1",5,1);
+    }
+    activatMouth(program,head,slot){
+        program.reset();
+        program.use()
+        program.textureArray(head.mandalaTextureArrayMouth,"uSampler",0,slot);
+        for (let i = 0; i < 5; i++) {
+            program.attribute("bshp"+i.toString(),head.mandalaBshpGlMouth[i],2);
+        }
+        program.attribute("coordinates",head.uvBufferMouth,2);
+        program.attribute("index",head.idxGlBufferMouth,null);
+    }
+
+    setupHeads(){
+        const head = this.heads.head0;
+        this.activateExpressionSlot0(head,"exp-neu")
+        this.activatMouth(this.mouthProgram,head)
+        
+    }
+
     setupHead1(){
         this.headMixProgram.use();
         const head = this.heads.head1
@@ -2327,47 +2306,47 @@ class RenderEngine{
         this.#effectFn = effect.fn;
         // console.log("Effect rend" + effect.fn)
     }
-    setNoEffect(){
-        this.destroyMixTimer();
-        this.isTransition = false;
-        this.effectRendering = false;
-    }
-    setMixEffect(mixWeight){
-        this.destroyMixTimer();
-        if (this.headCounter>1){
-            this.isTransition = false;
-            this.effectID = 0;
+    // setNoEffect(){
+    //     this.destroyMixTimer();
+    //     this.isTransition = false;
+    //     this.effectRendering = false;
+    // }
+    // setMixEffect(mixWeight){
+    //     this.destroyMixTimer();
+    //     if (this.headCounter>1){
+    //         this.isTransition = false;
+    //         this.effectID = 0;
             
-            this.mixWeight = mixWeight;
-            this.effectRendering = true;
-        }
-    }
+    //         this.mixWeight = mixWeight;
+    //         this.effectRendering = true;
+    //     }
+    // }
     
   
-    setHybridEffect(){
-        // if (this.headCounter>1){
-            this.destroyMixTimer();
-            this.effectRendering = true;
-            this.effectID = 1;
-            this.mixWeight = 1.0;
-            const mixChange = 0.0025;
+    // setHybridEffect(){
+    //     // if (this.headCounter>1){
+    //         this.destroyMixTimer();
+    //         this.effectRendering = true;
+    //         this.effectID = 1;
+    //         this.mixWeight = 1.0;
+    //         const mixChange = 0.0025;
 
-            this.mixTimer = setInterval(() =>{
-                this.mixWeight -= mixChange
-                if (this.mixWeight<=0){
+    //         this.mixTimer = setInterval(() =>{
+    //             this.mixWeight -= mixChange
+    //             if (this.mixWeight<=0){
 
-                    this.mixWeight=1.0;
+    //                 this.mixWeight=1.0;
                 
-                }
-            }, 1000/30);
-        // }
-    }
+    //             }
+    //         }, 1000/30);
+    //     // }
+    // }
 
 
     
-    setNextHead(flxData){
-        this.nextHead = flxData;
-    }
+    // setNextHead(flxData){
+    //     this.nextHead = flxData;
+    // }
     
     destroyHead1(head){
         if (head){
@@ -2427,7 +2406,7 @@ class RenderEngine{
 
     }
     
-    renderMouth(shaderProgram,parSet0,keyVtx,headUnit,zRotMatMouth,alpha){
+    renderMouth(shaderProgram,head,parSet0,keyVtx,headUnit,zRotMatMouth,alpha){
         const hc = this.headCtrl
         const gl = this.gl
         const [topMPivot,botMPivot,lipSize] = this.calcMouthPivot(headUnit);
@@ -2449,48 +2428,120 @@ class RenderEngine{
         shaderProgram.uniformMatrix4fv("zRotMatrix",zRotMatMouth);
         shaderProgram.uniform1i("isTop",0);
 
-        gl.drawElements(gl.TRIANGLES, this.heads.head0.idxGlBufferMouth.length, gl.UNSIGNED_SHORT,0);
+        gl.drawElements(gl.TRIANGLES, head.idxGlBufferMouth.length, gl.UNSIGNED_SHORT,0);
        
         const parSet2MouthTop = new Float32Array([topMPivot[0],topMPivot[1],botMPivot[0],botMPivot[1]]);
         const parSet1MTop = new Float32Array([hc[4],this.ratio,keyVtx[1][0],keyVtx[0][1]]);
         shaderProgram.uniform4fv("parSet1",parSet1MTop);
         shaderProgram.uniform4fv("parSet2",parSet2MouthTop);
         shaderProgram.uniform1i("isTop",1);
-        gl.drawElements(gl.TRIANGLES, this.heads.head0.idxGlBufferMouth.length, gl.UNSIGNED_SHORT,0);
+        gl.drawElements(gl.TRIANGLES, head.idxGlBufferMouth.length, gl.UNSIGNED_SHORT,0);
  
     }
+    #faceContent0 = null
+    #faceContent1 = null
+    #faceContentExp = null
+    #mouthContent0 = null
+    #mouthContent1 = null
+    // #flx0FlxUnit = null
+    getFlexatarUnit(){
+        if (this.#faceContent0)
+            return this.#mouthContent0.flexatarUnit
+    }
     render(){
-
-        // if (this.commitRenderThreadCommands){
-        //     for (const func of this.reloadFuncs){
-        //         func();
-        //     }
-        //     this.reloadFuncs = [];
-        //     this.commitRenderThreadCommands = false;
-
-        // }
+        
+        
         
         const endTime = window.performance.now();
         const elapsedTime = (endTime - this.#startTime) / 1000;
-        if (this.heads.head0 && this.headCtrl != null && this.renderIsOn ){
-            
-            var effect = this.#effectFn(elapsedTime)
+        
+        if (!this.faceProvider0){
+            return
+        }
+        if (!this.mouthProvider0){
+            return
+        }
+        const faceContent0 = this.faceProvider0(elapsedTime)
+        const mouthContent0 = this.mouthProvider0(elapsedTime)
+       
+        if (!faceContent0){
+            return
+        }
+        if (!mouthContent0){
+            return
+        }
 
-            if (this.heads.head1 == null){
+        if (this.#faceContent0 !== faceContent0){
+            this.#faceContent0 = faceContent0
+            
+
+            this.activateExpressionSlot0(faceContent0)
+        }
+        if (this.#mouthContent0 !== mouthContent0){
+            this.#mouthContent0 = mouthContent0
+            this.activatMouth(this.mouthProgram,mouthContent0,0)
+        }
+        var faceContent1
+        var mouthContent1
+        if (this.faceProvider1 && this.mouthProvider1){
+            faceContent1 = this.faceProvider1(elapsedTime)
+            mouthContent1 = this.mouthProvider1(elapsedTime)
+            
+        
+            if (this.#faceContent1 !== faceContent1){
+                this.#faceContent1 = faceContent1
+                this.activateExpressionSlot1(faceContent1)
+            }
+            if (this.#mouthContent1 !== mouthContent1){
+                this.#mouthContent1 = mouthContent1
+                this.activatMouth(this.mouthMixProgram,mouthContent1,1)
+            }
+            // console.log("faceContent1",faceContent1)
+        }else{
+            this.#faceContent1 = null
+            this.#mouthContent1 = null
+            if (this.faceProviderExp){
+                const faceContentExp = this.faceProviderExp(elapsedTime)
+                
+                if (this.#faceContentExp !== faceContentExp){
+                    this.#faceContentExp = faceContentExp
+                    this.activateExpressionSlot1(faceContentExp)
+                }
+                faceContent1 = this.#faceContentExp
+                mouthContent1 = this.#mouthContent0
+                
+            }
+
+        }
+        
+        if (this.headCtrl != null && this.renderIsOn ){
+            const currentFaceUnit = this.#faceContent0
+            var effect = this.#effectFn(elapsedTime)
+            // effect.parameter = 1 - effect.parameter
+            if (this.#mouthContent0 === mouthContent1){
+                // console.log("faceContent1",mouthContent1)
+                if (this.expFn){
+                    effect = this.expFn(elapsedTime)
+                }else{
+                    effect.mode = 0
+                }
+                // console.log(faceContentExp)
+            }
+            if (!mouthContent1){
                 effect.mode = 0
             }
             
-
+            effect.parameter = 1 - effect.parameter
             const hc = this.headCtrl;
             const gl = this.gl;
             const canvas = this.canvas;
-            // gl.colorMask(false, false, false, true);
+
             gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
             gl.clear(gl.COLOR_BUFFER_BIT);
             
             gl.viewport(this.marg,0,this.vpWidth,canvas.height);
-
+            
             // this.speechState[2] = -1
             const parSet0 = new Float32Array([hc[0],hc[1],hc[2],hc[3]]);
             const parSet1 = new Float32Array([hc[4],this.ratio,this.position[0],this.position[1]]);
@@ -2503,8 +2554,8 @@ class RenderEngine{
             var keyVtx;
             if (effect.mode !=0){
                 
-                const keyVtx0 = this.calcKeyVtx(zRotMat,extraRotMatrix,this.flexatarUnits.head0.keyVtx);
-                const keyVtx1 = this.calcKeyVtx(zRotMat,extraRotMatrix,this.flexatarUnits.head1.keyVtx);
+                const keyVtx0 = this.calcKeyVtx(zRotMat,extraRotMatrix,this.#faceContent0.keyVtx);
+                const keyVtx1 = this.calcKeyVtx(zRotMat,extraRotMatrix,faceContent1.keyVtx);
                 if (effect.mode == 2){
                     this.mouthMixWeight =  this.calcWeightByKeyUv(this.flexatarCustom.keyUV,effect.parameter);
 
@@ -2521,33 +2572,16 @@ class RenderEngine{
                     keyVtx.push(v);
                 }
             }else{
-                keyVtx = this.calcKeyVtx(zRotMat,extraRotMatrix,this.flexatarUnits.head0.keyVtx);
+                keyVtx = this.calcKeyVtx(zRotMat,extraRotMatrix,currentFaceUnit.keyVtx);
             }
             
-            
-            // const [topMPivot,botMPivot,lipSize] = this.calcMouthPivot();
-            // const mouthScale = -(keyVtx[5][0]-keyVtx[4][0])/lipSize;
 
-
-//------------MOUTH RENDER BLOCK------------
-            
-           
-          
-            // this.mandalaTextureArrayMouth.bind(0);
-
-            // const parSet1M = new Float32Array([hc[4],this.ratio,keyVtx[3][0],keyVtx[2][1]]);
-
-
-            // const parSet2Mouth = new Float32Array([topMPivot[0],botMPivot[1],botMPivot[0],botMPivot[1]]);
-            // const parSet3Mouth = new Float32Array([this.flexatarUnits.head0.mouthRatio,mouthScale,this.flexatarUnits.head0.teethGap[0],this.flexatarUnits.head0.teethGap[1]]);
-
-            
 
 //            ----HEAD RENDER BLOCK-----
             if (effect.mode != 0){
-
-                this.renderMouth(this.mouthProgram,parSet0,keyVtx,this.flexatarUnits.head0,zRotMatMouth,1.0);
-                this.renderMouth(this.mouthMixProgram,parSet0,keyVtx,this.flexatarUnits.head1,zRotMatMouth,this.mouthMixWeight);
+                // console.log(this.#faceContent0.flexatarUnit)
+                this.renderMouth(this.mouthProgram,this.#mouthContent0,parSet0,keyVtx,this.#mouthContent0.flexatarUnit,zRotMatMouth,1.0);
+                this.renderMouth(this.mouthMixProgram,mouthContent1,parSet0,keyVtx,mouthContent1.flexatarUnit,zRotMatMouth,this.mouthMixWeight);
                 
                 this.headMixProgram.use();
                 this.headMixProgram.bind();
@@ -2569,7 +2603,7 @@ class RenderEngine{
             }else{
              
 
-                this.renderMouth(this.mouthProgram,parSet0,keyVtx,this.flexatarUnits.head0,zRotMatMouth,1);
+                this.renderMouth(this.mouthProgram,this.#mouthContent0,parSet0,keyVtx,this.#mouthContent0.flexatarUnit,zRotMatMouth,1);
 
                 this.headProgram.use();
                 this.headProgram.bind();
@@ -2605,10 +2639,11 @@ class RenderEngine{
             
 
         }
-
+        
 
     }
     start(){
+        
         this.#startTime = window.performance.now();
         this.renderIsOn = true;
         const self = this;
@@ -2625,18 +2660,7 @@ class RenderEngine{
         this.renderIsOn = false;
     }
     calcMouthPivot(head){
-        // function calc(vecList,weightList,sizeList){
-        //     var topPivotf = [0,0];
-        //     var botPivotf = [0,0];
-        //     var lipSizef = 0
-        //     for (let i = 0; i < 5; i++) {
-        //         topPivotf = v2.add(v2.mulScalar(vecList[i][0],weightList[i]),topPivotf);
-        //         botPivotf = v2.add(v2.mulScalar(vecList[i][1],weightList[i]),botPivotf);
-        //         lipSizef += weightList[i] * sizeList[i];
-        //     }
-        //     return [topPivotf,botPivotf,lipSizef];
-        // }
-
+        
         const la = head.lipAnchors;
         const hc = this.headCtrl;
         var topPivot = [0,0];
@@ -2751,6 +2775,7 @@ class RenderEngine{
 
 }
 
+// var flexatarStaicUrl = "/file/raw/static.p"
 var flexatarStaicUrl = "https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flx_static.p"
 
 const speechNN = new SpeechNN();
@@ -2884,40 +2909,182 @@ class Flexatar{
                 reject()
             });
     }
-
-    connectTo(flexatarAnimator){
-        const gl = flexatarAnimator.gl;
-        const gpuBuffers = new Promise((resolve,reject)=>{
-            this.#flexatarReady.then(flexatarUnit=>{
-                this.#makeGlBuffers(gl,flexatarUnit,resolve)
-            })
-        });
-        this.#bufferStorage[flexatarAnimator.id] = gpuBuffers
-        if (flexatarAnimator.currentEmptySlot!=2){
-            this.setToSlot(flexatarAnimator.currentEmptySlot,flexatarAnimator)
-        }
-    }
-    setToSlot(slotIdx,flexatarAnimator){
-        flexatarAnimator.getRenderer().then(renderer =>{
-            renderer.setToSlot(slotIdx,this.#bufferStorage[flexatarAnimator.id])
-            flexatarAnimator.currentEmptySlot += 1
-        })
-    }
-    #makeGlBuffers(gl,flexatarUnit,resolve){
-        
-        const headMandalaBshpGLBuffers = []
-        for (let i = 0; i < 5; i++) {
-            const headMandalaBshp = flexatarUnit.mandalaGLBshpBuffers[i];
-            const headMandalaBshpGLBuffer = new VtxBuffer(gl,headMandalaBshp)
-            headMandalaBshpGLBuffers.push(headMandalaBshpGLBuffer)
-        }
-
-        const mandalaGLTexturesHead = []
-        for (const image of flexatarUnit.mandalaTextures) {
+    // #flexatarUnit = null
+    #connections = {}
+    connectTo(flexatarAnimator,slotId){
+        if (!(flexatarAnimator.id in this.#connections)){
+            this.#connections[flexatarAnimator.id] = true
             
-            mandalaGLTexturesHead.push(new Texture(gl,image));
+            this.#flexatarReady.then(flexatarUnit=>{
+                
+                this.#makeGlBuffers(flexatarAnimator.gl,flexatarUnit,flexatarAnimator.id)
+            })
+       
         }
-        const mandalaTextureArrayHead = new TextureArray(mandalaGLTexturesHead,gl);
+        let didSetToSlot = null
+        const connectedPromise = new Promise(resolve => {
+            didSetToSlot = resolve
+        })
+        if (slotId>=0){
+            var slot = flexatarAnimator.currentEmptySlot
+            if (slotId !== undefined && slotId !== null){
+                if (slotId == 0){
+                    flexatarAnimator.currentEmptySlot = 0
+                }else{
+                    flexatarAnimator.currentEmptySlot = -1
+                }
+                slot = slotId
+            }
+            
+            if (flexatarAnimator.currentEmptySlot!=2){
+                this.setToSlot(slot,flexatarAnimator,null,didSetToSlot)
+                flexatarAnimator.currentEmptySlot += 1
+                // this.setToSlot(flexatarAnimator.currentEmptySlot,flexatarAnimator,"exp-dsg")
+            }
+        }
+       return connectedPromise
+    }
+    static #setToSlotFuns = []
+
+    setToSlot(slotIdx,flexatarAnimator,expressionKey,didSetToSlot){
+        
+        const setToSlotFn = ready => {
+            this.#flexatarReady.then(flexatarUnit=>{
+                const keys = Object.keys(flexatarUnit.facePackages);
+                keys.shift()
+                let expKey = "exp-neu"
+                if (expressionKey){
+                    expKey = expressionKey
+                }
+                flexatarAnimator.getRenderer().then(renderer =>{
+
+                    const faceProvider = (time) => {
+                        const fc = this.faceContents[flexatarAnimator.id]
+                        if (fc)
+                            return fc[expKey]
+                    }
+                    const mouthProvider = (time) => {
+                        
+                        return this.mouthContent[flexatarAnimator.id]
+                    }
+                    if (slotIdx==0){
+                        console.log("provider0",slotIdx)
+                        renderer.faceProvider0 = faceProvider
+                        renderer.mouthProvider0 = mouthProvider
+                        // keys.length = 0
+                        if (keys.length>0){
+                            let randomExpKey = keys[getRandomInt(0, keys.length-1)]
+                            let startTime
+                            let elapsedTime 
+                            let emoDuration = getRandomInt(6, 10)
+                            renderer.faceProviderExp = (time) => {
+                                if (!startTime) 
+                                    if (!startTime) startTime = time
+                                elapsedTime = time - startTime
+                                if (elapsedTime > emoDuration){
+                                    startTime = time
+                                    elapsedTime = 0
+                                    
+                                    randomExpKey = keys[getRandomInt(0, keys.length-1)]
+                                }
+                                const fc = this.faceContents[flexatarAnimator.id]
+                                if (fc)
+                                    return fc[randomExpKey]
+                            }
+                            
+                            const fade_in_dur = emoDuration/getRandomInt(6, 10)
+                            const flat_dur = emoDuration/4
+                            const fade_out_dur = emoDuration/4
+
+                            renderer.expFn = (time) => {
+                                if (elapsedTime<fade_in_dur){
+                                    const weight = Math.pow (1 - (Math.cos(elapsedTime/fade_in_dur * Math.PI)+1)/2,3)
+                                    return {mode:1,parameter:weight}
+                                }
+                                const flatTime = elapsedTime - fade_in_dur
+                                if (flatTime<flat_dur){
+                                    
+                                    return {mode:1,parameter:1}
+                                }
+                                const fadeOutTime = flatTime - flat_dur
+                                if (fadeOutTime<fade_out_dur){
+                                    const weight = Math.pow (1 - (Math.cos(fadeOutTime/fade_out_dur * Math.PI)+1)/2,3)
+                                    return {mode:1,parameter:1 - weight}
+                                }
+                                return {mode:1,parameter:0}
+                            }
+                            
+                        }
+                        
+
+                    }else{
+                        console.log("provider1",slotIdx)
+                        renderer.faceProvider1 = faceProvider
+                        renderer.mouthProvider1 = mouthProvider
+                    }
+                    ready()
+                   
+                    if (didSetToSlot){
+                        
+                        didSetToSlot()
+                    }
+                })
+                
+            })
+        }
+        
+        Flexatar.#setToSlotFuns.push(setToSlotFn)
+        if (!Flexatar.#isRuningSetToSlot){
+            Flexatar.#isRuningSetToSlot = true
+            this.#runSetToSlot()
+        }
+    }
+    static #isRuningSetToSlot = false
+    #runSetToSlot(){
+
+        Flexatar.#isRuningSetToSlot = true
+        if (Flexatar.#setToSlotFuns.length != 0){
+            Flexatar.#setToSlotFuns[0](()=>{
+                Flexatar.#setToSlotFuns.shift()
+                this.#runSetToSlot()
+            })
+        }else{
+            Flexatar.#isRuningSetToSlot = false
+        }
+
+    }
+    faceContents = {}
+    mouthContent = {}
+    #makeGlBuffers(gl,flexatarUnit,animatorId){
+        console.log("loadBuffers")
+        if (!(animatorId in this.faceContents)){
+            this.faceContents[animatorId] = {}
+           
+        }
+        for (const [key, value] of Object.entries(flexatarUnit.facePackages)) {
+            const headMandalaBshpGLBuffers = []
+            for (let i = 0; i < 5; i++) {
+                const headMandalaBshp = value.mandalaGLBshpBuffers[i];
+                
+                const headMandalaBshpGLBuffer = new VtxBuffer(gl,headMandalaBshp)
+                headMandalaBshpGLBuffers.push(headMandalaBshpGLBuffer)
+            }
+    
+            const mandalaGLTexturesHead = []
+            for (const image of value.mandalaTextures) {
+             
+                mandalaGLTexturesHead.push(new Texture(gl,image));
+            }
+            const mandalaTextureArrayHead = new TextureArray(mandalaGLTexturesHead,gl);
+            
+            
+            this.faceContents[animatorId][key] = {
+                blinkGpuBuffer:new VtxBuffer(gl,value.blinkBlendshape),
+                headMandalaBshpGLBuffers:headMandalaBshpGLBuffers,
+                mandalaTextureArrayHead:mandalaTextureArrayHead,
+                keyVtx:value.keyVtx,
+            }
+        }
 
         const mandalaBshpGlMouth = [];
         for (let i = 0; i < 5; i++) {
@@ -2929,21 +3096,32 @@ class Flexatar{
             mouthTextures.push(new Texture(gl,image));
         }
         const mandalaTextureArrayMouth = new TextureArray(mouthTextures,gl);
-       
-        const gpuBuffers = {
-            // blinkGpuBuff:new VtxBuffer(gl,flexatarUnit.blinkBlendshape),
-            headMandalaBshpGLBuffers:headMandalaBshpGLBuffers,
-            mandalaTextureArrayHead:mandalaTextureArrayHead,
+        this.mouthContent[animatorId] = {
             mandalaBshpGlMouth:mandalaBshpGlMouth,
             uvBufferMouth:new VtxBuffer(gl,flexatarUnit.mouthUV),
             mandalaTextureArrayMouth:mandalaTextureArrayMouth,
-            idxGlBufferMouth:new IdxBuffer(gl,flexatarUnit.mouthIdx)
-        };
-        console.log(gpuBuffers)
-        resolve([flexatarUnit,gpuBuffers]);
+            idxGlBufferMouth:new IdxBuffer(gl,flexatarUnit.mouthIdx),
+            flexatarUnit:flexatarUnit
+        }
     }
-    
-
+    destroyGlBuffers(flexatartAnimator){
+        const animatorId = flexatartAnimator.id
+        for (const [key, value] of Object.entries(this.faceContents[animatorId])) {
+            value.blinkGpuBuffer.destroy()
+            value.mandalaTextureArrayHead.destroy()
+            for (const buffer of value.headMandalaBshpGLBuffers){
+                buffer.destroy()
+            }
+        }
+        const mc = this.mouthContent[animatorId]
+        mc.mandalaTextureArrayMouth.destroy()
+        mc.idxGlBufferMouth.destroy()
+        mc.uvBufferMouth.destroy()
+        for(const buffer of mc.mandalaBshpGlMouth){
+            buffer.destroy()
+        }
+        delete this.#connections[animatorId]
+    }
 }
 
 class FlexatarAnimator {
@@ -2953,15 +3131,27 @@ class FlexatarAnimator {
     #renderer = null
     #rendererInstance = null
    
-    constructor() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 480;
-        canvas.height = 640;
-        canvas.id = "flxCanvas";
-        canvas.style.display = "none";
-        this.#canvas = canvas
+    constructor(canvas,width,height) {
+        if (width)
+            this.width = width 
+        else
+            this.width = 480 
+        if (height)
+            this.height = height 
+        else
+            this.height = 640 
+        if (canvas) {
+            this.#canvas = canvas
+        }else{
+            const canvas = document.createElement('canvas');
+            canvas.width = this.width
+            canvas.height = this.height;
+            canvas.id = "flxCanvas";
+            canvas.style.display = "none";
+            this.#canvas = canvas
+        }
         this.id = crypto.randomUUID();
-        this.gl = canvas.getContext('webgl');
+        this.gl = this.#canvas.getContext('webgl');
 
             this.#renderer = new Promise((resolve,reject) => {
                 Flexatar.initiateStaticPackageDownload().then(staticPackage=>{
@@ -3007,35 +3197,25 @@ class FlexatarAnimator {
                 resolve()
             });
         })
-        // this.#videoStream.addTrack(audioTrack);
         
     }
     
     addAuidoTrack(url){
-        // Step 1: Create an AudioContext
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
 
-        // Step 2: Create an audio element
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
         const audioElement = new Audio(url);
 
-        // Ensure the audio element can be played without user interaction
         audioElement.crossOrigin = 'anonymous';
         audioElement.autoplay = true;
 
-        // Step 3: Create a MediaElementAudioSourceNode from the audio element
         const sourceNode = audioContext.createMediaElementSource(audioElement);
 
-        // Step 4: Create a MediaStreamAudioDestinationNode
         const destination = audioContext.createMediaStreamDestination();
 
-        // Connect the source node to the destination node
         sourceNode.connect(destination);
 
-        // Step 5: Get the MediaStream from the destination node
         const mediaStream = destination.stream;
-
-        
-        // let audioTrack = mediaStream.getAudioTracks()[0];
 
         audioElement.oncanplaythrough = () => {
             console.log(mediaStream);
@@ -3073,20 +3253,32 @@ class FlexatarAnimator {
     setEffect(effect){
         this.#renderer.then(renderer => {
             renderer.setEffect(effect)
-            // console.log("Effect flxaninator"+effect)
         })
     }
-    // setFlexatar1(flexatarConnection){
-    //     this.#renderer.then(renderer => {
-    //         renderer.setFlexatar1(flexatarConnection)
-    //     })
-    // }
+
+    freeSlot(slotIdx){
+        return this.#renderer.then(renderer => {
+            if (slotIdx == 0){
+                renderer.faceProvider0 = null
+                renderer.mouthProvider0 = null
+            }else{
+                renderer.faceProvider1 = null
+                renderer.mouthProvider1 = null
+                console.log("free slot 1")
+            }
+        })
+    }
     #timerId = null
+    isActive = false
     start(){
+        
         this.#renderer.then(renderer => {
+            
+            if (this.isActive) return
+            this.isActive = true
             this.#rendererInstance = renderer
             renderer.start()
-            // renderer.setHybridEffect()
+            
             var animFrameCounter = 0;
             function animationTimer(){
                 animFrameCounter += 1;
@@ -3095,12 +3287,12 @@ class FlexatarAnimator {
 
                 const rx = (animationFrame[3]-0.5)*1.0 + 0.5;
                 const ry = (animationFrame[4]-0.45)*1.0 + 0.45;
-                const flexatar = renderer.flexatarUnits.head0
+                const flexatar = renderer.getFlexatarUnit()
                 if (flexatar){
                     const interU = flexatar.makeInterUnit([rx,ry]);
                     renderer.headCtrl = interU[0];
                     renderer.extraRot = interU[1];
-                    renderer.position = [animationFrame[0],animationFrame[1],animationFrame[2],animationFrame[5],animationFrame[6],animationFrame[8]];
+                    renderer.position = [animationFrame[0],animationFrame[1]-0.3,animationFrame[2]-0.1,animationFrame[5],animationFrame[6],animationFrame[8]];
                 }
             }
 
@@ -3109,13 +3301,16 @@ class FlexatarAnimator {
         })
     }
     pause(){
+        this.isActive = false
         this.#renderer.then(renderer => {
             renderer.pause()
-            clearInterval(this.#timerId)
-            // console.log("Effect flxaninator"+effect)
+            if (this.#timerId){
+                clearInterval(this.#timerId)
+                this.#timerId = null
+            }
         })
     }
-    // starts a+v streaming from the input audio
+
     getMediaStream() {
         this.#videoStream = this.#canvas.captureStream(30)
         return this.#videoStream;
@@ -3149,8 +3344,6 @@ class FlexatarAnimator {
             if (this.onRecordStop != null ){
                 this.onRecordStop(url,file)
             }
-           
-
         };
     }
     
@@ -3159,8 +3352,6 @@ class FlexatarAnimator {
 
     }
 
-
-    // free gpu resources
     destroy() {
         this.#renderer.destroy()
     }
@@ -3173,10 +3364,7 @@ const ModeHybrid = 2
 class Effect {
 
     constructor(fn) {
-        this.fn = fn // fn(float seconds) int Mode, float Parameter
-        // function fn(time<in seconds>){
-        //     return Mode, Parameter
-        //} 
+        this.fn = fn 
     }
 
     static no() {
@@ -3184,9 +3372,7 @@ class Effect {
         return new Effect(function calc(time) {
             return {mode:0,parameter:0}
           });
-        // return (time => {
-        //     return {mode:0,parameter:0}
-        // })
+
     }
 
     static mix(mixWeight) {
@@ -3200,7 +3386,7 @@ class Effect {
         if (duration){
             dur = duration
         }
-        dur = 6
+        dur = 4
         return new Effect(function calc(time) {
             const periods = time/dur
             const periodCounter = Math.floor(periods)
@@ -3227,5 +3413,125 @@ class Effect {
             const weight = periods - periodCounter
             return {mode:2,parameter:weight}
          });
+    }
+}
+
+class FlexatarSDK {
+    static route = "/"
+    constructor(token,canvas,width,height) {
+        this.token = token
+        this.client = new FlexatarClient(this.token)
+        if (width)
+            this.width = width 
+        else
+            this.width = 480 
+        if (height)
+            this.height = height 
+        else
+            this.height = 640 
+
+        this.flexatarAnimator = new FlexatarAnimator(canvas,this.width,this.height);
+    }
+
+    // returns the list of flexatars
+    availableFlexatars() {
+
+    }
+
+    // returns preview image and name 
+    preview(ftar) {
+        
+
+    }
+
+    // accepts a list of either single or couple flexatars
+    // also downloads flexatars from the cloud
+    // continuous rendering is ensured
+    // models are updated when downloading in finished
+    #flexatar1 = null
+    #flexatar2 = null
+    static SAME = "same"
+    useFlexatars() {
+        if (arguments.length >0){
+            if (arguments[0]){
+                
+                if (arguments[0] !== FlexatarSDK.SAME){
+                    
+                    const flexatar1 = this.client.getFlexatar(arguments[0])
+                    flexatar1.connectTo(this.flexatarAnimator,0).then(()=>{
+                        if (this.#flexatar1){
+                            console.log("destroy 1")
+                            this.#flexatar1.destroyGlBuffers(this.flexatarAnimator)
+                           
+                        }
+                        
+                        this.#flexatar1 = flexatar1
+                        
+                    })
+                    
+                    this.flexatarAnimator.start()
+                }
+                
+            }else{
+                this.flexatarAnimator.freeSlot(0).then(()=>{
+                    setTimeout(()=>{
+                        if (this.#flexatar1){
+                            console.log("destroy 1")
+                            this.#flexatar1.destroyGlBuffers(this.flexatarAnimator)
+                            this.#flexatar1 == null
+                        }
+                    },100)
+                    
+                })
+                
+            }
+        }
+
+        if (arguments.length == 2){
+            if (arguments[1]){
+                if (arguments[1] !== FlexatarSDK.SAME){
+                    const flexatar2 = this.client.getFlexatar(arguments[1])
+                    flexatar2.connectTo(this.flexatarAnimator,1).then(()=>{
+                        if (this.#flexatar2){
+                            console.log("destroy 2")
+                            this.#flexatar2.destroyGlBuffers(this.flexatarAnimator)
+                        }
+                        this.#flexatar2 = flexatar2
+                    })
+                }
+            }else{
+                this.flexatarAnimator.freeSlot(1).then(()=>{
+                    setTimeout(()=>{
+                        if (this.#flexatar2){
+                            console.log("destroy 2")
+                            this.#flexatar2.destroyGlBuffers(this.flexatarAnimator)
+                            this.#flexatar2 = null
+                        }
+                    },100)
+                    
+                })
+            }
+
+        }
+        
+    }
+
+    useEffect(effect) {
+        this.flexatarAnimator.setEffect(effect)
+    }
+
+    // starts a+v streaming from the input audio
+    audioInputByUrl(audioIn) {
+        this.flexatarAnimator.addAuidoTrack(audioIn)
+    }
+    audioInputByMediaStrem(audioIn) {
+        this.flexatarAnimator.addMediaStream(audioIn)
+    }
+    get mediaStream(){
+        return this.flexatarAnimator.getMediaStream()
+    }
+    // free gpu resources
+    destroy() {
+        
     }
 }

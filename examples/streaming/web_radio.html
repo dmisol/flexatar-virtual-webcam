@@ -4,7 +4,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@alexanderolsen/libsamplerate-js"></script>
     <script src="https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam@latest/jslib/flx_render.js"></script>
-    <!-- <script src="js/flx_render.js"></script> -->
+    <!-- <script src="/js/flx_render.js"></script> -->
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -39,28 +39,22 @@
            
          });
 
-        let jsonToBackend = {token:"sometoken",ftar:"dexter.p"}
-        // let jsonToBackend = {token:"sometoken",ftar:"ftar_endpoint"}
-        let client = new FlexatarClient(jsonToBackend.token)
-        const flexatar1 = client.getFlexatar(jsonToBackend.ftar)
-
-        const flexatarAnimator = new FlexatarAnimator();
-        flexatar1.connectTo(flexatarAnimator);
-      
+        
+        FlexatarClient.route = "/"
+        const flexatarSDK = new FlexatarSDK("token")
+        flexatarSDK.useFlexatars("aniston.p","bushemi.p")
         document.getElementById('processButton').addEventListener('click', function() {
             document.getElementById("2hide").style.display = 'none'
             const radioUrl = document.getElementById('url2play').value
             
-            flexatarAnimator.addAuidoTrack(radioUrl);
-            flexatarAnimator.setEffect(myEffect)
-            flexatarAnimator.start()
+            flexatarSDK.audioInputByUrl(radioUrl);
+            flexatarSDK.useEffect(myEffect)
 
-            const mediaStream = flexatarAnimator.getMediaStream();
             var videoElement = document.getElementById('videoElement');
             videoElement.autoplay = true
             videoElement.controls = true
             videoElement.setAttribute('playsinline', '')
-            videoElement.srcObject = mediaStream;
+            videoElement.srcObject = flexatarSDK.mediaStream
      
         });
     </script>
