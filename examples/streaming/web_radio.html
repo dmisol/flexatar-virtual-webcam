@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   
-    <script src="https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam@latest/jslib/flx_render.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"> </script>
+    <script src="https://flexatar-generic-shared-files.s3.amazonaws.com/js/flx_render.js"></script> 
     <!-- <script src="/js/flx_render.js"></script> -->
     
     <meta charset="UTF-8">
@@ -45,7 +45,11 @@
     <script>
         
         function IsSafari() {
-            return navigator.userAgent.toLowerCase().indexOf('safari/') > -1
+            const isSafari = navigator.vendor && navigator.vendor.indexOf('Apple') > -1 &&
+               navigator.userAgent &&
+               navigator.userAgent.indexOf('CriOS') == -1 &&
+               navigator.userAgent.indexOf('FxiOS') == -1;
+            return isSafari
         }   
         
         let safariWebRadio
@@ -92,9 +96,11 @@
         
         function startFlexatar(){
             if (flexatarSDK) return
-            FlexatarClient.route = "/"
+            // FlexatarClient.route = "/ftar"
+            // FlexatarClient.route = "https://86s46xzcnk.execute-api.us-east-1.amazonaws.com/default/ftar"
+           
             flexatarSDK = new FlexatarSDK("token")
-            flexatarSDK.useFlexatars("aniston.p")
+            flexatarSDK.useFlexatars("http://t.me/flexatar_bot?ftar=private/1.00/tg/348542078/cef6c073-876d-413e-87ae-b0f95da06189&active=true")
             flexatarSDK.useEffect(Effect.morph())
 
             var videoElement = document.getElementById('videoElement');
@@ -115,7 +121,7 @@
             }
 
             effectCheckBox.onclick = () => {
-                flexatarSDK.useFlexatars(FlexatarSDK.SAME,effectCheckBox.checked ? "bushemi.p" : null)
+                flexatarSDK.useFlexatars(FlexatarSDK.SAME,effectCheckBox.checked ? "http://t.me/flexatar_bot?ftar=private/1.00/tg/348542078/leo&active=true" : null)
             }
 
             let currentMode = 1

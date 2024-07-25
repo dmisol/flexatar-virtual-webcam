@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"> </script>
+    <!-- <script src="https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam@latest/jslib/flx_render.min.js"></script> -->
+    <script src="/js/flx_render.js"></script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flexatar Web Radior</title>
+</head>
+<body>
+    <h1>Flexatar Web Radio</h1>
+    <div id="2hide">
+        <input type="text" id="url2play" value="https://radio.talkradio.co.uk/stream"/>
+        <button id="processButton">Play Radio</button>
+        
+    </div>
+    <div id="video-container"></div>
+    <!-- <video id="videoElement" width="240" height="320" autoplay></video> -->
+
+    
+ 
+    <script>
+        let isPlaying = false
+        function IsSafari() {
+            return navigator.userAgent.toLowerCase().indexOf('safari/') > -1
+        }   
+        
+        let safariWebRadio
+        // let flexatarSDK
+        
+       
+        const startButton = document.getElementById('processButton')
+        const radio1Button = document.getElementById('radio1')
+        const urlInput = document.getElementById('url2play')
+
+        const container = document.getElementById('video-container')
+        
+        let flxViews
+        let flexatarAnimators = []
+        function startFlexatar(){
+            if (flxViews) return
+            flxViews = []
+            for (let i = 0; i < 4; i++){
+                FlexatarClient.route = "/"
+                const flexatarSDK = new FlexatarSDK("token")
+                flexatarSDK.useFlexatars("aniston.p")
+                flexatarSDK.useEffect(Effect.morph())
+                flxViews.push(flexatarSDK)
+                
+                var videoElement = document.createElement('video');
+                videoElement.height = 320;
+                videoElement.width = 240;
+                videoElement.autoplay = true
+                videoElement.controls = true
+                videoElement.setAttribute('playsinline', '')
+                videoElement.srcObject = flexatarSDK.mediaStream
+                container.appendChild(videoElement);
+            }
+            
+        }
+        
+        startButton.onclick  = () => {
+            
+            if (isPlaying){
+                isPlaying = false
+                startButton.textContent = "Play Radio"
+                if (safariWebRadio){
+                    safariWebRadio.stop()
+                    safariWebRadio = null
+                    return
+                }else{
+                    for (const flexatarSDK of flxViews){
+                        flexatarSDK.removeAudioTrack()
+                    }
+                    return
+                }
+                
+            }else{
+                startButton.textContent = "Stop Radio"
+                isPlaying = true
+            }
+           
+            startFlexatar()
+            
+            if (IsSafari()){
+                safariWebRadio = new SafariWebRadio(urlInput.value,flxViews[0].audioContext)
+                for (const flexatarSDK of flxViews){
+                    flexatarSDK.audioInputByMediaStrem(safariWebRadio.mediaStream)
+                }
+            }else{
+                for (const flexatarSDK of flxViews){
+                    flexatarSDK.audioInputByUrl(urlInput.value)
+                }
+            }
+        }
+    </script>
+</body>
+</html>
