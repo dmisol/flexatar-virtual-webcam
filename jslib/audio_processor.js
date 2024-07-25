@@ -1,3 +1,4 @@
+
 function concatenateFloat32Arrays(arrays) {
     // Calculate total length
     let totalLength = 0;
@@ -30,8 +31,16 @@ class MyAudioProcessor extends AudioWorkletProcessor {
         this.isActive = event.data;
 //        console.log("this.isActive");
    }
-
+   const { create, ConverterType } = globalThis.LibSampleRate;
+   const nChannels = 1
+   const outputSampleRate = 16000;
+   create(nChannels, sampleRate, outputSampleRate, {
+    converterType: ConverterType.SRC_SINC_FASTEST, // or some other quality
+    }).then((src) => {
+      this.resampler = src;
+    });
     this.collector = []
+    
   }
 
   process(inputList, outputList, parameters) {
@@ -40,27 +49,32 @@ class MyAudioProcessor extends AudioWorkletProcessor {
     const inputChannel0 = input[0];
     var port = this.port;
 
-    if (this.isActive){
+
+      const self = this
       this.addBuffer(inputChannel0,function (buffer){
+        if (self.resampler){
+          const resampled = self.resampler.simple(buffer)
+          port.postMessage(resampled);
+        }
+        // port.postMessage(buffer);
+      },function (){port.postMessage("");});
 
-
-        port.postMessage(buffer);
-      });
-    }
 
     return true;
   }
-  addBuffer(buffer,onBufferReady){
+  addBuffer(buffer,onBufferReady,onFail){
     if (buffer){
       this.collector.push(new Float32Array(buffer));
       if ((this.collector.length - 1) * buffer.length +  this.collector[0].length >this.windowSize) {
           const audioBuffer = concatenateFloat32Arrays(this.collector);
-
+          // const message = {audioBuffer:,sampleRate:sampleRate}
           onBufferReady(audioBuffer.subarray(0,this.windowSize));
           this.collector = [];
           const tail = audioBuffer.subarray(this.windowSize,audioBuffer.length);
           this.collector.push(tail);
       }
+    }else{
+      onFail()
     }
   }
 }

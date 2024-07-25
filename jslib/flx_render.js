@@ -1,141 +1,8 @@
+// const nnWorkerUrl = "/js/service_worker.js"
+// const audioProcessorUrl = "/js/audio_processor.js"
+const nnWorkerUrl = "https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam@latest/jslib/service_worker.js"
+const audioProcessorUrl = "https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam@latest/jslib//audio_processor.js"
 
-class SpeechNN{
-    constructor() {
-        this.wav2melModel = null;
-        this.mel2phonModel = null;
-        this.phon2avecModel = null;
-        this.isReady = false;
-        this.readyCallback = null;
-        this.loadNetworks();
-    }
-    async loadNetworks(){
-        
-        this.wav2melModel = await tf.loadLayersModel('https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/wav2mel/model.json');
-//        this.wav2melModel = await tf.loadLayersModel('/file/wav2mel/model.json');
-        this.mel2phonModel = await tf.loadLayersModel('https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/mel2phon/model.json');
-//        this.mel2phonModel = await tf.loadLayersModel('/file/mel2phon/model.json');
-        this.phon2avecModel = await tf.loadLayersModel('https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/phon2avec/model.json');
-//        this.phon2avecModel = await tf.loadLayersModel('/file/phon2avec/model.json');
-
-        const inputData = tf.tensor2d([new Float32Array(800)]);
-        const melPredicted = this.wav2melModel.predict(inputData);
-        const melTensors = [];
-        for (let i = 0; i < 20; i++) {
-            melTensors.push(melPredicted);
-        }
-        const melGroup = tf.concat(melTensors,1);
-        const phoneGroup = this.mel2phonModel.predict(melGroup);
-        const start = [0, 0, 0, 0];
-        const end = [phoneGroup.shape[0], phoneGroup.shape[1],phoneGroup.shape[2]-1,phoneGroup.shape[3]];
-        const phoneGroup1 = tf.slice(phoneGroup,start,end);
-        const avec = this.phon2avecModel.predict(phoneGroup1);
-
-        this.isReady = true;
-        if (this.readyCallback) {
-            this.readyCallback();
-        }
-    }
-
-    async awaitResources() {
-        if (this.isReady) {
-          return Promise.resolve();
-        }
-
-        return new Promise((resolve) => {
-          this.readyCallback = resolve;
-        });
-    }
-}
-
-
-class AnimCalc{
-    constructor(speechNetworks) {
-        this.speechNetworks = speechNetworks;
-        this.melTensors = [];
-        this.zeroAnimState = new Float32Array(5);
-        this.zeroAnimState[0] = 0.5;
-        this.zeroAnimState[1] = 0.48;
-        this.zeroAnimState[2] = 0.52;
-        this.zeroAnimState[3] = 0.43;
-        this.zeroAnimState[4] = 0.46;
-        var converterType = LibSampleRate.ConverterType.SRC_SINC_FASTEST;
-    //        var converterType = LibSampleRate.ConverterType.SRC_SINC_BEST_QUALITY;
-        this.resampler;
-        let nChannels = 1;
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        let inputSampleRate = audioContext.sampleRate;
-        let outputSampleRate = 16000;
-
-        LibSampleRate.create(nChannels, inputSampleRate, outputSampleRate, {
-                converterType: converterType, // default SRC_SINC_FASTEST. see API for more
-            }).then((src) => {
-
-                this.resampler = src;
-//
-        });
-    }
-    getAnim(aBuffer){
-        const result = this.makeMel(this.resampler.simple(aBuffer));
-        if (result) {
-            return result;
-        }else{
-            return [0.0,0.0,0.0,0.0,0.0];
-        }
-    }
-    makeMel(aBuffer){
-//        tf.engine().startScope()
-        const inputData = tf.tensor2d([aBuffer]);
-        const mel = this.speechNetworks.wav2melModel.predict(inputData);
-
-
-        this.melTensors.push(mel)
-
-        if (this.melTensors.length == 20){
-
-            const melGroup = tf.concat(this.melTensors,1);
-
-            const phoneGroup = this.speechNetworks.mel2phonModel.predict(melGroup);
-            const start = [0, 0, 0, 0];
-            const end = [phoneGroup.shape[0], phoneGroup.shape[1],phoneGroup.shape[2]-1,phoneGroup.shape[3]];
-            const phoneGroup1 = tf.slice(phoneGroup,start,end);
-            const avec = this.speechNetworks.phon2avecModel.predict(phoneGroup1);
-            const avecSlice = tf.slice(avec,[0,10,0,0],[1,1,5,1]);
-            const avecArrayTF = avecSlice.arraySync()
-
-
-            const avecArray = new Float32Array(5);
-            for (let i = 0; i < 5; i++) {
-                avecArray[i] = avecArrayTF[0][0][i][0];
-            }
-//            this.avecToBshpCoef(avecArray,rEngine,onAnimate);
-
-            //Dispose tensors
-                this.melTensors[0].dispose();
-                inputData.dispose();
-                melGroup.dispose();
-                phoneGroup.dispose();
-                phoneGroup1.dispose();
-                avec.dispose()
-                avecSlice.dispose();
-            //-----
-            this.melTensors.shift()
-            return this.avecToBshpCoef(avecArray)
-        }
-
-
-    }
-    avecToBshpCoef(nnAvec){
-        const result = new Float32Array(5);
-        const amp = -7;
-         for (let i = 0; i < 5; i++) {
-                result[i] =amp*(nnAvec[i]-this.zeroAnimState[i]);
-         }
-         return result;
-//         onAnimate(result,rEngine);
-
-    }
-}
-//console.log("matirx op")
 
 var v2 = {
     mulScalar: function(v, s) {
@@ -1283,7 +1150,7 @@ class FlexatarUnit{
                     this.facePackages[delimiterName] = currentFaceUnit
 
                 }
-                console.log("delimiterName",delimiterName)
+                // console.log("delimiterName",delimiterName)
             }
             if (delimiterName === "mouth"){
                 this.mouthPackage.addPackagePart(header,body)
@@ -2054,8 +1921,8 @@ class RenderEngine{
     #startTime = null
     constructor(canvas,gl,flexatarCustom){
 
-        var maxVertexAttribs = gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
-        console.log("Max Vertex Attributes: " + maxVertexAttribs);
+        // var maxVertexAttribs = gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
+        // console.log("Max Vertex Attributes: " + maxVertexAttribs);
        
         this.timerId = null;
         // this.flexatarUnit = flexatarUnit;
@@ -2778,8 +2645,7 @@ class RenderEngine{
 // var flexatarStaicUrl = "/file/raw/static.p"
 var flexatarStaicUrl = "https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/flx_static.p"
 
-const speechNN = new SpeechNN();
-const animCalc = new AnimCalc(speechNN);
+
 
 function fetchArrayBuffer(url){
     return fetch(url)
@@ -2909,7 +2775,7 @@ class Flexatar{
                 reject()
             });
     }
-    // #flexatarUnit = null
+   
     #connections = {}
     connectTo(flexatarAnimator,slotId){
         if (!(flexatarAnimator.id in this.#connections)){
@@ -2925,6 +2791,9 @@ class Flexatar{
         const connectedPromise = new Promise(resolve => {
             didSetToSlot = resolve
         })
+        if (!slotId){
+            slotId = flexatarAnimator.currentEmptySlot
+        }
         if (slotId>=0){
             var slot = flexatarAnimator.currentEmptySlot
             if (slotId !== undefined && slotId !== null){
@@ -2939,10 +2808,9 @@ class Flexatar{
             if (flexatarAnimator.currentEmptySlot!=2){
                 this.setToSlot(slot,flexatarAnimator,null,didSetToSlot)
                 flexatarAnimator.currentEmptySlot += 1
-                // this.setToSlot(flexatarAnimator.currentEmptySlot,flexatarAnimator,"exp-dsg")
             }
         }
-       return connectedPromise
+        return connectedPromise
     }
     static #setToSlotFuns = []
 
@@ -2968,7 +2836,7 @@ class Flexatar{
                         return this.mouthContent[flexatarAnimator.id]
                     }
                     if (slotIdx==0){
-                        console.log("provider0",slotIdx)
+                        // console.log("provider0",slotIdx)
                         renderer.faceProvider0 = faceProvider
                         renderer.mouthProvider0 = mouthProvider
                         // keys.length = 0
@@ -3018,7 +2886,7 @@ class Flexatar{
                         
 
                     }else{
-                        console.log("provider1",slotIdx)
+                        // console.log("provider1",slotIdx)
                         renderer.faceProvider1 = faceProvider
                         renderer.mouthProvider1 = mouthProvider
                     }
@@ -3056,7 +2924,7 @@ class Flexatar{
     faceContents = {}
     mouthContent = {}
     #makeGlBuffers(gl,flexatarUnit,animatorId){
-        console.log("loadBuffers")
+        // console.log("loadBuffers")
         if (!(animatorId in this.faceContents)){
             this.faceContents[animatorId] = {}
            
@@ -3160,49 +3028,46 @@ class FlexatarAnimator {
             })
         this.currentEmptySlot = 0
         
+
+        this.speechAnimator = new SpeechAnimator()
+        this.audioContext = this.speechAnimator.audioContext
+        this.speechAnimator.active = true
+        this.speechAnimator.onFrame = animVector =>{
+            if (this.#rendererInstance){
+                this.#rendererInstance.speechState = animVector
+            }
+        }
+        this.#videoStream = this.#canvas.captureStream(30)
        
     }
-    
-    addMediaStream(mediaStream){
-        return new Promise(resolve =>{
-            let audioTracks =  this.#videoStream.getAudioTracks()
-            if (audioTracks.length>0){
-                this.#videoStream.removeTrack(audioTracks[0]);
-            }
-        
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            let micSrc = audioContext.createMediaStreamSource(mediaStream);
-            // audioContext.audioWorklet.addModule("js/audio_processor.js").then(() => {
-            audioContext.audioWorklet.addModule("https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam/jslib/audio_processor.min.js").then(() => {
-                const processorNode = new AudioWorkletNode(audioContext,"my-audio-processor",);
-                micSrc.connect(processorNode);
-                processorNode.port.postMessage(true);
-                processorNode.port.onmessage = (event) => {
-                    if (event.data){
-                        if (this.#rendererInstance){
-                            const speechState = animCalc.getAnim(event.data)
-                            this.#rendererInstance.speechState = speechState;
-                        }
-                    
-                    }
-                }
-                var delayNode = audioContext.createDelay(1);
-                delayNode.delayTime.value = 0.5;
-                micSrc.connect(delayNode);
-                const flxAudioStreamSource = audioContext.createMediaStreamDestination();
-                delayNode.connect(flxAudioStreamSource);
-                const flxStreamAudio = flxAudioStreamSource.stream;
-                let audioTrack = flxStreamAudio.getAudioTracks()[0];
-                this.#videoStream.addTrack(audioTrack);
-                resolve()
-            });
-        })
-        
+    removeAudioTrack(){
+        this.speechAnimator.removeSource()
+       
+        let audioTracks =  this.#videoStream.getAudioTracks()
+        if (audioTracks.length>0){
+            this.#videoStream.removeTrack(audioTracks[0]);
+        }
     }
-    
+    addMediaStream(mediaStream){
+        const audioContext = this.audioContext
+        this.removeAudioTrack()
+        let micSrc = audioContext.createMediaStreamSource(mediaStream);
+        this.speechAnimator.connectSource(micSrc)
+
+        var delayNode = audioContext.createDelay(1);
+        delayNode.delayTime.value = 0.5;
+        micSrc.connect(delayNode);
+        const flxAudioStreamSource = audioContext.createMediaStreamDestination();
+        delayNode.connect(flxAudioStreamSource);
+        const flxStreamAudio = flxAudioStreamSource.stream;
+        let audioTrack = flxStreamAudio.getAudioTracks()[0];
+        this.#videoStream.addTrack(audioTrack);
+       
+    }
+   
     addAuidoTrack(url){
 
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const audioContext = this.audioContext
 
         const audioElement = new Audio(url);
 
@@ -3216,35 +3081,10 @@ class FlexatarAnimator {
         sourceNode.connect(destination);
 
         const mediaStream = destination.stream;
-
+        
         audioElement.oncanplaythrough = () => {
-            console.log(mediaStream);
-           
-                let micSrc = audioContext.createMediaStreamSource(mediaStream);
-                audioContext.audioWorklet.addModule("https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam/jslib/audio_processor.min.js").then(() => {
-                    const processorNode = new AudioWorkletNode(audioContext,"my-audio-processor",);
-                    micSrc.connect(processorNode);
-                    processorNode.port.postMessage(true);
-                    processorNode.port.onmessage = (event) => {
-                        if (event.data){
-                            if (this.#rendererInstance){
-                                const speechState = animCalc.getAnim(event.data)
-                                this.#rendererInstance.speechState = speechState;
-                            }
-                        
-                        }
-                    }
-                    var delayNode = audioContext.createDelay(1);
-                    delayNode.delayTime.value = 0.5;
-                    micSrc.connect(delayNode);
-                    const flxAudioStreamSource = audioContext.createMediaStreamDestination();
-                    delayNode.connect(flxAudioStreamSource);
-                    const flxStreamAudio = flxAudioStreamSource.stream;
-                    let audioTrack = flxStreamAudio.getAudioTracks()[0];
-                    this.#videoStream.addTrack(audioTrack);
-                });
-                
-            };
+            this.addMediaStream(mediaStream)
+        }
        
     }
     getRenderer(){
@@ -3312,7 +3152,7 @@ class FlexatarAnimator {
     }
 
     getMediaStream() {
-        this.#videoStream = this.#canvas.captureStream(30)
+        
         return this.#videoStream;
     }
 
@@ -3357,9 +3197,56 @@ class FlexatarAnimator {
     }
 }
 
-const ModeMix = 0
-const ModeMorph = 1
-const ModeHybrid = 2
+
+
+
+class SpeechAnimator{
+    active = false
+    
+    constructor(){
+        this.onFrame = null
+        const myWorker = new Worker(nnWorkerUrl);
+        myWorker.onmessage = (e) => {
+            
+            if (this.onFrame) this.onFrame(e.data.anim)
+        };
+
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        this.processorNode = Promise.all([
+            this.audioContext.audioWorklet.addModule("https://cdn.jsdelivr.net/gh/aolsenjazz/libsamplerate-js/dist/libsamplerate.worklet.js"),
+            this.audioContext.audioWorklet.addModule(audioProcessorUrl)
+        ]).then(()=>{
+            const processorNode = new AudioWorkletNode(this.audioContext,"my-audio-processor",);
+            processorNode.port.onmessage = (event) => {
+
+                // console.log("data",event.data)
+                const data = event.data  
+                if (data && this.active && data instanceof Float32Array) {
+                    myWorker.postMessage(data);
+                }else{
+                    this.onFrame([0.0,0.0,0.0,0.0,0.0])
+                }
+            }
+            return processorNode
+        })
+    }
+    #src = null
+    connectSource(src){
+        this.#src = src
+ 
+        
+        this.processorNode.then(processorNode => {
+            
+            src.connect(processorNode);
+        })
+    }
+    removeSource(){
+        if (this.#src) this.#src.disconnect()
+    }
+
+}
+
+
 
 class Effect {
 
@@ -3519,6 +3406,9 @@ class FlexatarSDK {
     useEffect(effect) {
         this.flexatarAnimator.setEffect(effect)
     }
+    removeAudioTrack(){
+        this.flexatarAnimator.removeAudioTrack()
+    }
 
     // starts a+v streaming from the input audio
     audioInputByUrl(audioIn) {
@@ -3534,4 +3424,106 @@ class FlexatarSDK {
     destroy() {
         
     }
+    get audioContext(){
+        return this.flexatarAnimator.speechAnimator.audioContext
+    }
 }
+
+class SafariWebRadio{
+    active = true
+    currentSampleSource = null
+    stream = null
+    readbleStream = null
+    constructor(url,audioContext){
+        const playbackRate = 1;
+        let init = true
+        let chunks = []
+        let destination = audioContext.createMediaStreamDestination()
+        this.mediaStream = destination.stream
+        const mediaType = (navigator.userAgent.indexOf("Firefox") != -1) ? 'audio/mp4':'audio/mpeg'
+        let self = this
+        async function play(bufferCount){
+            if (!bufferCount)
+                bufferCount = 0
+            if (chunks.length < bufferCount){
+                setTimeout(() => {
+                    console.log("no signal")
+                    if (self.active) play(10)
+                        
+                }, 1000);
+                return
+            }
+            const dataUrl = URL.createObjectURL(new Blob(chunks, { type: mediaType }));
+            chunks = []  
+            let buffer
+            try{
+                buffer = await audioContext.decodeAudioData(await (await fetch(dataUrl)).arrayBuffer())
+            }catch{
+                console.log("incorrect buffer")
+                play(10)
+                return
+            }
+            const sampleSource = new AudioBufferSourceNode(audioContext, {
+                buffer: buffer,
+                playbackRate,
+            });
+            sampleSource.start();
+            self.currentSampleSource = sampleSource
+            sampleSource.connect(destination);
+            const duration = sampleSource.buffer.duration;
+            
+            setTimeout(() => {
+                console.log('Playback finished');
+                if (self.active)
+                    play()
+            }, duration * 1000 - 100);
+        }
+        
+        
+        function pump(stream){
+            return stream.read().then(data => {
+                if (!data.value) {return}
+                chunks.push(data.value.buffer)
+                
+                if (chunks.length == 10 && init){
+                    play()
+                    init = false
+                }
+                console.log("pump")
+                if (self.active)
+                    pump(stream)
+            })
+        }
+        console.log("fetch radio",self.active)
+        fetch(url).then(res=>{
+            console.log("res",res)
+            this.readbleStream = res
+            pump(this.stream = res.body.getReader())
+        })
+
+    }
+    cancel(){
+       
+    }
+
+    get stream(){
+        return this.mediaStream
+    }
+    stop(){
+        this.active = false
+        if (this.currentSampleSource){
+            console.log("Stop resource",this.stream)
+            this.currentSampleSource.stop()
+            this.currentSampleSource = null
+            this.stream.cancel().then(() => {
+                this.stream.releaseLock();
+                console.log('Stream reading stopped and reader lock released.');
+              }).catch((error) => {
+                console.error('Error cancelling the stream:', error);
+              });
+            
+        }
+    }
+}
+
+

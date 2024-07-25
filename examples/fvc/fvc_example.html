@@ -2,9 +2,9 @@
 <head>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@alexanderolsen/libsamplerate-js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam@latest/jslib/flx_render.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam@latest/jslib/flx_render.js"></script> -->
 
-<!-- <script src="/js/flx_render.js"></script> -->
+<script src="/js/flx_render.js"></script>
 
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -172,11 +172,11 @@ startButton.onclick = function(){
             .then((stream) => {
                 track = stream.getTracks()[0];
                 
-                flexatarAnimator.addMediaStream(stream).then(()=>{
-                    flexatarAnimator.record()
-                    statusLabel.textContent = STATUS_SPEAK
-                    startButton.textContent = STOP_CAPTION
-                })
+                flexatarAnimator.addMediaStream(stream)
+                flexatarAnimator.record()
+                statusLabel.textContent = STATUS_SPEAK
+                startButton.textContent = STOP_CAPTION
+                
             });
         }
                

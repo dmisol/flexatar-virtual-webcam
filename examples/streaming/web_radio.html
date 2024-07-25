@@ -1,62 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@alexanderolsen/libsamplerate-js"></script>
+   
     <script src="https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam@latest/jslib/flx_render.js"></script>
     <!-- <script src="/js/flx_render.js"></script> -->
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Radio Processor</title>
+    <title>Flexatar Web Radior</title>
 </head>
 <body>
-    <h1>Web Radio Processor</h1>
+    <h1>Flexatar Web Radio</h1>
     <div id="2hide">
         <input type="text" id="url2play" value="https://radio.talkradio.co.uk/stream"/>
-        <button id="processButton">Process and Play Radio</button>
+        <button id="processButton">Play Radio</button>
+        
     </div>
     <video id="videoElement" width="240" height="320" autoplay></video>
+
+    <div>
+        <input type="checkbox" id="effect" name="effect" />
+        <label for="effect">Effect</label>
+        <input type="checkbox" id="animated" name="animated" />
+        <label for="effect">Animated</label>
+
+
+        <fieldset>
+            <legend>Choose Effect</legend>
+            <div>
+              <input type="radio" id="morph" name="effectType" value="morph" checked />
+              <label for="morph">Morph</label>
+            </div>
+            <div>
+              <input type="radio" id="hybrid" name="effectType" value="hybrid" />
+              <label for="hybrid">Hybrid</label>
+            </div>
+            <div>
+                <input type="range" min="1" max="100" value="50" class="slider" id="effectSlider">
+            </div>
+          </fieldset>
+          
+    </div>
+    <div id="button-container"></div>
     <script>
-               
-        const duration1 = 6
-        const duration2 = duration1/2
-        const myEffect = new Effect(function calc(time) {
-            const periods1 = time/duration1
-            const periodCounter1 = Math.floor(periods1)
-            const periods2 = time/duration2
-            const periodCounter2 = Math.floor(periods2)
-            const weight = periods2 - periodCounter2
-                if (periodCounter1%2 == 0){
-                    return {mode:2,parameter:weight}
-                }else{
-                    if (periodCounter2%2 == 0){
-                    return {mode:1,parameter:weight}
-                }else{
-                    return {mode:1,parameter:1 - weight}
+        
+        function IsSafari() {
+            return navigator.userAgent.toLowerCase().indexOf('safari/') > -1
+        }   
+        
+        let safariWebRadio
+        let flexatarSDK
+        
+        const startButton = document.getElementById('processButton')
+        const radio1Button = document.getElementById('radio1')
+        const urlInput = document.getElementById('url2play')
+        const animatedCheckBox = document.getElementById('animated')
+        const effectCheckBox = document.getElementById('effect')
+
+        const typeChkBoxs = document.querySelectorAll("input[name='effectType']")
+        const slider = document.getElementById("effectSlider")
+
+        animatedCheckBox.checked = true
+        effectCheckBox.checked = false
+
+        const container = document.getElementById('button-container')
+        const radioUrls = [
+            "https://radio.talkradio.co.uk/stream",
+            "https://deutschrap-high.rautemusik.fm/?ref=radiobrowser",
+            "http://streams.90s90s.de/hiphop/mp3-192/streams.90s90s.de/",
+            "https://ice64.securenetsystems.net/WYEZ",
+            "https://radio.talksport.com/stream?aisGetOriginalStream=true"
+        ]
+        let isPlaying = false
+        let counter = 0
+        for (const url of radioUrls){
+            counter += 1
+            const newButton = document.createElement('button')
+            
+            newButton.textContent = 'Radio ' +counter;
+           
+            newButton.onclick = () => {
+                urlInput.value = url
+                if (isPlaying) {
+                    startButton.click()
+                    startButton.click()
                 }
             }
-           
-         });
-
-        
-        FlexatarClient.route = "/"
-        const flexatarSDK = new FlexatarSDK("token")
-        flexatarSDK.useFlexatars("aniston.p","bushemi.p")
-        document.getElementById('processButton').addEventListener('click', function() {
-            document.getElementById("2hide").style.display = 'none'
-            const radioUrl = document.getElementById('url2play').value
             
-            flexatarSDK.audioInputByUrl(radioUrl);
-            flexatarSDK.useEffect(myEffect)
+            container.appendChild(newButton);
+        }
+        
+        function startFlexatar(){
+            if (flexatarSDK) return
+            FlexatarClient.route = "/"
+            flexatarSDK = new FlexatarSDK("token")
+            flexatarSDK.useFlexatars("aniston.p")
+            flexatarSDK.useEffect(Effect.morph())
 
             var videoElement = document.getElementById('videoElement');
             videoElement.autoplay = true
             videoElement.controls = true
             videoElement.setAttribute('playsinline', '')
             videoElement.srcObject = flexatarSDK.mediaStream
-     
-        });
+            
+            function setNotAnimatedEffect(){
+                const effect = new Effect(function(time){
+                    return {mode:currentMode,parameter:slider.value/100}
+                })
+                flexatarSDK.useEffect(effect)
+            }
+
+            function setAnimatedEffect(){
+                flexatarSDK.useEffect(currentMode == 1 ? Effect.morph() : Effect.hybrid())
+            }
+
+            effectCheckBox.onclick = () => {
+                flexatarSDK.useFlexatars(FlexatarSDK.SAME,effectCheckBox.checked ? "bushemi.p" : null)
+            }
+
+            let currentMode = 1
+            for (const chkBox of typeChkBoxs){
+                if (chkBox.value == "morph") chkBox.checked = true
+                chkBox.onclick = () => {
+                    currentMode = chkBox.value == "hybrid" ? 2 : 1
+                    
+                    if (animatedCheckBox.checked){
+                        setAnimatedEffect()
+                    }else{
+                        setNotAnimatedEffect()
+                    }
+                }
+            }
+            animatedCheckBox.onclick = () => {
+                if (animatedCheckBox.checked){
+                    setAnimatedEffect()
+                }else{
+                    setNotAnimatedEffect()
+                }
+            }
+            slider.oninput = () => {
+                animatedCheckBox.checked = false
+                setNotAnimatedEffect()
+            }
+
+        }
+        
+        startButton.onclick  = () => {
+            
+            if (isPlaying){
+                isPlaying = false
+                startButton.textContent = "Play Radio"
+                if (safariWebRadio){
+                    safariWebRadio.stop()
+                    safariWebRadio = null
+                    return
+                }else{
+                    flexatarSDK.removeAudioTrack()
+                    return
+                }
+                
+            }else{
+                startButton.textContent = "Stop Radio"
+                isPlaying = true
+            }
+           
+            startFlexatar()
+            
+            if (IsSafari()){
+                safariWebRadio = new SafariWebRadio(urlInput.value,flexatarSDK.audioContext)
+                flexatarSDK.audioInputByMediaStrem(safariWebRadio.mediaStream)
+            }else{
+                flexatarSDK.audioInputByUrl(urlInput.value)
+            }
+        }
     </script>
 </body>
 </html>
