@@ -1,7 +1,7 @@
 // const nnWorkerUrl = "/js/service_worker.js"
 // const audioProcessorUrl = "/js/audio_processor.js"
 const nnWorkerUrl = "https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam@latest/jslib/service_worker.js"
-const audioProcessorUrl = "https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam@latest/jslib//audio_processor.js"
+const audioProcessorUrl = "https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam@latest/jslib/audio_processor.js"
 
 
 var v2 = {
