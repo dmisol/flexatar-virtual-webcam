@@ -22,7 +22,14 @@ You can find the preliminary examples [here](examples)
 ## Scenarios
 
 ### Animating audio for user
-We are targeting obvious applications like virtual assiatances, bots etc
+We are targeting obvious applications like virtual assiatances, bots etc. The [demo](https://86s46xzcnk.execute-api.us-east-1.amazonaws.com/default/demo) provides an idea how it works.
+
+In the context of the mentioned scenario, we are working on integration with
+
+- various frontend frameworks
+- popular TTS services
+
+Stay tuned!
 
 ### Webrtc Virtual Webcam
 The key advantage of **flexatar** technique is that it can be used to animate user's audio track from microphone, thus acting as a virtual webcam for **WebRTC**.
