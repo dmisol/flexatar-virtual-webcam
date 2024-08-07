@@ -21,7 +21,7 @@ You can find the preliminary examples [here](examples)
 
 ## Scenarios
 
-### Animating audio for user
+### Scenario 1: Animating audio for user
 We are targeting obvious applications like virtual assiatances, bots etc. The [demo](https://86s46xzcnk.execute-api.us-east-1.amazonaws.com/default/demo) provides an idea how it works.
 
 In the context of the mentioned scenario, we are working on integration with
@@ -31,7 +31,7 @@ In the context of the mentioned scenario, we are working on integration with
 
 Stay tuned!
 
-### Webrtc Virtual Webcam
+### Scenario 2: Webrtc Virtual Webcam
 The key advantage of **flexatar** technique is that it can be used to animate user's audio track from microphone, thus acting as a virtual webcam for **WebRTC**.
 We are planning to commit integration examples to leading WebRTC SFU's like Janus, Livekit etc. Feel free to offer candidates.
 
@@ -43,8 +43,9 @@ The procedure is as follows:
 3. **FlexatarSDK** supplies both **audio** and **video** tracks ensuring lipsyncing   
 _We are planning to share the example of interfacing [pion](https://github.com/pion/webrtc) soon_
 
-### Making static images move
-Like in Majic movies. No need to fetch audio features and animate as above, animation pattern is enough.
+### Scenario 3: Making static images "Magic"
+Like in Magic movies: a photo starts moving. 
+From the technical point of view: no need to fetch audio features and animate as above, animation pattern is enough.
 
 ## Other Solutions
 ### Browser Extension
