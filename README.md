@@ -63,7 +63,7 @@ Android version is [available](https://play.google.com/store/apps/details?id=org
 1. What **flexatar** stands for?
 - **Flexatar** is our format of storing **3d model of human face**, capable of online animating **in browser in realtime using WebGL**.
 2. Can I make a **flexatar** by my own?
-- Sure.
+- Sure. Just send a photo to our [telegram bot](https://t.me/flexatar_bot)
 3. Is it 3D?
 - Yes! We can export flexatar as a conventional **.obj** file with 3d model and textures. If you are a game developer and need either a custom 3d or a morphable model, please feel free to contact us
 4. What's under the hood?
