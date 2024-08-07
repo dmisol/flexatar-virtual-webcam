@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <!-- <script src="/js/app_webpack.js"> </script> -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"> </script>
@@ -8,55 +9,89 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flexatar Web Radior</title>
+    <title>Demo: Flexatar Web Radio</title>
 </head>
-<body>
-    <h1>Flexatar Web Radio</h1>
-    <div id="2hide">
-        <input type="text" id="url2play" value="https://radio.talkradio.co.uk/stream"/>
-        <button id="processButton">Play Radio</button>
-        
-    </div>
-    <video id="videoElement" width="240" height="320" autoplay></video>
-    
-    <div>
-        <input type="checkbox" id="effect" name="effect" />
-        <label for="effect">Effect</label>
-        <input type="checkbox" id="animated" name="animated" />
-        <label for="effect">Animated</label>
 
+<body>
+    <h1>Demo: Animate Web Radio With Flexatar</h1>
+    <video id="videoElement" width="240" height="320" autoplay></video>
+
+    <div id="audio source">
+        <input type="text" id="url2play" value="https://radio.talkradio.co.uk/stream" />
+        <button id="processButton"><b>START</b></button>
 
         <fieldset>
-            <legend>Choose Effect</legend>
-            <div>
-              <input type="radio" id="morph" name="effectType" value="morph" checked />
-              <label for="morph">Morph</label>
-            </div>
-            <div>
-              <input type="radio" id="hybrid" name="effectType" value="hybrid" />
-              <label for="hybrid">Hybrid</label>
-            </div>
-            <div>
-                <input type="range" min="1" max="100" value="50" class="slider" id="effectSlider">
-            </div>
-          </fieldset>
-          
+            <legend>Radio to Play</legend>
+            <div id="button-container"></div>
+        </fieldset>
     </div>
-    <div id="button-container"></div>
-   
+
+    <div id="animation control">
+        <fieldset>
+            <legend>Animation Control</legend>
+            <div id="flexatar1">
+                <fieldset>
+                    <legend>Flexatar №1</legend>
+                    <i>here there will be buttons to select</i>
+                </fieldset>
+            </div>
+
+            <fieldset>
+                <legend>Effects</legend>
+                <div>
+                    <input type="radio" id="single" name="effectType" value="single" checked />
+                    <label for="single">Flexatar №1 ONLY</label>
+                </div>
+                <div>
+                    <input type="radio" id="morph" name="effectType" value="morph" />
+                    <label for="morph">Morph Flexatars №1 & №2</label>
+                </div>
+                <div>
+                    <input type="radio" id="hybrid" name="effectType" value="hybrid" />
+                    <label for="hybrid">Hybrid Flexatars №1 & №2</label>
+                </div>
+                <div>
+                    <input type="range" min="1" max="100" value="50" class="slider" id="effectSlider">
+                </div>
+                <input type="checkbox" id="animated" name="animated" />
+                <label for="effect">Animated</label>
+
+            </fieldset>
+
+            <div id="flexatar2">
+                <fieldset>
+                    <legend>Flexatar №2</legend>
+                    <i>here there will be buttons to select</i>
+                </fieldset>
+            </div>
+
+            <div>
+                <br>
+                <i>* Flexatar is our format to pack 3D model</i>
+                <br>
+                <i>** Flexatars created with <a href="https://t.me/flexatar_bot"> Flexatar Telegram Bot</a></i>
+            </div>
+        </fieldset>
+
+    </div>
+
+
+    <div>
+        <input type="checkbox" id="effect" name="effect" hidden="true" />
+        <label for="effect" hidden="true">Effect</label>
+    </div>
+
     <script>
-        // console.log(new ftar.SpeechNN())
-        // console.log(ftar.AnimCalc)
         function IsSafari() {
             const isSafari = navigator.vendor && navigator.vendor.indexOf('Apple') > -1 &&
-               navigator.userAgent &&
-               navigator.userAgent.indexOf('CriOS') == -1 &&
-               navigator.userAgent.indexOf('FxiOS') == -1;
+                navigator.userAgent &&
+                navigator.userAgent.indexOf('CriOS') == -1 &&
+                navigator.userAgent.indexOf('FxiOS') == -1;
             return isSafari
-        }   
-        let flexatarSDK
+        }
 
         let safariWebRadio
+        let flexatarSDK
 
         const startButton = document.getElementById('processButton')
         const radio1Button = document.getElementById('radio1')
@@ -80,12 +115,12 @@
         ]
         let isPlaying = false
         let counter = 0
-        for (const url of radioUrls){
+        for (const url of radioUrls) {
             counter += 1
             const newButton = document.createElement('button')
-            
-            newButton.textContent = 'Radio ' +counter;
-           
+
+            newButton.textContent = 'Radio ' + counter;
+
             newButton.onclick = () => {
                 urlInput.value = url
                 if (isPlaying) {
@@ -93,17 +128,16 @@
                     startButton.click()
                 }
             }
-            
+
             container.appendChild(newButton);
         }
-        
-        function startFlexatar(){
-            // if (flexatarSDK) return
+
+        function startFlexatar() {
+            if (flexatarSDK) return
             // FlexatarClient.route = "/ftar"
             // FlexatarClient.route = "https://86s46xzcnk.execute-api.us-east-1.amazonaws.com/default/ftar"
-           
-            flexatarSDK = new FlexatarSDK("token")
-            // flexatarSDK.useFlexatars("naruto/neu-naruto.exp")
+
+            flexatarSDK = new FlexatarSDK("{{.Token}}")
             flexatarSDK.useFlexatars("http://t.me/flexatar_bot?ftar=private/1.00/tg/348542078/cef6c073-876d-413e-87ae-b0f95da06189&active=true")
             flexatarSDK.useEffect(Effect.morph())
 
@@ -112,40 +146,39 @@
             videoElement.controls = false
             videoElement.setAttribute('playsinline', '')
             videoElement.srcObject = flexatarSDK.mediaStream
-           
-            
-            function setNotAnimatedEffect(){
-                const effect = new Effect(function(time){
-                    return {mode:currentMode,parameter:slider.value/100}
+
+            function setNotAnimatedEffect() {
+                const effect = new Effect(function (time) {
+                    return { mode: currentMode, parameter: slider.value / 100 }
                 })
                 flexatarSDK.useEffect(effect)
             }
 
-            function setAnimatedEffect(){
+            function setAnimatedEffect() {
                 flexatarSDK.useEffect(currentMode == 1 ? Effect.morph() : Effect.hybrid())
             }
 
             effectCheckBox.onclick = () => {
-                flexatarSDK.useFlexatars(FlexatarSDK.SAME,effectCheckBox.checked ? "http://t.me/flexatar_bot?ftar=private/1.00/tg/348542078/leo&active=true" : null)
+                flexatarSDK.useFlexatars(FlexatarSDK.SAME, effectCheckBox.checked ? "http://t.me/flexatar_bot?ftar=private/1.00/tg/348542078/leo&active=true" : null)
             }
 
             let currentMode = 1
-            for (const chkBox of typeChkBoxs){
+            for (const chkBox of typeChkBoxs) {
                 if (chkBox.value == "morph") chkBox.checked = true
                 chkBox.onclick = () => {
                     currentMode = chkBox.value == "hybrid" ? 2 : 1
-                    
-                    if (animatedCheckBox.checked){
+
+                    if (animatedCheckBox.checked) {
                         setAnimatedEffect()
-                    }else{
+                    } else {
                         setNotAnimatedEffect()
                     }
                 }
             }
             animatedCheckBox.onclick = () => {
-                if (animatedCheckBox.checked){
+                if (animatedCheckBox.checked) {
                     setAnimatedEffect()
-                }else{
+                } else {
                     setNotAnimatedEffect()
                 }
             }
@@ -155,37 +188,38 @@
             }
 
         }
-        
-        startButton.onclick  = () => {
-            
-            if (isPlaying){
-               
 
+        startButton.onclick = () => {
+
+            if (isPlaying) {
                 isPlaying = false
-                startButton.textContent = "Play Radio"
-                if (safariWebRadio){
+                startButton.textContent = "START"
+                startButton.style.fontWeight = "bold"
+                if (safariWebRadio) {
                     safariWebRadio.stop()
                     safariWebRadio = null
                     return
-                }else{
+                } else {
                     flexatarSDK.removeAudioTrack()
                     return
                 }
-                
-            }else{
-                startButton.textContent = "Stop Radio"
+
+            } else {
+                startButton.textContent = "STOP"
+                startButton.style.fontWeight = "bold"
                 isPlaying = true
             }
-           
+
             startFlexatar()
-            
-            if (IsSafari()){
-                safariWebRadio = new SafariWebRadio(urlInput.value,flexatarSDK.audioContext)
+
+            if (IsSafari()) {
+                safariWebRadio = new SafariWebRadio(urlInput.value, flexatarSDK.audioContext)
                 flexatarSDK.audioInputByMediaStrem(safariWebRadio.mediaStream)
-            }else{
+            } else {
                 flexatarSDK.audioInputByUrl(urlInput.value)
             }
         }
     </script>
 </body>
+
 </html>
