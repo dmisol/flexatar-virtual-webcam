@@ -14,6 +14,8 @@
 
 
 ## Demo
+![Webradio Animation Screenshot](webradio-animate-demo.png)
+
 To start with, [get an impression](https://86s46xzcnk.execute-api.us-east-1.amazonaws.com/default/demo) of animating **flexatar** with web radio in your browser. 
 The **flexatar** is created from a single portrait in few seconds. 
 
@@ -53,7 +55,7 @@ Is scheduled. The current version is outdated, we are planning to revert.
 
 ### Unofficial Telegram Client
 ![flexatar telegram](flexatar-telegram.png)
-
+![alt text](<Screenshot at 2024-08-08 00-49-16.png>)
 Last but not least: we are providing Flexatar Telegram clients, that are capable of creating **flexatars** and using them for
 - video calls 
 - video conferences
