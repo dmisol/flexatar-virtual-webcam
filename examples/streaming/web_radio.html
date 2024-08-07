@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- <script src="/js/app_webpack.js"> </script> -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"> </script>
-    <script src="https://flexatar-generic-shared-files.s3.amazonaws.com/js/flx_render.js"></script> 
-    <!-- <script src="/js/flx_render.js"></script> -->
+    <!-- <script src="https://flexatar-generic-shared-files.s3.amazonaws.com/js/flx_render.js"></script>  -->
+    <script src="/js/flx_render.js"></script>
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,7 +18,7 @@
         
     </div>
     <video id="videoElement" width="240" height="320" autoplay></video>
-
+    
     <div>
         <input type="checkbox" id="effect" name="effect" />
         <label for="effect">Effect</label>
@@ -42,8 +43,10 @@
           
     </div>
     <div id="button-container"></div>
+   
     <script>
-        
+        // console.log(new ftar.SpeechNN())
+        // console.log(ftar.AnimCalc)
         function IsSafari() {
             const isSafari = navigator.vendor && navigator.vendor.indexOf('Apple') > -1 &&
                navigator.userAgent &&
@@ -51,10 +54,10 @@
                navigator.userAgent.indexOf('FxiOS') == -1;
             return isSafari
         }   
-        
-        let safariWebRadio
         let flexatarSDK
-        
+
+        let safariWebRadio
+
         const startButton = document.getElementById('processButton')
         const radio1Button = document.getElementById('radio1')
         const urlInput = document.getElementById('url2play')
@@ -95,19 +98,21 @@
         }
         
         function startFlexatar(){
-            if (flexatarSDK) return
+            // if (flexatarSDK) return
             // FlexatarClient.route = "/ftar"
             // FlexatarClient.route = "https://86s46xzcnk.execute-api.us-east-1.amazonaws.com/default/ftar"
            
             flexatarSDK = new FlexatarSDK("token")
+            // flexatarSDK.useFlexatars("naruto/neu-naruto.exp")
             flexatarSDK.useFlexatars("http://t.me/flexatar_bot?ftar=private/1.00/tg/348542078/cef6c073-876d-413e-87ae-b0f95da06189&active=true")
             flexatarSDK.useEffect(Effect.morph())
 
             var videoElement = document.getElementById('videoElement');
             videoElement.autoplay = true
-            videoElement.controls = true
+            videoElement.controls = false
             videoElement.setAttribute('playsinline', '')
             videoElement.srcObject = flexatarSDK.mediaStream
+           
             
             function setNotAnimatedEffect(){
                 const effect = new Effect(function(time){
@@ -154,6 +159,8 @@
         startButton.onclick  = () => {
             
             if (isPlaying){
+               
+
                 isPlaying = false
                 startButton.textContent = "Play Radio"
                 if (safariWebRadio){
