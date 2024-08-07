@@ -2,8 +2,11 @@
 <html lang="en">
 
 <head>
+    <!-- <script src="/js/app_webpack.js"> </script> -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"> </script>
-    <script src="https://flexatar-generic-shared-files.s3.amazonaws.com/js/flx_render.js"></script>
+    <!-- <script src="https://flexatar-generic-shared-files.s3.amazonaws.com/js/flx_render.js"></script>  -->
+    <script src="/js/flx_render.js"></script>
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Demo: Flexatar Web Radio</title>
@@ -140,7 +143,7 @@
 
             var videoElement = document.getElementById('videoElement');
             videoElement.autoplay = true
-            videoElement.controls = true
+            videoElement.controls = false
             videoElement.setAttribute('playsinline', '')
             videoElement.srcObject = flexatarSDK.mediaStream
 

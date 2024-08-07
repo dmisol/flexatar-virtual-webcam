@@ -3,6 +3,10 @@ const audioProcessorUrl = "https://flexatar-generic-shared-files.s3.amazonaws.co
 // const nnWorkerUrl = "https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam@latest/jslib/service_worker.js"
 // const audioProcesso
 
+// var SpeechNN = ftar.SpeechNN
+// var AnimCalc = ftar.AnimCalc
+
+
 class SpeechNN{
     constructor() {
         this.wav2melModel = null;
@@ -13,7 +17,6 @@ class SpeechNN{
         this.loadNetworks();
     }
     async loadNetworks(){
-        
         this.wav2melModel = await tf.loadLayersModel('https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/wav2mel/model.json');
 //        this.wav2melModel = await tf.loadLayersModel('/file/wav2mel/model.json');
         this.mel2phonModel = await tf.loadLayersModel('https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/mel2phon/model.json');
@@ -1146,6 +1149,19 @@ class FlexatarMouthUnit{
     }
 }
 
+function isBase64(uint8Array) {
+    // Convert Uint8Array to string
+    const testArray = uint8Array.subarray(1000, 1100);
+    let str = new TextDecoder().decode(testArray);
+
+    // Check if the string is base64 encoded
+    // Base64 strings are generally of the form: characters, padding, and new lines
+    // Base64 characters: A-Z, a-z, 0-9, +, /
+    // Padding: =
+    const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
+    return base64Regex.test(str);
+}
 
 class FlexatarUnit{
     constructor(arrayBuffer,flexatarCommon){
@@ -1173,8 +1189,10 @@ class FlexatarUnit{
         this.facePackages = {};
 
         let uint8Array = new Uint8Array(arrayBuffer);
-        // console.log("base64 ",Flexatar.base64)
-        if (true){
+        const isB64 = isBase64(uint8Array)
+        // console.log("base64 ",isB64)
+        
+        if (isB64){
             var enc = new TextDecoder("utf-8");
             var arr = uint8Array
             uint8Array = atob(enc.decode(arr))
@@ -3283,6 +3301,47 @@ class FlexatarAnimator {
             this.#timerId = renderer.timerId 
         })
     }
+    #startFrameTime
+    #mX = 0
+    #mZ = 0
+    #mCounter = 0
+    headMotion(x,y,z){
+        if(!this.#rendererInstance)
+            return
+        if (!this.#startFrameTime){
+            this.#startFrameTime = window.performance.now()
+        }
+        const elapsed = window.performance.now() - this.#startFrameTime 
+        this.#mX += x
+        this.#mZ += z
+        this.#mCounter += 1
+        if (elapsed<50) return
+        this.#mX /= this.#mCounter
+        this.#mZ /= this.#mCounter
+        this.#mCounter = 0
+
+        this.#startFrameTime = window.performance.now()
+
+        if(this.#timerId){
+            clearInterval(this.#timerId)
+            this.#timerId = null
+        }
+        const renderer = this.#rendererInstance
+        const animationFrame = renderer.flexatarCustom.getAnimationFrame(10);
+        
+        const rx = this.#mX + 0.5;
+        const ry = this.#mZ + 0.5;
+        this.#mZ = 0
+        this.#mX = 0
+        console.log(rx,ry)
+        const flexatar = renderer.getFlexatarUnit()
+        if (flexatar){
+            const interU = flexatar.makeInterUnit([rx,ry]);
+            renderer.headCtrl = interU[0];
+            renderer.extraRot = interU[1];
+            renderer.position = [animationFrame[0],animationFrame[1]-0.3,animationFrame[2]-0.1,animationFrame[5],animationFrame[6],animationFrame[8]];
+        }
+    }
     pause(){
         this.isActive = false
         this.#renderer.then(renderer => {
@@ -3347,9 +3406,10 @@ class SpeechAnimator{
     active = false
     
     constructor(){
-        if (noWorklet)
+        if (noWorklet){
+            
             this.animCalc = new AnimCalc(new SpeechNN());
-
+       }
         this.onFrame = null
         let myWorker
         if (!noWorklet){
@@ -3572,6 +3632,9 @@ class FlexatarSDK {
     }
     audioInputByMediaStrem(audioIn) {
         this.flexatarAnimator.addMediaStream(audioIn)
+    }
+    headMotion(x,y,z){
+        this.flexatarAnimator.headMotion(x,y,z)
     }
     get mediaStream(){
         return this.flexatarAnimator.getMediaStream()
