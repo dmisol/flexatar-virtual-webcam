@@ -52,7 +52,8 @@ From the technical point of view: no need to fetch audio features and animate as
 Is scheduled. The current version is outdated, we are planning to revert.
 
 ### Unofficial Telegram Client
-Last but not least: we are providing Flexatar Telegram clients, that are capable to create **flexatars** and use them for
+![flexatar telegram](flexatar-telegram.png)
+Last but not least: we are providing Flexatar Telegram clients, that are capable of creating **flexatars** and using them for
 - video calls 
 - video conferences
 - record circles
