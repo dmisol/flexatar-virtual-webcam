@@ -53,6 +53,7 @@ Is scheduled. The current version is outdated, we are planning to revert.
 
 ### Unofficial Telegram Client
 ![flexatar telegram](flexatar-telegram.png)
+
 Last but not least: we are providing Flexatar Telegram clients, that are capable of creating **flexatars** and using them for
 - video calls 
 - video conferences
