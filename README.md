@@ -14,7 +14,7 @@
 
 
 ## Demo
-![Webradio Animation Screenshot](webradio-animate-demo.png)
+[![Webradio Animation Screenshot](webradio-animate-demo.png)](https://86s46xzcnk.execute-api.us-east-1.amazonaws.com/default/demo)
 
 To start with, [get an impression](https://86s46xzcnk.execute-api.us-east-1.amazonaws.com/default/demo) of animating **flexatar** with web radio in your browser. 
 The **flexatar** is created from a single portrait (not even photo) in few seconds. 
@@ -23,7 +23,7 @@ You can find the preliminary examples [here](examples)
 
 ## Scenarios
 
-### Scenario 1: Animating audio for user
+### Scenario 1: Animating audio for user :headphones:
 We are targeting obvious applications like virtual assiatances, bots etc. The [demo](https://86s46xzcnk.execute-api.us-east-1.amazonaws.com/default/demo) provides an idea how it works.
 
 All you need is to 
@@ -42,7 +42,7 @@ In the context of the mentioned scenario, we are working on integration with
 
 Stay tuned!
 
-### Scenario 2: Webrtc Virtual Webcam
+### Scenario 2: Webrtc Virtual Webcam :microphone:
 The key advantage of **flexatar** technique is that it can be used to animate user's audio track from microphone, thus acting as a virtual webcam for **WebRTC**.
 
 We are planning to commit integration examples to leading WebRTC SFU's like Janus, Livekit etc. Feel free to offer candidates.
@@ -60,7 +60,7 @@ WIP
 
 _We are planning to share the example of interfacing [pion](https://github.com/pion/webrtc) soon_
 
-### Scenario 3: Making static images "Magic"
+### Scenario 3: Making static images "Magic" :movie_camera:
 Like in Magic movies: a photo starts moving. 
 From the technical point of view: no need to fetch audio features and animate as above, animation pattern is enough.
 
