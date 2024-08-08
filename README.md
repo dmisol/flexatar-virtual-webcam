@@ -65,10 +65,10 @@ Like in Magic movies: a photo starts moving.
 From the technical point of view: no need to fetch audio features and animate as above, animation pattern is enough.
 
 ## Other Solutions
-### Browser Extension
+### Browser Extension :earth_asia:
 Is scheduled. The current version is outdated, we are planning to revert.
 
-### Unofficial Telegram Client
+### Unofficial Telegram Client :iphone:
 ![flexatar telegram](flexatar-telegram.png)
 ![alt text](<Screenshot at 2024-08-08 00-49-16.png>)
 Last but not least: we are providing Flexatar Telegram clients, that are capable of creating **flexatars** and using them for
