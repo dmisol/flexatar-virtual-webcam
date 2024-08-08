@@ -8,7 +8,7 @@
 - Just single photo (with default mouth and minor quality) 
 - A set of 5 photos plus mouth (optionally) provides better quality and real mouth, which is to be positioned manually
 - Short video 
-2. Animate audio with **flexatar** in browser/on the device in hard realtime
+2. Animate audio with **flexatar** in **browser (on the device) in hard realtime, respecting lipsync**
 - Audio track is enough to make **flexatar** "speak"
 - We can issueq various effects, mixing/morphing flexatars on the fly
 
@@ -44,6 +44,7 @@ Stay tuned!
 
 ### Scenario 2: Webrtc Virtual Webcam
 The key advantage of **flexatar** technique is that it can be used to animate user's audio track from microphone, thus acting as a virtual webcam for **WebRTC**.
+
 We are planning to commit integration examples to leading WebRTC SFU's like Janus, Livekit etc. Feel free to offer candidates.
 
 ![Virtual Webcam with Flexatar](flexatar-virtual-webcam.jpg)
