@@ -2,10 +2,9 @@
 <html lang="en">
 
 <head>
-    <!-- <script src="/js/app_webpack.js"> </script> -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"> </script>
-    <!-- <script src="https://flexatar-generic-shared-files.s3.amazonaws.com/js/flx_render.js"></script>  -->
-    <script src="/js/flx_render.js"></script>
+    <script src="https://flexatar-generic-shared-files.s3.amazonaws.com/js/ftar.js"> </script>
+    <!-- <script src="/js/ftar.js"> </script> -->
+
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -137,9 +136,9 @@
             // FlexatarClient.route = "/ftar"
             // FlexatarClient.route = "https://86s46xzcnk.execute-api.us-east-1.amazonaws.com/default/ftar"
 
-            flexatarSDK = new FlexatarSDK("{{.Token}}")
+            flexatarSDK = new ftar.FlexatarSDK("{{.Token}}")
             flexatarSDK.useFlexatars("http://t.me/flexatar_bot?ftar=private/1.00/tg/348542078/cef6c073-876d-413e-87ae-b0f95da06189&active=true")
-            flexatarSDK.useEffect(Effect.morph())
+            flexatarSDK.useEffect(ftar.Effect.morph())
 
             var videoElement = document.getElementById('videoElement');
             videoElement.autoplay = true

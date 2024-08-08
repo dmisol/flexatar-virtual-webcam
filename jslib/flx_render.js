@@ -3,27 +3,28 @@ const audioProcessorUrl = "https://flexatar-generic-shared-files.s3.amazonaws.co
 // const nnWorkerUrl = "https://cdn.jsdelivr.net/gh/dmisol/flexatar-virtual-webcam@latest/jslib/service_worker.js"
 // const audioProcesso
 
-// var SpeechNN = ftar.SpeechNN
-// var AnimCalc = ftar.AnimCalc
 
 
 class SpeechNN{
     constructor() {
+       
+        this.isReady = false;
+        this.readyCallback = null;
         this.wav2melModel = null;
         this.mel2phonModel = null;
         this.phon2avecModel = null;
-        this.isReady = false;
-        this.readyCallback = null;
         this.loadNetworks();
+        
     }
     async loadNetworks(){
+        
         this.wav2melModel = await tf.loadLayersModel('https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/wav2mel/model.json');
 //        this.wav2melModel = await tf.loadLayersModel('/file/wav2mel/model.json');
         this.mel2phonModel = await tf.loadLayersModel('https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/mel2phon/model.json');
 //        this.mel2phonModel = await tf.loadLayersModel('/file/mel2phon/model.json');
         this.phon2avecModel = await tf.loadLayersModel('https://raw.githubusercontent.com/dmisol/flexatar-virtual-webcam/main/raw/phon2avec/model.json');
 //        this.phon2avecModel = await tf.loadLayersModel('/file/phon2avec/model.json');
-
+       
         const inputData = tf.tensor2d([new Float32Array(800)]);
         const melPredicted = this.wav2melModel.predict(inputData);
         const melTensors = [];
