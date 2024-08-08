@@ -17,7 +17,7 @@
 ![Webradio Animation Screenshot](webradio-animate-demo.png)
 
 To start with, [get an impression](https://86s46xzcnk.execute-api.us-east-1.amazonaws.com/default/demo) of animating **flexatar** with web radio in your browser. 
-The **flexatar** is created from a single portrait in few seconds. 
+The **flexatar** is created from a single portrait (not even photo) in few seconds. 
 
 You can find the preliminary examples [here](examples)
 
@@ -25,6 +25,15 @@ You can find the preliminary examples [here](examples)
 
 ### Scenario 1: Animating audio for user
 We are targeting obvious applications like virtual assiatances, bots etc. The [demo](https://86s46xzcnk.execute-api.us-east-1.amazonaws.com/default/demo) provides an idea how it works.
+
+All you need is to 
+- init FlexatarAnimator with token and link to the flexatar
+- provide audio
+- connect output to a video element
+
+```
+WIP
+```
 
 In the context of the mentioned scenario, we are working on integration with
 
@@ -43,6 +52,11 @@ The procedure is as follows:
 1. getUserMedia() with **audio only**
 2. audio is delivered to [FlexatarSDK](FlexatarSDK.js)
 3. **FlexatarSDK** supplies both **audio** and **video** tracks ensuring lipsyncing   
+
+```
+WIP
+```
+
 _We are planning to share the example of interfacing [pion](https://github.com/pion/webrtc) soon_
 
 ### Scenario 3: Making static images "Magic"
@@ -71,7 +85,7 @@ Android version is [available](https://play.google.com/store/apps/details?id=org
 3. Is it 3D?
 - Yes! We can export flexatar as a conventional **.obj** file with 3d model and textures. If you are a game developer and need either a custom 3d or a morphable model, please feel free to contact us
 4. What's under the hood?
-- Our in-house math runs on servers compute and store **flexatars**
+- Our in-house math runs on backend to compute and store **flexatars**
 - Rendering is performed in JS with WebGL
 5. How much time does it take to create a **flexatar**?
 - It takes couple of seconds to compute **flexatar** on GPU by photo, and few more seconds to deliver/queue etc. Making high quality flexatar with custom mouth takes about 10 seconds
