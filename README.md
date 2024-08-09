@@ -36,7 +36,7 @@
  In the context of the mentioned scenario, we are working on integration with
 
  - various frontend frameworks
- - popular TTS services
+ - popular Text-To-Speech (TTS) services
 
  Stay tuned!
 
