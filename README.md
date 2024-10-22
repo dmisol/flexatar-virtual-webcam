@@ -10,9 +10,9 @@
 Our technology is intentionally designed for **WebRTC**!
 
 ## Demo
-[![Webradio Animation Screenshot](screenshot.png)](https://86s46xzcnk.execute-api.us-east-1.amazonaws.com/default/demo)
+[![Webradio Animation Screenshot](screenshot.png)](https://www.flexatar-sdk.com/demo)
 
-To start with, [PLEASE TAKE A LOOK at our demo](https://86s46xzcnk.execute-api.us-east-1.amazonaws.com/default/demo) of animating **flexatar** with web radio in your browser.
+To start with, [PLEASE TAKE A LOOK at our demo](https://www.flexatar-sdk.com/demo) of animating **flexatar** with web radio in your browser.
 
 You can find the preliminary examples [here](examples)
 
@@ -42,7 +42,7 @@ _We are planning to share the example of interfacing [pion](https://github.com/p
 
 ### Scenario 2: Animating audio for user :headphones:
 ![In-Browser Animation with Flexatar](flexatarAnimation.jpg)
-We are targeting obvious applications like virtual assistants, bots etc. The [demo](https://86s46xzcnk.execute-api.us-east-1.amazonaws.com/default/demo) provides an idea how it works.
+We are targeting obvious applications like virtual assistants, bots etc. The [demo](https://www.flexatar-sdk.com/demo) provides an idea how it works.
 
 All you need is to
 - init FlexatarAnimator with token and link to the flexatar
