@@ -76,6 +76,52 @@ Stay tuned!
 Like in Magic movies: a photo starts moving.
 From the technical point of view: no need to fetch audio features and animate as above, animation pattern is enough.
 
+## Using Flexatar SDK on your Website
+
+### B2B Callflow
+
+We are providing **FLexatarSDK** as B2B to our partners.
+
+By default, our services are provided as prepaid. After the money paid, we are sharing a **Secret**.
+
+
+![B2B Flexatar Callflow](flexatar-B2B.jpg)
+To enable our **FLexatar SDK** for your customers, you need to receive **Token** from our backend and provide it to your customer.
+
+When a user requires a service from our partner (1), a partner needs to make **POST** request (2) to our backend, with **Secret** in Bearer header and json in request body. The json contains user data and tariff ("subscription") to be used.
+
+The response (3) contains json with **Token** that is to be provided to the user, alongside with a webpage and **Flexatar SDK** (4).
+
+When SDK needs to create or download Flexatar (5) for the user, the **Token** is involved.
+
+### B2B POST Parameters
+
+**Request Headers:**
+```
+"Content-Type: application/json" 
+"Authorization: Bearer <Secret>"
+```
+
+**POST Request JSON Fields:**
+```
+"subscription": "<the tariff to be used>",
+"authtype": "<the way how the end-user was authenticated, like gmail.com>",
+"user": "<user id>",
+"resubscribe": true   __optional, if the user is to be charged as a new one__
+```
+
+**POST Response fields:**
+```
+"token": "<token for the given end-user>",
+"ExpiresAt": "when the token expires",
+"is_expired": <bool>  __if the token expires, either time-based or resources consumed__
+"exists": <bool> __if the token is charged now or have already been charged earlier__
+```
+
+### Making payments
+
+We'll accept Stripe payments soon. We are open to discuss other alternatives.
+
 ## FAQ
 
 1.What **flexatar** stands for?  
