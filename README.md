@@ -85,7 +85,7 @@ We are providing **FLexatarSDK** as B2B to our partners.
 By default, our services are provided as prepaid. After the money paid, we are sharing a **Secret**.
 
 
-![B2B Flexatar Callflow](flexatar-B2B.jpg)
+![B2B Flexatar Callflow](Flexatar-B2B.jpg)
 To enable our **FLexatar SDK** for your customers, you need to receive **Token** from our backend and provide it to your customer.
 
 When a user requires a service from our partner (1), a partner needs to make **POST** request (2) to our backend, with **Secret** in Bearer header and json in request body. The json contains user data and tariff ("subscription") to be used.
