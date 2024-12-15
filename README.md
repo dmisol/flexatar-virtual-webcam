@@ -42,6 +42,7 @@ _We are planning to share the example of interfacing [pion](https://github.com/p
 
 ### Scenario 2: Animating audio for user :headphones:
 ![In-Browser Animation with Flexatar](flexatarAnimation.jpg)
+
 We are targeting obvious applications like virtual assistants, bots etc. The [demo](https://www.flexatar-sdk.com/demo) provides an idea how it works.
 
 All you need is to
@@ -86,6 +87,7 @@ By default, our services are provided as prepaid. After the money paid, we are s
 
 
 ![B2B Flexatar Callflow](Flexatar-B2B.jpg)
+
 To enable our **FLexatar SDK** for your customers, you need to receive **Token** from our backend and provide it to your customer.
 
 When a user requires a service from our partner (1), a partner needs to make **POST** request (2) to our backend, with **Secret** in Bearer header and json in request body. The json contains user data and tariff ("subscription") to be used.
