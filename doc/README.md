@@ -1,4 +1,56 @@
-# Flexatar Platform API 
+
+# Flexatar API Integration Guide
+
+## Overview
+
+This guide provides step-by-step instructions for integrating the Flexatar API into your application, managing user subscriptions, and handling user tokens effectively.
+
+---
+
+## 1. Obtaining a User Token
+
+### Your Backend Responsibilities:
+1. **Call the `usertoken` endpoint** of the Flexatar API service to obtain a user token for the user interacting with your front end.
+2. **Deliver the token to your front end**, where it will be used with the Flexatar SDK to provide functionality.
+
+> **Note:** A user token can only be obtained for an **existing subscription**.
+
+---
+
+## 2. Creating a Subscription
+
+### Steps to Create a Subscription:
+- if subscription exists call `delsubscription` endpoint to delete subscription.
+- Call the `buysubscription` endpoint to create a subscription.
+
+### Example Use Case: Video Generator
+1. When you receive a `payment_success` event from your payment provider, call the `buysubscription` endpoint on the Flexatar API service.
+2. After the subscription is created, obtain a user token using the `usertoken` endpoint.
+
+---
+
+## 3. Shared Subscription for Demos or Virtual Assistants
+
+- For use cases such as a virtual assistant or providing a demo with a fixed number of predefined Flexatars:
+  - Create a single user subscription.
+  - Obtain a user token and share it with all your customers.
+  - Use `curl` to call the `buysubscription` endpoint for creating the subscription.
+
+---
+
+## 4. Handling Token Expiration or Session Limits
+
+### Token Expiration:
+- While using the Flexatar SDK on the front end, you may encounter an expired token or one that has reached its session limit.
+- When this happens:
+  1. Call the `delsubscription` endpoint to delete the existing subscription.
+  2. Call the `buysubscription` endpoint to create a new subscription.
+  3. Obtain a new user token by calling the `usertoken` endpoint.
+
+---
+
+# Flexatar API 
+All this endpoints are managed to call on your backend. Never provide FLEXATAR_API_SECRET to your front end.
 
 ## Buy Subscription
 
@@ -22,6 +74,9 @@ curl -X POST https://api.flexatar-sdk.com/b2b/buysubscription \
 - `"crt"` - client request token. In case the response code is from 500-series, retry request with same crt. That grants you won't be charged for this request again. We suggest using V4 UUIDs, or another random string with enough entropy to avoid collisions.
 - `"testing"` - set `true` or `false`. If testing enabled you won't be charged for this request. 
 
+Subscription is given for 1 month.
+
+
 
 
 ## Delete Subscription
@@ -44,12 +99,12 @@ Deletes subscription for given `"authtype"` and  `"user"`. Use it if you want to
 curl -X POST https://api.flexatar-sdk.com/b2b/usertoken \
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer FLEXATAR_API_SECRET" \
-     -d '{"authtype":"auth_tag","user":"user_id","testing":true/false}'
+     -d '{"authtype":"auth_tag","user":"user_id","restricted":true/false,"testing":true/false}'
 ```
 
 ### Response
 - **200** - success.
-- **body** - `{"token":"USER_TOKEN","exp":"EXPIRATION_DATE","crt":"CRT"}`
+- **body** - `{"token":"USER_TOKEN","exp":"EXPIRATION_DATE","crt":"CRT","is_expired":true/false}`
 
 ### Errors
 - **404** - user not found.
