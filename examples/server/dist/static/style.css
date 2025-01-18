@@ -1,0 +1,102 @@
+.popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .popup-window {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+    flex: 0 1 auto;
+    /* width:400px; */
+    /* height:400px; */
+  }
+
+  .button-flexatar-style {
+    background-color: #344d23;
+    color: #f68b1e;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1rem;
+    /* border-radius: 4px; */
+    cursor: pointer;
+    transition: background-color 0.3s;
+    /* display: flex; */
+   
+}
+
+.loader-frame {
+    position: fixed; /* Position relative to the .container */
+    top: 50%; /* Distance from the top */
+    left: 50%; /* Distance from the left */
+    /* padding: 10px; */
+    border-radius: 10%;
+    border: 1px solid #838383;
+    background-color: #ddd;
+   
+    width: 70px;
+    height: 70px;
+    
+    display: flex;
+    
+  }
+
+  .loader {
+    
+
+    margin: 5px;
+    border: 10px solid #838383;
+    border-radius: 50%;
+    border-top: 10px solid #f68b1e;
+    width: 40px;
+    height: 40px;
+    animation: spinner 4s steps(10) infinite;
+    /* display: flex; */
+    
+  }
+
+  @keyframes spinner {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .drop-zone {
+    /* width: 90%; */
+    /* height: 200px; */
+    /* height: 90%; */
+    border: 2px dashed #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #fff;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin: 10px ;
+    flex-grow: 1;
+    /* padding: 10px; */
+    /* word-wrap: break-word;
+  word-break: break-word;
+  white-space: normal; */
+}
+
+.drop-zone.hover {
+    background-color: #ffd6b5;
+}
+
+.drop-zone p {
+    text-align: center;
+    color: #999;
+    font-size: 16px;
+}

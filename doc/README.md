@@ -43,9 +43,9 @@ This guide provides step-by-step instructions for integrating the Flexatar API i
 ### Token Expiration:
 - While using the Flexatar SDK on the front end, you may encounter an expired token or one that has reached its session limit.
 - When this happens:
-  1. Call the `delsubscription` endpoint to delete the existing subscription.
-  2. Call the `buysubscription` endpoint to create a new subscription.
-  3. Obtain a new user token by calling the `usertoken` endpoint.
+  - Call the `delsubscription` endpoint to delete the existing subscription.
+  - Call the `buysubscription` endpoint to create a new subscription.
+  - Obtain a new user token by calling the `usertoken` endpoint.
 
 ---
 
@@ -99,7 +99,7 @@ Deletes subscription for given `"authtype"` and  `"user"`. Use it if you want to
 curl -X POST https://api.flexatar-sdk.com/b2b/usertoken \
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer FLEXATAR_API_SECRET" \
-     -d '{"authtype":"auth_tag","user":"user_id","restricted":true/false,"testing":true/false}'
+     -d '{"authtype":"auth_tag","user":"user_id","restricted":true/false,"testing":true/false,"restricted":true/false}'
 ```
 
 ### Response
@@ -108,6 +108,8 @@ curl -X POST https://api.flexatar-sdk.com/b2b/usertoken \
 
 ### Errors
 - **404** - user not found.
+
+`"restricted"` - restricted token not allow to creat or delete flexatars. Use it for virtual assistants.
 
 `"USER_TOKEN"` - must be delivered to browser for flexatar SDK functionality.
 
