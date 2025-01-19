@@ -27,7 +27,7 @@ export function listItem(entry,tokenReady){
         showPopup({
             buttons:[
                 {
-                    text:"User Token",
+                    text:"Get User Token",
                     onclick:async closeHandler =>{
                         closeHandler()
                         const resp = await fetch("/usertoken",{
@@ -38,7 +38,7 @@ export function listItem(entry,tokenReady){
 
                         if (resp.ok){
                             const respJson = await resp.json()
-                            console.log(respJson)
+                            
                             userTokenPlaceHolder.innerText = respJson.token
                             if (tokenReady) tokenReady()
 
@@ -49,7 +49,7 @@ export function listItem(entry,tokenReady){
                     }
                 },
                 {
-                    text:"Delete",
+                    text:"Delete Subscription",
                     onclick:async closeHandler =>{
                         closeHandler()
                         const resp = await fetch("/delsubscription",{

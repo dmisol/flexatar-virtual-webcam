@@ -69,3 +69,26 @@ export function showAlert(alertText,action){
         ]
     })
 }
+
+export function showConfirm(alertText,action){
+    showPopup({text:alertText,
+        buttons:[
+            {
+                text:"OK",
+                onclick:closeHandler =>{
+                   
+                    closeHandler()
+                    if (action) action()
+                }
+            },
+            {
+                text:"CANCEL",
+                onclick:closeHandler =>{
+                   
+                    closeHandler()
+                    
+                }
+            }
+        ]
+    })
+}

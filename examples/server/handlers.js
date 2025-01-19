@@ -2,7 +2,7 @@
 const flexatarApiUrl = "https://api.flexatar-sdk.com"
 const flexatarApiSecret = process.env.FLEXATAR_API_SECRET;
 
-const isTesting = true
+
 async function flexRequest(endpoint,reqBody){
 
     
@@ -20,9 +20,8 @@ async function flexRequest(endpoint,reqBody){
 }
 
 exports.getUserToken = async (req, res, next) => {
-    // console.log(req)
-    // const reqBody = {authtype:"test",user:"user",testing:isTesting}
-    console.log(req.body)
+
+
     const resp = await flexRequest("usertoken",req.body)
     if (resp.ok){
         return res.status(resp.status).json(await resp.json());
@@ -31,15 +30,9 @@ exports.getUserToken = async (req, res, next) => {
     }
     
 
-    // next(); // Pass control to the next handler
 };
 
 exports.buySubscription = async (req, res) => {
-    req.body.testing = isTesting
-    // console.log(req.body)
-
-    // const crt = crypto.randomUUID()
-    // const reqBody = {authtype:"test",user:"user",testing:true,crt}
     
     const resp = await flexRequest("buysubscription",req.body)
     // console.log(resp.text())
@@ -49,9 +42,7 @@ exports.buySubscription = async (req, res) => {
     }else{
         return res.status(resp.status).json({error:await resp.text()});
     }
-    // const resp = {sucess:true}
-   
-    next(); // Pass control to the next handler
+
 };
 
 
@@ -64,14 +55,11 @@ exports.delSubscription = async (req, res) => {
     }else{
         return res.status(resp.status).json({error:await resp.text()});
     }
-    // const resp = {sucess:true}
-   
-    next(); // Pass control to the next handler
+
 };
 
 exports.listSubscriptions = async (req, res, next) => {
-    // console.log(req)
-    // const reqBody = {authtype:"test",user:"user",testing:isTesting}
+
     const resp = await flexRequest("listsubscription",req.body)
     if (resp.ok){
         return res.status(resp.status).json(await resp.json());
@@ -80,6 +68,5 @@ exports.listSubscriptions = async (req, res, next) => {
     }
     
 
-    // next(); // Pass control to the next handler
 };
 

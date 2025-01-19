@@ -8,16 +8,7 @@ const app = express();
 const PORT = 8081;
 const ROOT = path.join(__dirname, "dist");
 
-var fs = require('fs');
-var https = require('https');
-var privateKey  = fs.readFileSync('/home/naospennikov/Documents/self_signed_cert/localhost.key', 'utf8');
-var certificate = fs.readFileSync('/home/naospennikov/Documents/self_signed_cert/localhost.crt', 'utf8');
-
-var credentials = {key: privateKey, cert: certificate};
-
-// app.use((_, res, next) => {
-//   next();
-// });
+var http = require('http');
 
 
 
@@ -31,11 +22,7 @@ app.route("/buysubscription").post(handlers.buySubscription);
 app.route("/listsubscription").post(handlers.listSubscriptions);
 app.route("/delsubscription").post(handlers.delSubscription);
 
-var httpsServer = https.createServer(credentials, app);
+var httpServer = http.createServer( app);
 
-httpsServer.listen(PORT);
+httpServer.listen(PORT);
 
-
-// app.listen(PORT, () => {
-//   console.log(`Listening on port ${PORT}`);
-// });

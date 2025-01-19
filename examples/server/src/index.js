@@ -1,6 +1,6 @@
 import {listItem} from "./list-item.js"
 import {createContainer} from "./sub-create-container.js"
-import {showPopup,showAlert} from "../../util/popup.js"
+import {showPopup,showAlert,showConfirm} from "../../util/popup.js"
 import {DropZone,checkFileType,imageMimeTypes} from "../../util/drop-zone.js"
 
 function getToken(){
@@ -23,7 +23,7 @@ buySybscription.onclick = async() => {
                         testing:containerElements.checkbox.checked,
                         crt:crypto.randomUUID()
                     }
-                    console.log(reqBody)
+                   
                     // todo fetch with retry
                     const resp = await fetch("/buysubscription",{
                         method: 'POST',
@@ -36,6 +36,12 @@ buySybscription.onclick = async() => {
                         console.log("buy subscription success")
                     }
 
+                }
+               
+            },{
+                text:"CANCEL",
+                onclick:async closeHandler =>{
+                    closeHandler()
                 }
             }
         ]
@@ -58,8 +64,6 @@ async function showListElements(body){
     const respJson = await resp.json()
     for (const entry of respJson.list){
         const subscription = listItem(entry,()=>{
-            // const token = userTokenPlaceHolder.innerText
-            // console.log(token)
             flexatarSDK = new FtarView.SDK(getToken())
         })
 
@@ -109,6 +113,18 @@ async function addPreview(ftarLink){
             customElement:renderer.canvas,
             buttons:[
                 {
+                    text:"REMOVE",
+                    onclick:async closeHandler =>{
+                        closeHandler()
+                        if (await FtarView.deleteFlexatar(ftarLink,getToken())){
+                            preview.remove()
+                            console.log("deletion success")
+                        }else{
+                            console.log("deletion error")
+                        }
+                    }
+                },
+                {
                     text:"CLOSE",
                     onclick:async closeHandler =>{
                         closeHandler()
@@ -127,8 +143,8 @@ imageDropZone.handleFiles = (e) =>{
    
     const fileType = file.type;
     if (checkFileType(fileType,imageMimeTypes)){
-        showAlert("Make flexatar?",async () =>{
-            // const token = userTokenPlaceHolder.innerText
+        showConfirm("Make flexatar?",async () =>{
+
             const ftarLink = await FtarView.makeFlexatar(getToken(),file,"noname",{ftar:true,preview:true})
             if (!ftarLink){
                 console.log("Unknown error")
@@ -137,14 +153,13 @@ imageDropZone.handleFiles = (e) =>{
                 if (ftarLink.reason){
                     if (ftarLink.reason === "queue_limit"){
                         console.log("Only one process at time allowed")
-                       
                     }else if (ftarLink.reason === "subscription_limit") {
                         console.log("Out of Subscription Limit")
+                    }else if (ftarLink.reason === "bad_photo") {
+                        console.log("Bad Photo")
                     }
-                }else{
-                    console.log("Bad Photo")
                 }
-                
+                return
             }
             console.log("ftar-sucess")
             addPreview(ftarLink)
@@ -159,18 +174,12 @@ flexatarImageDropDownContainer.appendChild(imageDropZone.dropZone)
 
 
 showFlexatarPreview .onclick = async() => {
-    // const token = userTokenPlaceHolder.innerText
+
     const ftarList = await FtarView.flexatarList(getToken(),{preview:true})
-    console.log(ftarList)
+   
     for (const listElement of ftarList){
         await addPreview(listElement)
     }
 }
 
 
-// getUserToken.onclick = async() => {
-    
-//     const resp = await fetch("/usertoken")
-
-//     console.log(await resp.json())
-// }
