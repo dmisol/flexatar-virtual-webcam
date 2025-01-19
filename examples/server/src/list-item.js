@@ -1,7 +1,7 @@
 import {showPopup} from "../../util/popup.js"
 
 
-export function listItem(entry){
+export function listItem(entry,tokenReady){
     const container = document.createElement("span")
     container.style.display = "flex"
     container.style.flexDirection = "row"
@@ -40,6 +40,7 @@ export function listItem(entry){
                             const respJson = await resp.json()
                             console.log(respJson)
                             userTokenPlaceHolder.innerText = respJson.token
+                            if (tokenReady) tokenReady()
 
                         }else{
                             console.log(await resp.text())

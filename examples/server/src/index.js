@@ -3,8 +3,10 @@ import {createContainer} from "./sub-create-container.js"
 import {showPopup,showAlert} from "../../util/popup.js"
 import {DropZone,checkFileType,imageMimeTypes} from "../../util/drop-zone.js"
 
+function getToken(){
+    return userTokenPlaceHolder.innerText
+}
 
-let userToken
 buySybscription.onclick = async() => {
 
     const containerElements = createContainer();
@@ -42,7 +44,7 @@ buySybscription.onclick = async() => {
   
 }
 
-
+let flexatarSDK
 async function showListElements(body){
     if (!body) body = {}
     const resp = await fetch("/listsubscription",{
@@ -55,8 +57,13 @@ async function showListElements(body){
     }
     const respJson = await resp.json()
     for (const entry of respJson.list){
+        const subscription = listItem(entry,()=>{
+            // const token = userTokenPlaceHolder.innerText
+            // console.log(token)
+            flexatarSDK = new FtarView.SDK(getToken())
+        })
 
-        subscriptionsContainer.appendChild(listItem(entry))
+        subscriptionsContainer.appendChild(subscription)
     }
 
     if (respJson.continue){
@@ -75,6 +82,45 @@ listSubscription.onclick = async() => {
 }
 
 
+let renderer
+async function addPreview(ftarLink){
+    const previewImg = await FtarView.getPreview(ftarLink);
+            
+    const preview = document.createElement("img")
+    preview.src = previewImg
+    preview.style.cursor = "pointer"
+    preview.style.width = '75px'; 
+    preview.style.height = 'auto'; 
+    preview.style.objectFit = 'contain';
+    flexatarPreviewContainer.appendChild(preview)
+    preview.onclick = async () =>{
+        if (!flexatarSDK) return
+        if (!renderer){
+            renderer = await flexatarSDK.getRenderer()
+        }
+        const ftarEntry = await FtarView.flexatarEntry(getToken(),ftarLink.id,{ftar:true})
+        const ftar = await FtarView.getFlexatar(ftarEntry);
+
+        renderer.slot1 = ftar
+        renderer.start()
+        renderer.canvas.width=240
+        renderer.canvas.height=320
+        showPopup({
+            customElement:renderer.canvas,
+            buttons:[
+                {
+                    text:"CLOSE",
+                    onclick:async closeHandler =>{
+                        closeHandler()
+                    }
+                }
+            ]
+    
+        })
+
+    }
+}
+
 const imageDropZone = new DropZone("Drag & drop frontal photo here or click to upload")
 imageDropZone.handleFiles = (e) =>{
     const file = e.target.files[0];
@@ -82,8 +128,8 @@ imageDropZone.handleFiles = (e) =>{
     const fileType = file.type;
     if (checkFileType(fileType,imageMimeTypes)){
         showAlert("Make flexatar?",async () =>{
-            const token = userTokenPlaceHolder.innerText
-            const ftarLink = await FtarView.makeFlexatar(token,file,"noname",{ftar:true,preview:true})
+            // const token = userTokenPlaceHolder.innerText
+            const ftarLink = await FtarView.makeFlexatar(getToken(),file,"noname",{ftar:true,preview:true})
             if (!ftarLink){
                 console.log("Unknown error")
             }
@@ -101,15 +147,8 @@ imageDropZone.handleFiles = (e) =>{
                 
             }
             console.log("ftar-sucess")
-            const previewImg = await FtarView.getPreview(ftarLink);
-            console.log("previewImg",previewImg)
-            const preview = document.createElement("img")
-            preview.src = previewImg
-            preview.style.cursor = "pointer"
-            preview.style.width = '75px'; 
-            preview.style.height = 'auto'; 
-            preview.style.objectFit = 'contain';
-            flexatarPreviewContainer.appendChild(preview)
+            addPreview(ftarLink)
+            
             return
 
         })
@@ -117,6 +156,17 @@ imageDropZone.handleFiles = (e) =>{
     }
 }
 flexatarImageDropDownContainer.appendChild(imageDropZone.dropZone)
+
+
+showFlexatarPreview .onclick = async() => {
+    // const token = userTokenPlaceHolder.innerText
+    const ftarList = await FtarView.flexatarList(getToken(),{preview:true})
+    console.log(ftarList)
+    for (const listElement of ftarList){
+        await addPreview(listElement)
+    }
+}
+
 
 // getUserToken.onclick = async() => {
     
