@@ -1,7 +1,10 @@
 import {listItem} from "./list-item.js"
 import {createContainer} from "./sub-create-container.js"
+// import {initVAssistant,sendFileToSpeak} from "./v-assistant.js"
 import {showPopup,showAlert,showConfirm} from "../../util/popup.js"
 import {DropZone,checkFileType,imageMimeTypes} from "../../util/drop-zone.js"
+import VCAM from "./ftar-v-cam.js"
+
 
 function getToken(){
     return userTokenPlaceHolder.innerText
@@ -50,6 +53,10 @@ buySybscription.onclick = async() => {
   
 }
 
+const getTokenInst = new FtarView.GetToken(async ()=>{
+    return getToken()
+})
+
 let flexatarSDK
 async function showListElements(body){
     if (!body) body = {}
@@ -64,7 +71,8 @@ async function showListElements(body){
     const respJson = await resp.json()
     for (const entry of respJson.list){
         const subscription = listItem(entry,()=>{
-            flexatarSDK = new FtarView.SDK(getToken())
+            
+            flexatarSDK = new FtarView.SDK(getTokenInst)
         })
 
         subscriptionsContainer.appendChild(subscription)
@@ -102,7 +110,7 @@ async function addPreview(ftarLink){
         if (!renderer){
             renderer = await flexatarSDK.getRenderer()
         }
-        const ftarEntry = await FtarView.flexatarEntry(getToken(),ftarLink.id,{ftar:true})
+        const ftarEntry = await FtarView.flexatarEntry(getTokenInst,ftarLink.id,{ftar:true})
         const ftar = await FtarView.getFlexatar(ftarEntry);
 
         renderer.slot1 = ftar
@@ -116,7 +124,7 @@ async function addPreview(ftarLink){
                     text:"REMOVE",
                     onclick:async closeHandler =>{
                         closeHandler()
-                        if (await FtarView.deleteFlexatar(ftarLink,getToken())){
+                        if (await FtarView.deleteFlexatar(ftarLink,getTokenInst)){
                             preview.remove()
                             console.log("deletion success")
                         }else{
@@ -145,7 +153,7 @@ imageDropZone.handleFiles = (e) =>{
     if (checkFileType(fileType,imageMimeTypes)){
         showConfirm("Make flexatar?",async () =>{
 
-            const ftarLink = await FtarView.makeFlexatar(getToken(),file,"noname",{ftar:true,preview:true})
+            const ftarLink = await FtarView.makeFlexatar(getTokenInst,file,"noname",{ftar:true,preview:true})
             if (!ftarLink){
                 console.log("Unknown error")
             }
@@ -175,11 +183,54 @@ flexatarImageDropDownContainer.appendChild(imageDropZone.dropZone)
 
 showFlexatarPreview .onclick = async() => {
 
-    const ftarList = await FtarView.flexatarList(getToken(),{preview:true})
+    const ftarList = await FtarView.flexatarList(getTokenInst,{preview:true})
    
     for (const listElement of ftarList){
         await addPreview(listElement)
     }
 }
 
+function createVCam(user,videoelement,holder){
+    // const size = {width:"50px",height:"320px"}
+    const vCam = VCAM.getVCamElement("http://localhost:8082")
+    vCam.setupTokenFetch("/usertoken",
+        {
+            method: 'POST',
+            headers:{"Content-Type":"application/json"},
+            body: JSON.stringify({authtype:"test",user:user,restricted:false})  
+        }
+    )
+    vCam.ontokenerror = (error)=>{
+        console.log(error)
+    }
+
+    vCam.onoutputstream = (mediaStream) => {
+        videoelement.srcObject = mediaStream
+        // console.log("onoutputstream",mediaStream)
+    }
+    vCam.background = "./static/background0.jpg"
+    vCam.mount(holder)
+    return vCam
+}
+let vCam
+showVAssistant.onclick = () => {
+    // const token = getToken()
+   
+    vCam = createVCam("test@user.email",videoFromIframe,iframeHolder)
+    // createVCam("test@user.email",videoFromIframe1,iframeHolder1)
+}
+
+
+
+speakButton.onclick = async () => {
+    vCam.src = "./static/Mary.mp3"
+}
+
+stopButton.onclick = async () => {
+    vCam.src = null
+}
+// speakButton.onclick = async () => {
+//     const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+//     vCam.audiostream = mediaStream
+// }
 

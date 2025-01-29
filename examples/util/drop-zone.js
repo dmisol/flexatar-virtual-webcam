@@ -6,6 +6,7 @@ export class DropZone {
         this.dropZoneText = document.createElement("p")
         this.dropZoneText.innerText = text
         this.dropZone.appendChild(this.dropZoneText)
+        
         const input=document.createElement('input');
         input.type="file";
         if (accept){
