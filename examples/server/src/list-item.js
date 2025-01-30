@@ -1,7 +1,7 @@
 import {showPopup} from "../../util/popup.js"
 
 
-export function listItem(entry,tokenReady){
+export function listItem(entry,opts){
     const container = document.createElement("span")
     container.style.display = "flex"
     container.style.flexDirection = "row"
@@ -27,9 +27,11 @@ export function listItem(entry,tokenReady){
         showPopup({
             buttons:[
                 {
-                    text:"Get User Token",
+                    text:"Show V-Cam",
                     onclick:async closeHandler =>{
                         closeHandler()
+                        if (opts.vcam) opts.vcam(reqBody)
+                        /*
                         const resp = await fetch("/usertoken",{
                             method: 'POST',
                             headers:{"Content-Type":"application/json"},
@@ -40,11 +42,11 @@ export function listItem(entry,tokenReady){
                             const respJson = await resp.json()
                             
                             userTokenPlaceHolder.innerText = respJson.token
-                            if (tokenReady) tokenReady()
+                           
 
                         }else{
                             console.log(await resp.text())
-                        }
+                        }*/
                         
                     }
                 },

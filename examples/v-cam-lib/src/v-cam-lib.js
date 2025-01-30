@@ -10,12 +10,13 @@ class VCam {
     #onoutputstream
     #reloadTokenFunc = async () => {}
     #errorCalback = ()=> {}
+    #opts
     setupTokenFetch(url,opts){
         let firstTry = true
         this.#reloadTokenFunc = async () => {
-            if (firstTry &&  this.opts?.token){
+            if (firstTry &&  this.#opts?.token){
                 firstTry = false
-                return this.opts.token
+                return this.#opts.token
             }
             try{
                 const response = await fetch(url,opts)
@@ -46,82 +47,96 @@ class VCam {
                 return
             }
             const imageBuffer = await resp.arrayBuffer()
-            console.log("bckg lreceaved",imageBuffer)
-            await this.iframeLoadedPromise
-            console.log("bckg loaded and sent")
-            this.iframe.contentWindow.postMessage({flexatar:{type:"background",imageBuffer}}, "*")
+            // console.log("bckg lreceaved",imageBuffer)
+            await this.#iframeLoadedPromise
+            // console.log("bckg loaded and sent")
+            this.#iframe.contentWindow.postMessage({flexatar:{type:"background",imageBuffer}}, "*")
    
         })()
        
     }
+    #iframe
+    #iframeLoadedPromise
+    #id
+    #videoOutReadyPromise
     constructor(iframeUrl,opts){
-        this.id = crypto.randomUUID()
-        // if (!opts.size){
-        //     opts.size = {width:"60px",height:"320px"}
-        // }
-        this.opts = opts
+        this.#id = crypto.randomUUID()
+        this.#opts = opts
         if (opts?.token){
             this.#reloadTokenFunc = ()=>{
                 return opts.token
             }
         }
-        this.iframe = document.createElement("iframe")
-        this.isVideoOutputReady = false
+        this.#iframe = document.createElement("iframe")
+
         let videoOutResolver 
         
-        this.videoOutReadyPromise = new Promise(resolve =>{
+        this.#videoOutReadyPromise = new Promise(resolve =>{
             videoOutResolver = resolve
         })
-        this.videoOutResolver = videoOutResolver
+        this.#videoOutResolver = videoOutResolver
         
         window.addEventListener('message', async event => {
             let data = event.data;
-            console.log(data)
+            // console.log(data)
             if (!data.flexatar) return
             data = data.flexatar
-            data = data[this.id]
+            data = data[this.#id]
             if (!data) return
                
             if (data.type === 'answer') {
-                this.mediaConnection.recvAnswer(data)
+                this.#mediaConnection.recvAnswer(data)
         
             } else if (data.type === 'ice-candidate') {
         
-                this.mediaConnection.addIceCandidate(data)
+                this.#mediaConnection.addIceCandidate(data)
             } if (data.type === 'offer') {
-                this.mediaConnection.recvOffer(data)
+                this.#mediaConnection.recvOffer(data)
         
             } else if (data.type === 'ftarvideoready') {
                 
-                // this.iframe.contentWindow.postMessage({flexatar:await this.mediaConnection.offerMessage()}, '*');
+           
             }else if (data.type === 'reload_token') {
-                this.iframe
-                const token = await this.#reloadTokenFunc()
-                this.iframe.contentWindow.postMessage({flexatar:{type:"reload_token",token}}, "*")
-
                 
-                // this.iframe.contentWindow.postMessage({flexatar:await this.mediaConnection.offerMessage()}, '*');
+                const token = await this.#reloadTokenFunc()
+                this.#iframe.contentWindow.postMessage({flexatar:{type:"reload_token",token}}, "*")
             }
             
         });
         
-        this.iframeLoadedPromise = new Promise(resolve=>{
-            this.iframe.onload = async ()=>{
-                this.iframe.contentWindow.postMessage({flexatar:{token:true}}, "*");
+        this.#iframeLoadedPromise = new Promise(resolve=>{
+            this.#iframe.onload = async ()=>{
+                this.#iframe.contentWindow.postMessage({flexatar:{token:true}}, "*");
+                this.#setupMediaConnection()
                 resolve()
             }
         })
-        this.iframe.src = `${iframeUrl}?id=${this.id}`
-        this.iframe.style.width = "100%"
-        this.iframe.style.height = "100%"
-        this.iframe.style.border = "none"
-        this.iframe.style.position = "absolute"
-        this.iframe.style.top = "0"
-        this.iframe.style.left = "0"
-        // this.iframe.style.height=this.opts.size.height
-        // this.iframe.style.width=this.opts.size.width
+        this.#iframe.src = `${iframeUrl}?id=${this.#id}`
+        this.#iframe.style.width = "100%"
+        this.#iframe.style.height = "100%"
+        this.#iframe.style.border = "none"
+        this.#iframe.style.position = "absolute"
+        this.#iframe.style.top = "0"
+        this.#iframe.style.left = "0"
+        this.#style = this.#iframe.style
+
         
     }
+    set resolution(val){
+        (async () => {
+            await this.#videoOutReadyPromise
+            this.#iframe.contentWindow.postMessage({flexatar:{type:"resolution",resolution:val}}, "*")
+
+        })()
+    }
+    #style
+    set style(val){
+        this.#iframe.style = val
+    }
+    get style(){
+        return this.#style
+    }
+
     #playingAudioStream
     set src(src){
         if (!src){
@@ -150,19 +165,16 @@ class VCam {
     }
     set audiotrack(audiotrack){
         (async () => {
-            // console.log("mediaStream provided")
-            await this.videoOutReadyPromise
+            await this.#videoOutReadyPromise
             if (audiotrack){
                 audiotrack.onended = ()=>{
-                    console.log("track ended")
-                    this.mediaConnection.addAudioTrack(null)
-                    this.mediaConnection.isNegotiating = false
+                    this.#mediaConnection.addAudioTrack(null)
+                    this.#mediaConnection.isNegotiating = false
                 }
             }
            
-            // console.log("setting audiotrack",mediaStream)
-            this.mediaConnection.addAudioTrack(audiotrack)
-            this.mediaConnection.isNegotiating = false
+            this.#mediaConnection.addAudioTrack(audiotrack)
+            this.#mediaConnection.isNegotiating = false
            
         })()
         
@@ -176,9 +188,7 @@ class VCam {
                 this.#playingAudioStream.stopBufferSource()
             }
             this.#playingAudioStream = await mediaStreamFromArrayBufer(arraybuffer,VCam.#getAudioContext(),()=>{
-                // console.log("url play stoped" )
                 this.#playingAudioStream = null
-                // this.audiostream = null
             })
             this.audiostream = this.#playingAudioStream
         })()
@@ -196,50 +206,56 @@ class VCam {
             return
         }
         const audioTrack = mediaStream.getAudioTracks()[0]
-        console.log(audioTrack)
+        // console.log(audioTrack)
         this.audiotrack = audioTrack
-        // (async () => {
-        //     // console.log("mediaStream provided")
-        //     await this.videoOutReadyPromise
-        //     // console.log("setting audiotrack",mediaStream)
-        //     this.mediaConnection.addAudioTrack(mediaStream)
-        //     this.mediaConnection.isNegotiating = false
-        // })()
     }
 
     set onoutputstream(callback){
         this.#onoutputstream = callback
     }
     mediastream = new MediaStream();
-    
-    mount(element){
-        element.style.position = "relative"; 
-        element.appendChild(this.iframe)
-        if (this.mediaConnection) return
-
-        this.mediaConnection = new MediaConnectionProvider(this.iframe.contentWindow,"host")
-        this.mediaConnection.ondelayedaudio  = (audioTrack)=>{
-            if (this.oldTarck){
-                this.mediastream.removeTrack(this.oldTarck);
+    #videoOutResolver
+    #mediaConnection
+    #oldTarck
+    #setupMediaConnection(){
+        this.#mediaConnection = new MediaConnectionProvider(this.#iframe.contentWindow,"host")
+        this.#mediaConnection.ondelayedaudio  = (audioTrack)=>{
+            if (this.#oldTarck){
+                this.mediastream.removeTrack(this.#oldTarck);
                 
             }
-            this.oldTarck = audioTrack
+            this.#oldTarck = audioTrack
             this.mediastream.addTrack(audioTrack);
-            console.log("plaing tracks",this.mediastream.getTracks())
+            // console.log("plaing tracks",this.mediastream.getTracks())
         }
-        this.mediaConnection.onflexatarready = ftarTrack =>{
-            this.videoOutResolver()
+        this.#mediaConnection.onflexatarready = ftarTrack =>{
+            this.#videoOutResolver()
             this.mediastream.addTrack(ftarTrack);
             if (this.#onoutputstream) this.#onoutputstream( this.mediastream)
             
         }
     }
-    unmount(element){
-        element.remove()
+
+    mount(element){
+        element.style.position = "relative"; 
+        element.appendChild(this.#iframe)
+        
+    }
+    get element(){
+        return  this.#iframe
+    }
+    unmount(){
+        this.#iframe.remove()
+    }
+    destroy(){
+        if (this.#iframe.parentNode){
+            this.#iframe.remove()
+        }
+        this.#iframe.src = null
     }
 
 }
 
 export default {
     getVCamElement
-  };
+};

@@ -11,7 +11,19 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flexatar Realtime</title>
+    <title>Flexatar Demo Server</title>
+    <style>
+        table {
+            border-collapse: collapse;
+        }
+        td {
+            border: 2px solid black;
+            text-align: center;
+            vertical-align: middle;
+            padding: 3px;
+            margin: 0px;
+        }
+    </style>
 </head>
 
 <body>
@@ -22,19 +34,42 @@
     <span id="subscriptionsContainer" style="display: block;"></span>
 
     <button id="showMoreButton" style="display: none;">Show More</button>
-    <span style="display: block;">
+    <!-- <span style="display: block;">
         <span style="display: inline;"><strong>Selected User Token:</strong> </span><span id="userTokenPlaceHolder" style="display: inline;font-size: 8px;"> </span>
-    </span>
-    <span id="flexatarImageDropDownContainer"><strong>To make flexatar:</strong></span>
+    </span> -->
+    <!-- <span id="flexatarImageDropDownContainer"><strong>To make flexatar:</strong></span>
     
     <button id="showFlexatarPreview" style="display: block;">List Flextaras</button>
     <span id="flexatarPreviewContainer" ></span>
-    <button id="showVAssistant" style="display: block;">Show V-Assistant</button>
-    <button id="speakButton" style="display: block;">Speak</button>
-    <button id="stopButton" style="display: block;">Stop</button>
-    <div id="iframeHolder" style="width: 70px;height: 320px; display: inline-block;"></div>
+    <button id="showVAssistant" style="display: block;">Show V-Assistant</button> -->
+    
+   
     <!-- <button id="getUserToken">Get User Token</button> -->
-    <video id="videoFromIframe" playsinline autoplay loop></video>
+   
+
+    <table id="vCamTable" style="display: none;">
+        <tr>
+            <td>Your Audio</td>
+            <td>Flexatar SDK </td>
+            <td>Your Video Element</td>
+        </tr>
+        <tr>
+            <td >
+                <span style="display: flex; gap:20px; flex-direction: column;">
+                    <button id="micButton" style="display: block;">Microphone</button>
+                    <button id="speakButton" style="display: block;">Audio File</button>
+                    <button id="stopButton" style="display: block;">STOP</button>
+                </span>
+               
+            </td>
+            <td> 
+                <div id="iframeHolder" style="width: 70px;height: 320px; display: inline-block;"></div>
+            </td>
+            <td> 
+                <video id="videoFromIframe" playsinline autoplay loop style="width: 240; height:320px;"></video>
+            </td>
+        </tr>
+    </table>
 
     <!-- <div id="iframeHolder1" style="width: 70px;height: 320px; display: inline-block;"></div>
     <video id="videoFromIframe1" playsinline autoplay loop></video> -->

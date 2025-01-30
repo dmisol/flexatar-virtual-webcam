@@ -21,7 +21,7 @@ buttonContainer.style.gap = "20px"
 buttonContainer.style.justifyContent = "center"
 buttonContainer.style.alignItems = "center"
 document.body.appendChild(popupBlockingOverlay)
-console.log("popup ready")
+// console.log("popup ready")
 
 export function showPopup(opts){
     const allElements = []

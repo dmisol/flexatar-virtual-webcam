@@ -4,7 +4,7 @@ import {getFlexatarWraped,getPreviewWraped} from "./caching.js"
 import {Texts} from "./texts.js"
 import {MediaConnectionProvider} from "../../util/rtc-connection.js"
 import {checkFileType,imageMimeTypes} from "../../util/util.js"
-import { resolve } from "../webpack.config.js"
+
 
 
 const queryString = window.location.search;
@@ -21,27 +21,15 @@ urlParams.forEach((value, key) => {
 const lipsyncerPromise = FtarLipsync.newInstance()
 
 const lipsyncerWithACtxPromise = new Promise(async resolve=>{
-    // startButton.onclick = async ()=>{
-        const lipsyncer = await lipsyncerPromise
-        await lipsyncer.startAudioContext()
-        console.log("audioContext",lipsyncer.audioContext)
-        // const audioContext = lipsyncer.audioContext
-        resolve(lipsyncer)
-        
-    // }
+
+    const lipsyncer = await lipsyncerPromise
+    await lipsyncer.startAudioContext()
+    // console.log("audioContext",lipsyncer.audioContext)
+    resolve(lipsyncer)
 })
-
-// const buttonClickPromise = new Promise(resolve => {
-//     startButton.onclick = async ()=>{
-//         resolve()
-//     }
-// })
-
-// mediaConnection.addTransiver("sendonly")
 
 let flexatarSDK;
 let renderer;
-// let  audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
 function createDropZone(element,handler){
     const input=document.createElement('input');
@@ -71,26 +59,7 @@ function createDropZone(element,handler){
 }
 
 function addMakeFlexatarButton(){
-    // const holder = document.createElement("span")
-    // holder.className = "item-holder bkg-color"
-    // // holder.style.height = "auto"
-    // // holder.style.cursor = "pointer"
-    // const circle = document.createElement("div")
-    // circle.className = "circle"
-    // const vPlus = document.createElement("div")
-    // vPlus.className = "bar horizontal"
-    // const hPlus = document.createElement("div")
-    // hPlus.className = "bar vertical"
-    // circle.appendChild(vPlus)
-    // circle.appendChild(hPlus)
-    // holder.appendChild(circle)
 
-    
-
-    // const text = document.createElement("div")
-    // text.textContent = Texts.DROP_PHOTO
-    // text.className = "drop-photo"
-    // holder.appendChild(text)
     const holder = createFlexatarHolder
     const circle = plusCircle
     const text = makeTextHolder
@@ -109,29 +78,26 @@ function addMakeFlexatarButton(){
     }
     
     const setLoader = ()=>{
-        // holder.classList.add('block');
         circle.style.display = "none"
         text.style.display = "none"
         blockOverlay.style.display = "block"
-        // holder.classList.add('loader-border');
+
 
         return ()=>{
             circle.style.display = "block"
             text.style.display = "block"
             blockOverlay.style.display = "none"
-            // holder.classList.remove('loader-border');
-            // holder.classList.remove('block');
         }
     }
 
-    // previewListHolder.appendChild(holder)
+
     let removeErrorSign
     createDropZone(holder,async (e)=>{
         if (removeErrorSign){
             removeErrorSign()
             removeErrorSign = null
         }
-        // console.log("file chosen",file)
+
         const removeLoader = setLoader()
 
        
@@ -143,7 +109,7 @@ function addMakeFlexatarButton(){
             removeLoader()
             return
         }
-        console.log("getTokenInst",getTokenInst)
+
         const ftarLink = await FtarView.makeFlexatar(getTokenInst,file,"noname",{ftar:true,preview:true})
         removeLoader()
         if (!ftarLink){
@@ -166,9 +132,8 @@ function addMakeFlexatarButton(){
         FtarView.userInfo(getTokenInst).then(userInfo=>{
             ftarCountSign.textContent =  userInfo.FtarCount
         })
-        const ftar = await getFlexatarWraped(ftarLink,getTokenInst)
-        // renderer.slot1 = ftar
-        // renderer.start()
+        await getFlexatarWraped(ftarLink,getTokenInst)
+
         const holder = await addPreview(ftarLink,true)
         holder.click()
         emptyBlock.textContent = ""
@@ -226,17 +191,14 @@ async function addPreview(ftarLink,first){
 
     // }
     holder.onclick = async() =>{
-        console.log("ftar icon pressed")
-        // loader.style.display = "block"
         selecteFtar = {element:holder,ftarId:ftarLink.id}
 
         if (oldClicked){
-            console.log("remove class")
+            
             oldClicked.classList.remove("selected-item")
         }
       
         oldClicked = holder
-        // oldClicked = holder
         holder.classList.add("selected-item")
         holder.appendChild(loader)
         try{
@@ -272,8 +234,13 @@ window.addEventListener('message', async (event) => {
 
     if (data.type === "reload_token"){
         reloadTokenResolve(data.token)
+    }else if (data.type === "resolution"){
+        await rendererPromise
+        renderer.canvas.width = data.resolution.width
+        renderer.canvas.height = data.resolution.height
+
     }else if (data.type === "background"){
-        console.log("background obtained", data.imageBuffer)
+        // console.log("background obtained", data.imageBuffer)
         await rendererPromise
 
         const overlayUrl = URL.createObjectURL( new Blob([data.imageBuffer], { type: 'image/jpg' }));
@@ -284,7 +251,7 @@ window.addEventListener('message', async (event) => {
 
         const token = new FtarView.GetToken(async ()=>{
         
-                console.log("reload token iframe")
+                // console.log("reload token iframe")
                 const tokenPromise = new Promise((resolve)=>{reloadTokenResolve=resolve})
                 const sendObject = {}
                 sendObject[iframeId] = {type:"reload_token"}
@@ -368,7 +335,7 @@ window.addEventListener('message', async (event) => {
            
             mediaConnection.addAudioTrack(synchronizedAudio.getAudioTracks()[0])
             audioTrack.onended = () => {
-                console.log('Track has been stopped.');
+                // console.log('Track has been stopped.');
                 setTimeout(()=>{
                     lipsyncer.mediaStream = null
                     mediaConnection.addAudioTrack(null)
@@ -378,22 +345,6 @@ window.addEventListener('message', async (event) => {
             mediaConnection.isNegotiating = false
             
         }
-
-
-        /*
-        const audioStream = await audioPromise
-        const lipsyncer = await lipsyncerWithACtxPromise
-
-        lipsyncer.mediaStream = audioStream
-        lipsyncer.connect(renderer)
-
-        const synchronizedAudio = lipsyncer.synchronizedStream()
-        FtarView.util.addAudioStream(ftarVideoStream,synchronizedAudio)
-
-        mediaConnection.addAllTraks(ftarVideoStream)
-        console.log("add ftarmediastream")
-        */
-
     }
 
     if (data.type === 'offer') {
@@ -407,27 +358,12 @@ window.addEventListener('message', async (event) => {
     } 
 });
 
-// const peerConnection = new RTCPeerConnection();
 
-// let mediastream
-// // When a track is received, attach it to an audio element
-// peerConnection.ontrack = event => {
-//     console.log("audio received",event.streams )
-//     mediastream = event.streams[0]
 
-// };
-
-// Send ICE candidates to the parent window
-// peerConnection.onicecandidate = event => {
-//     if (event.candidate) {
-//         window.parent.postMessage({ type: 'ice-candidate', candidate: JSON.stringify(event.candidate) }, '*');
-//     }
-// };
-
-let buffers = []
-async function addAudioBuffer(buffer){
-        buffers.push(buffer)
-}
+// let buffers = []
+// async function addAudioBuffer(buffer){
+//         buffers.push(buffer)
+// }
 
 
 let isTrashPressed = false

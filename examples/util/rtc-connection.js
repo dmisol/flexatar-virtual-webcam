@@ -58,8 +58,8 @@ export class MediaConnectionProvider{
         // this.peerConnection.addTransceiver('audio', { direction: 'sendrecv' });
         this.peerConnection.ontrack = event => {
             
-            console.log("ontrack",holderId)
-            console.log(event.track)
+            // console.log("ontrack",holderId)
+            // console.log(event.track)
             // console.log(event.streams[0].getTracks())
             const track = event.track
             if (holderId == "iframe"){
@@ -83,7 +83,7 @@ export class MediaConnectionProvider{
         };
 
         this.peerConnection.onicecandidate = event => {
-            console.log("onicecandidate")
+            // console.log("onicecandidate")
             if (event.candidate) {
    
                
@@ -91,7 +91,7 @@ export class MediaConnectionProvider{
             }
         };
         this.peerConnection.onconnectionstatechange = () => {
-            console.log('Connection State:', this.peerConnection.connectionState);
+            // console.log('Connection State:', this.peerConnection.connectionState);
             if (this.peerConnection.connectionState == "connected"){
                
                 // this.isNegotiating = false
@@ -99,49 +99,40 @@ export class MediaConnectionProvider{
            
         };
         this.isNegotiating = true
-        // if (holderId == "iframe"){
-            this.peerConnection.onnegotiationneeded = async () => {
-                console.log('Negotiation needed...',holderId);
-                if (this.isNegotiating) return
-                this.isNegotiating = true
-                // this.offerMessage()
-                // if (holderId == "host")
-                    postMessageProvider.postMessage({flexatar:wrapPayload(await this.offerMessage(),this.iframeId)}, '*');
-                // else{
-                //     postMessageProvider.postMessage({flexatar:{type:"renegotiate"}}, '*');
-                // }
-               
-            }
-        // }
-    }
-    // addTransiver(direction){
-    //     const transiver = this.peerConnection.addTransceiver('video', { direction: direction });
+       
+        this.peerConnection.onnegotiationneeded = async () => {
+            // console.log('Negotiation needed...',holderId);
+            if (this.isNegotiating) return
+            this.isNegotiating = true
 
-    // }
+            postMessageProvider.postMessage({flexatar:wrapPayload(await this.offerMessage(),this.iframeId)}, '*');
+
+            
+        }
+
+    }
+
     async recvOffer(data){
-        console.log("recvOffer")
+        // console.log("recvOffer")
 
         // console.log('Offer SDP:', data.sdp);
         const remoteDesc = new RTCSessionDescription({ type: 'offer', sdp: data.sdp });
         // console.log("remoteDesc",remoteDesc)
         await this.peerConnection.setRemoteDescription(remoteDesc);
 
-        // Create an answer
+        
         const answer = await this.peerConnection.createAnswer();
         await this.peerConnection.setLocalDescription(answer);
 
-        // Send the answer back to the parent
-        // const sdp = this.peerConnection.localDescription.sdp 
-        // this.postMessageProvider.postMessage({flexatar:{ type: 'answer', sdp: sdp }}, '*');
-        console.log("send answer")
+
+        // console.log("send answer")
         this.postMessageProvider.postMessage({flexatar:wrapPayload({ type: 'answer', sdp: answer.sdp },this.iframeId)}, '*');
         // window.parent.postMessage({flexatar:{ type: 'answer', sdp: this.peerConnection.localDescription.sdp }}, '*');
         // console.log('answer SDP:', this.peerConnection.localDescription.sdp);
     }
     async recvAnswer(data){
-        console.log("recvAnswer")
+        // console.log("recvAnswer")
         const remoteDesc = new RTCSessionDescription({ type: 'answer', sdp: data.sdp });
-        // console.log("answer remoteDesc",remoteDesc)
         await this.peerConnection.setRemoteDescription(remoteDesc);
     }
     async addIceCandidate(data){
@@ -151,7 +142,6 @@ export class MediaConnectionProvider{
 
         const offer = await this.peerConnection.createOffer();
         await this.peerConnection.setLocalDescription(offer);
-        console.log(this.holderId)
         // printMediaLineOrder(offer.sdp)
 
         return { type: 'offer', sdp: offer.sdp }
@@ -161,13 +151,13 @@ export class MediaConnectionProvider{
         if (audiotrack){
             if (this.audioTransiver){
                 this.audioTransiver.sender.replaceTrack(audiotrack).then(() => {
-                    console.log('Track replaced successfully.');
+                    // console.log('Track replaced successfully.');
                 }).catch((error) => {
                     console.error('Error replacing track:', error);
                 });
                 // this.audioTransiver.stop()
             }else{
-                console.log("setting new transiver",this.holderId)
+                // console.log("setting new transiver",this.holderId)
                 this.audioTransiver = this.peerConnection.addTransceiver(audiotrack, { direction: 'sendonly' });
                
             }
@@ -189,7 +179,7 @@ export class MediaConnectionProvider{
     addAllTraks(mediaStream){
         // this.peerConnection.addStream(mediaStream);
         mediaStream.getTracks().forEach(track => {
-            const sender = this.peerConnection.addTransceiver(track, { direction: 'sendonly' });
+            this.peerConnection.addTransceiver(track, { direction: 'sendonly' });
 
         //     // console.log("track to add",track)
             // const sender = this.peerConnection.addTrack(track,mediaStream)
