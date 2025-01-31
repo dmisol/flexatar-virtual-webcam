@@ -13,8 +13,8 @@ module.exports = function(env) {
       minimize: true,
     },
 
-    // mode: 'production',
-    mode: 'development',
+    mode: 'production',
+    // mode: 'development',
     entry: './src/v-cam-lib.js',
     target: 'web',
     output: {

@@ -127,7 +127,6 @@ export class MediaConnectionProvider{
 
         // console.log("send answer")
         this.postMessageProvider.postMessage({flexatar:wrapPayload({ type: 'answer', sdp: answer.sdp },this.iframeId)}, '*');
-        // window.parent.postMessage({flexatar:{ type: 'answer', sdp: this.peerConnection.localDescription.sdp }}, '*');
         // console.log('answer SDP:', this.peerConnection.localDescription.sdp);
     }
     async recvAnswer(data){

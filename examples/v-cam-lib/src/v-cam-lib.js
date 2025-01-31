@@ -93,8 +93,11 @@ class VCam {
             } if (data.type === 'offer') {
                 this.#mediaConnection.recvOffer(data)
         
-            } else if (data.type === 'ftarvideoready') {
-                
+            } else if (data.type === 'request_audio') {
+                if (this.#requestAudioResolve) {
+                    this.#requestAudioResolve()
+                    this.#requestAudioResolve == null
+                }
            
             }else if (data.type === 'reload_token') {
                 
@@ -234,6 +237,23 @@ class VCam {
             if (this.#onoutputstream) this.#onoutputstream( this.mediastream)
             
         }
+    }
+
+    #requestAudioResolve
+    #isAudioRequested = false
+    get isAudioReady(){
+        return this.#isAudioRequested
+    }
+    async requestAudioPermition(callback){
+        if (this.#isAudioRequested) return
+        this.#isAudioRequested = true
+        console.log("post request audio")
+        this.#iframe.contentWindow.postMessage({flexatar:{type:"request_audio"}}, "*")
+        await new Promise(resolve=>{
+            this.#requestAudioResolve = resolve
+        })
+        callback()
+
     }
 
     mount(element){

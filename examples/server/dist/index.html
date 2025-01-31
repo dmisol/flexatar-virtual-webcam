@@ -55,15 +55,17 @@
         </tr>
         <tr>
             <td >
-                <span style="display: flex; gap:20px; flex-direction: column;">
+                <span id="buttonContainer" style="display: flex; gap:20px; flex-direction: column;">
                     <button id="micButton" style="display: block;">Microphone</button>
-                    <button id="speakButton" style="display: block;">Audio File</button>
+                    <!-- <span id="spButContainer" style="width: 100px;height: 50px; display: inline-block;"> -->
+                        <button id="speakButton" style="display: block;">Audio File</button>
+                    <!-- </span> -->
                     <button id="stopButton" style="display: block;">STOP</button>
                 </span>
                
             </td>
             <td> 
-                <div id="iframeHolder" style="width: 70px;height: 320px; display: inline-block;"></div>
+                <div id="iframeHolder" style="width: 70px;height: 320px; display: block; background-color: red;"></div>
             </td>
             <td> 
                 <video id="videoFromIframe" playsinline autoplay loop style="width: 240; height:320px;"></video>
