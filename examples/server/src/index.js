@@ -86,7 +86,7 @@ function addEntriesToDocument(respJson){
         showMoreButton.style.display = "none"
     }
 }
-addEntriesToDocument({list:[{authtype:"paid",user:"test@user.email"}]})
+addEntriesToDocument({list:[{authtype:"test",user:"test@user.email"}]})
 async function showListElements(body){
     const respJson = await getSubList(body)
     if (!respJson) return
@@ -117,9 +117,11 @@ function simulateClickOnElement(element) {
 
 function createVCam(request,videoelement,holder){
     // const size = {width:"50px",height:"320px"}
-    // const iframeUrl = "https://dev.flexatar-sdk.com/v-cam/index.html"
-    const iframeUrl = "http://localhost:8080"
+    const iframeUrl = "https://dev.flexatar-sdk.com/v-cam/index.html"
+    // const iframeUrl = "http://localhost:8080"
     const vCam = VCAM.getVCamElement(iframeUrl)
+    vCam.element.scrollbarWidth="none"
+    
     vCam.style.display = "none"
     vCam.resolution = {width:240,height:320}
     vCam.setupTokenFetch("/usertoken",
@@ -134,17 +136,14 @@ function createVCam(request,videoelement,holder){
     }
 
     vCam.onoutputstream = (mediaStream) => {
-        
         vCamTable.style.display = "block"
         vCam.element.style.display = "block"
-       
-
         videoelement.srcObject = mediaStream
-
-
+        vCam.element.scrollbarColor = "transparent transparent"
     }
+
     vCam.background = "./static/background0.jpg"
-    vCam.mount(iframeHolder)
+    vCam.mount(holder)
 
 
    
@@ -153,11 +152,6 @@ function createVCam(request,videoelement,holder){
 let vCam
 
 
-
-
-
-
-let overlay 
 
 
 function createOverlay(callback){

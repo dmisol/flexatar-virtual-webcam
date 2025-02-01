@@ -1,5 +1,8 @@
 
+
 # Flexatar API Integration Guide
+
+[Check out demo server example to start](../examples/server)
 
 ## Overview
 
@@ -41,7 +44,7 @@ This guide provides step-by-step instructions for integrating the Flexatar API i
 ## 4. Handling Token Expiration or Session Limits
 
 ### Token Expiration:
-- While using the Flexatar SDK on the front end, you may encounter an expired token or one that has reached its session limit.
+- While using the Flexatar SDK on the front end, you may encounter an expired subscription or one that has reached its session limit.
 - When this happens:
   - Call the `delsubscription` endpoint to delete the existing subscription.
   - Call the `buysubscription` endpoint to create a new subscription.
@@ -72,9 +75,9 @@ curl -X POST https://api.flexatar-sdk.com/b2b/buysubscription \
 - `"authtype"` - identifies the type of authentication or authorization being used like phone, email, google... The value of this field must consist only of letters (A-Z, a-z) or digits (0-9). Special characters and spaces are not allowed. Define it your own way.
 - `"user"` - contains user ID like email or phone number, consists of any symbols.
 - `"crt"` - client request token. In case the response code is from 500-series, retry request with same crt. That grants you won't be charged for this request again. We suggest using V4 UUIDs, or another random string with enough entropy to avoid collisions.
-- `"testing"` - set `true` or `false`. If testing enabled you won't be charged for this request. 
+- `"testing"` - set `true` or `false`. If testing enabled you won't be charged for this request. You will obtain test subscription. Flexatar creation result will be the one of our demo flexatars.
 
-Subscription is given for 1 month.
+> **Note:** Subscription is given for 1 month.
 
 
 
@@ -85,7 +88,7 @@ Subscription is given for 1 month.
 curl -X POST https://api.flexatar-sdk.com/b2b/delsubscription \
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer FLEXATAR_API_SECRET" \
-     -d '{"authtype":"auth_tag","user":"user_id","testing":true/false}'
+     -d '{"authtype":"auth_tag","user":"user_id"}'
 ```
 
 Deletes subscription for given `"authtype"` and  `"user"`. Use it if you want to buy new subscription for given user.
@@ -99,7 +102,7 @@ Deletes subscription for given `"authtype"` and  `"user"`. Use it if you want to
 curl -X POST https://api.flexatar-sdk.com/b2b/usertoken \
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer FLEXATAR_API_SECRET" \
-     -d '{"authtype":"auth_tag","user":"user_id","restricted":true/false,"testing":true/false,"restricted":true/false}'
+     -d '{"authtype":"auth_tag","user":"user_id","restricted":true/false}'
 ```
 
 ### Response
@@ -109,8 +112,11 @@ curl -X POST https://api.flexatar-sdk.com/b2b/usertoken \
 ### Errors
 - **404** - user not found.
 
+### Request Fields
+
 `"restricted"` - restricted token not allow to creat or delete flexatars. Use it for virtual assistants.
 
+### Response Fields
 `"USER_TOKEN"` - must be delivered to browser for flexatar SDK functionality.
 
 `"EXPIRATION_DATE"` - can be set to browsers cookies as is.
@@ -118,25 +124,5 @@ curl -X POST https://api.flexatar-sdk.com/b2b/usertoken \
 `"CRT"` - crt that was in `buysubscription` request. Comparing `CRT` values one can detect if new subscription is ready.
 
 
-## Set User Subscription For Testing
 
-```bash
-curl -X POST https://api.flexatar-sdk.com/b2b/settesting \
-     -H "Content-Type: application/json" \
-     -H "Authorization: Bearer FLEXATAR_API_SECRET" \
-     -d '{"authtype":"auth_tag","user":"user_id"}'
-```
-To eanble testing mode you have to buy at least one subscription. Call this endpoint to attach subscription to testing mode. Then, while you are makeing requests with `"testing":true` flag, you won't be charged for buying the subscription.
-
-You can attach only one subscription to testing mode.
-
-Calling endpoint `usertoken` in testing mode gives response with user token same as in subscription you are attached to testing.
-
-Using testing mode you can develop the integration with Flexatar Api without incurring any charges. When you are ready to go in production just set `"testing":false` in all your requests.
-
-### Response
-- **204** - empty response. Subscription successfully set as testing.
-
-### Errors
-- **404** - user not found.
 

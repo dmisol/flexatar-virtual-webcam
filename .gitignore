@@ -62,3 +62,4 @@ raw/*.bin
 .vscode/
 *.sublime-project
 *.sublime-workspace
+*.sh

@@ -6,6 +6,10 @@ import {MediaConnectionProvider} from "../../util/rtc-connection.js"
 import {checkFileType,imageMimeTypes} from "../../util/util.js"
 
 
+window.onload = function() {
+    window.scrollTo(0, 200); // Scrolls 200px down
+};
+
 allowAuidoOverlay.textContent = Texts.ALLOW_AUDIO
 
 const queryString = window.location.search;
@@ -175,6 +179,7 @@ async function addPreview(ftarLink,first){
     const preview = document.createElement("img")
 
     preview.src = previewImg
+    preview.draggable = false
     preview.style.cursor = "pointer"
     preview.style.display = 'block'; 
     preview.style.width = '100%'; 
@@ -309,6 +314,25 @@ window.addEventListener('message', async (event) => {
         flexatarSDK = new FtarView.SDK(token)
         renderer = await flexatarSDK.getRenderer()
         
+        // console.log("patternlist",renderer.animator.patternList)
+        const emoButtons = [Joy,Anger,Sadness,Surprise,Disgust,Confusion]
+        let oldPressd = AllEmo
+        oldPressd.classList.add("color-emo-selected")
+        for (const b of emoButtons){
+            b.onclick = () =>{
+                oldPressd.classList.remove("color-emo-selected")
+                oldPressd = b
+                oldPressd.classList.add("color-emo-selected")
+                renderer.animator.currentAnimationPattern = b.id
+            }
+        }
+        AllEmo.onclick = () =>{
+            oldPressd.classList.remove("color-emo-selected")
+            oldPressd = AllEmo
+            oldPressd.classList.add("color-emo-selected")
+            renderer.animator.currentAnimationPattern = null
+        }
+
         if (ftarList.length>0){
             previewListHolder.children[2].click()
         }else{
@@ -532,6 +556,18 @@ function stopDarg(){
 }
 document.addEventListener('mouseup', stopDarg);
 document.addEventListener('mouseleave', stopDarg);
+
+
+expandEmoButton.onclick = () =>{
+    emoContainer.classList.remove("invisible")
+    closeEmoButton.classList.remove("invisible")
+    expandEmoButton.classList.add("invisible")
+}
+closeEmoButton.onclick = () =>{
+    emoContainer.classList.add("invisible")
+    closeEmoButton.classList.add("invisible")
+    expandEmoButton.classList.remove("invisible")
+}
 
   
 
