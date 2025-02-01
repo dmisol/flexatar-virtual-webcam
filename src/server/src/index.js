@@ -99,22 +99,7 @@ async function showListElements(body){
 listSubscription.onclick = async() => {
     showListElements()
 }
-
-function simulateClickOnElement(element) {
-    // Create a new MouseEvent
-    const iframePosition = vCam.element.getBoundingClientRect();
-    const mouseEvent = new MouseEvent('click', {
-        bubbles: true,           // Allow the event to bubble up through the DOM
-        cancelable: true,        // Allow the event to be canceled
-     
-        screenX: iframePosition.left,              // X coordinate of the mouse click (not needed, but set to 0)
-        screenY: iframePosition.top               // Y coordinate of the mouse click (not needed, but set to 0)
-    });
-
-    // Dispatch the event to the given element
-    vCam.element.dispatchEvent(mouseEvent);
-}
-
+let vCam
 function createVCam(request,videoelement,holder){
     // const size = {width:"50px",height:"320px"}
     const iframeUrl = "https://dev.flexatar-sdk.com/v-cam/index.html"
@@ -149,10 +134,27 @@ function createVCam(request,videoelement,holder){
    
     return vCam
 }
-let vCam
 
 
+micButton.onclick = async () => {
+    createOverlay(async ()=>{
+        vCam.src = await navigator.mediaDevices.getUserMedia({ audio: true });
+        videoFromIframe.muted = true
+    })
+   
+}
+speakButton.onclick = async () => {
 
+    createOverlay(()=>{
+        vCam.src = "./static/Mary.mp3"
+        videoFromIframe.muted = false
+    })
+}
+
+
+stopButton.onclick = async () => {
+    vCam.src = null
+}
 
 function createOverlay(callback){
     if (vCam.isAudioReady){
@@ -197,26 +199,6 @@ function createOverlay(callback){
         callback()
         
     })
-}
-
-micButton.onclick = async () => {
-    createOverlay(async ()=>{
-        vCam.src = await navigator.mediaDevices.getUserMedia({ audio: true });
-        videoFromIframe.muted = true
-    })
-   
-}
-speakButton.onclick = async () => {
-
-    createOverlay(()=>{
-        vCam.src = "./static/Mary.mp3"
-        videoFromIframe.muted = false
-    })
-}
-
-
-stopButton.onclick = async () => {
-    vCam.src = null
 }
 
 

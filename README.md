@@ -12,30 +12,50 @@ This means
 
 Last but not least, we are provideing effects like mixing different models and introducing emotions
 
-[![Webradio Animation Screenshot](screenshot1.jpg)](https://www.flexatar-sdk.com/demo)
+[![Webradio Animation Screenshot](screenshot1.jpg)](https://flexatar-sdk.com)
 
-[Please take a look at our demo](https://www.flexatar-sdk.com/demo) to get an idea how it looks. It makes sense to start with **Web Radio** App.
+[Please take a look at our demo](https://flexatar-sdk.com/demo/) to get an idea how it looks. It makes sense to start with **Web Radio** App.
+
+
+## Quick start 
+
+Obtain **FLEXATAR_API_SECRET** from [Flexatar Web Page](https://flexatar-sdk.com).
+ ```
+ export FLEXATAR_API_SECRET=your_api_key
+ cd src/server
+ npm install
+ npm run build
+ npm run start
+ ```
+ Visit the demo server in your browser at: [localhost:8081/main](http://localhost:8081/main)
 
 
 ## Integration
 
-To make integration super easy, we prepared 3 i-frames for different scenarios, and an example of server-side integration with out backend.
+To make integration seamless, we provide JavaScript libraries, each utilizing an underlying i-frame but offering additional functionality and UI for different use cases.
 
-### Making short videos
-[Video I-frame]() can be placed in your webpage to let your users create short videos with full control over effects.
+### AI Assistants & WebRTC Virtual Camera
+The Virtual Camera Library [v-cam](./src/v-cam-lib) takes an audio source as input and outputs a synchronized (audio+video) stream. It includes an iframe-based UI for controlling the video output, allowing users to create Flexatars, switch between different Flexatars and adjust emotions. This solution can be used in various scenarios, such as:
 
-### Building personal assistants and AI talking frontends
-[Assistant I-frame]() is used to make your flexatar speak like a human. You can easily decorate it with your style integrate it with TTS engine of your choice
+- WebRTC Virtual Camera – Acts as a virtual webcam, providing a new capture device alongside physical cameras.
 
-### WebRTC Virtual Web Camera
-The most unique product, [WebRTC virtual web camera I-frame]() can be easily embedded in your WebRTC frontend, adding a new vitrual capturing device, alongside with physical webcams. All you need is to supply the i-frame with audio stream, and it will return (audio+video) streams back, with respect of lipsync with neiglible delay
+- AI Virtual Assistant – Can be used to create interactive AI-driven avatars that respond naturally. In this case, the UI for creating and deleting Flexatars can be hidden for a more streamlined experience.
+
+
+
+### Creating videos
+
+The Video Generator Library [v-gen](./src/v-gen-lib/README.md) provides a UI and functionality for generating videos with talking heads synchronized to audio. It allows users to create and customize video content easily within your webpage.
+
+Our solutions are designed for easy embedding and customization, enabling you to integrate talking avatars into your applications effortlessly.
+
 
 ### Interfacing our backend
 All out I-frames from above are interworing with our backend. Our customers are getting Secrets from us, that enables them to request Tokens to serve their end-users.
 
 We are also providing test access to help our customers tune interfacing with both our backend and end-users. 
 
-The node.js example of customer-side backend can be found [here]()
+The node.js example of customer-side backend can be found [here](./src/server)
 
 The terms of use are presented at [our website](https://flexatar.com)
 

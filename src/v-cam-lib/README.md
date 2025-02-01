@@ -51,6 +51,13 @@
     vCam.src = null
     // vCam.src accepts url as string, MediaStream, MediaStreamTrack, or ArrayBuffer with encoded audio.
 
+    // When v-cam i-frame will try to init AudioContext it will need button press
+    vCam.requestAudioPermition(()=>{
+        // will be executed after button press
+    })
+    // Check if audio context initialized or not, if not call requestAudioPermition
+    if (vCam.isAudioReady){}
+
  ```
 
  > **Note:** If you will use restricted user tokens, UI for flexatar creation or deletion will be hidden. 

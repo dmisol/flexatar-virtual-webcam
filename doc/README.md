@@ -2,7 +2,7 @@
 
 # Flexatar API Integration Guide
 
-[Check out demo server example to start](../examples/server)
+[Check out demo server example to start](../src/server)
 
 ## Overview
 
