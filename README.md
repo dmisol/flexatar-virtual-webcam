@@ -12,7 +12,7 @@ This means
 
 Last but not least, we are provideing effects like mixing different models and introducing emotions
 
-[![Webradio Animation Screenshot](screenshot1.jpg)](https://flexatar-sdk.com)
+[![Webradio Animation Screenshot](screenshot2.jpg)](https://flexatar-sdk.com/demo)
 
 [Please take a look at our demo](https://flexatar-sdk.com/demo/) to get an idea how it looks. It makes sense to start with **Web Radio** App.
 
@@ -34,7 +34,9 @@ Obtain **FLEXATAR_API_SECRET** from [Flexatar Web Page](https://flexatar-sdk.com
 
 To make integration seamless, we provide JavaScript libraries, each utilizing an underlying i-frame but offering additional functionality and UI for different use cases.
 
-### AI Assistants & WebRTC Virtual Camera
+[![Webradio Animation Screenshot](screenshot1.jpg)](https://dev.flexatar-sdk.com)
+
+### 1. AI Assistants & WebRTC Virtual Camera
 The Virtual Camera Library [v-cam](./src/v-cam-lib) takes an audio source as input and outputs a synchronized (audio+video) stream. It includes an iframe-based UI for controlling the video output, allowing users to create Flexatars, switch between different Flexatars and adjust emotions. This solution can be used in various scenarios, such as:
 
 - WebRTC Virtual Camera – Acts as a virtual webcam, providing a new capture device alongside physical cameras.
@@ -43,14 +45,14 @@ The Virtual Camera Library [v-cam](./src/v-cam-lib) takes an audio source as inp
 
 
 
-### Creating videos
+### 2. Creating videos
 
 The Video Generator Library [v-gen](./src/v-gen-lib/README.md) provides a UI and functionality for generating videos with talking heads synchronized to audio. It allows users to create and customize video content easily within your webpage.
 
 Our solutions are designed for easy embedding and customization, enabling you to integrate talking avatars into your applications effortlessly.
 
 
-### Interfacing our backend
+### 3. Interfacing our backend
 All out I-frames from above are interworing with our backend. Our customers are getting Secrets from us, that enables them to request Tokens to serve their end-users.
 
 We are also providing test access to help our customers tune interfacing with both our backend and end-users. 
