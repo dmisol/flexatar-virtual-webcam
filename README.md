@@ -12,7 +12,7 @@ This means
 
 Last but not least, we are provideing effects like mixing different models and introducing emotions
 
-[![Webradio Animation Screenshot](screenshot2.jpg)](https://flexatar-sdk.com/demo)
+[![Webradio Animation Screenshot](screenshot2.png)](https://flexatar-sdk.com/demo)
 
 [Please take a look at our demo](https://flexatar-sdk.com/demo/) to get an idea how it looks. It makes sense to start with **Web Radio** App.
 
