@@ -1,0 +1,26 @@
+{
+  "name": "videogen",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.0"
+  },
+  "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.13",
+    "@ffmpeg/util": "^0.12.1",
+    "express": "^4.21.2",
+    "serve-index": "^1.9.1",
+    "tar": "^7.4.3"
+  }
+}

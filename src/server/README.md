@@ -32,3 +32,15 @@ This demo server shows the way how to integrate with Flexatar API. Allows to han
 
  > **Note:** UI for handling "busy state" and error messages has not been implemented.
 
+## Examples
+ Find how to use flexatar SDK on the front end in:
+ ```
+ src/vcam-creator.js
+ src/vgen-creator.js
+ ```
+
+ Find how to interact with our API on backend in:
+ ```
+handlers.js
+ ```
+

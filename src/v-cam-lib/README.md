@@ -1,6 +1,6 @@
 # Flexatar V-Cam
 
-[v-cam iframe source](../v-cam)
+[v-cam iframe source](../v-cam-iframe)
 
 ## Quick start 
 
@@ -42,6 +42,9 @@
     // makes appendCild to provided container
     // alternatively: holder.appendChild(vCam.element)
     vCam.mount(holder)
+
+    // remove iframe from document
+    vCam.unmount()
 
     // providing audio source iframe immideatelly starts playback
     vCam.src = "url/to/audio.mp3"

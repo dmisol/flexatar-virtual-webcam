@@ -31,23 +31,13 @@ export function listItem(entry,opts){
                     onclick:async closeHandler =>{
                         closeHandler()
                         if (opts.vcam) opts.vcam(reqBody)
-                        /*
-                        const resp = await fetch("/usertoken",{
-                            method: 'POST',
-                            headers:{"Content-Type":"application/json"},
-                            body: JSON.stringify(reqBody)
-                        })
-
-                        if (resp.ok){
-                            const respJson = await resp.json()
-                            
-                            userTokenPlaceHolder.innerText = respJson.token
-                           
-
-                        }else{
-                            console.log(await resp.text())
-                        }*/
-                        
+                    }
+                },
+                {
+                    text:"Show V-Gen",
+                    onclick:async closeHandler =>{
+                        closeHandler()
+                        if (opts.vgen) opts.vgen(reqBody)
                     }
                 },
                 {

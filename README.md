@@ -12,7 +12,7 @@ This means
 
 Last but not least, we are provideing effects like mixing different models and introducing emotions
 
-[![Webradio Animation Screenshot](screenshot2.png)](https://flexatar-sdk.com/demo)
+[![Webradio Animation Screenshot](screenshot2.png)](https://flexatar-sdk.com/demo/)
 
 [Please take a look at our demo](https://flexatar-sdk.com/demo/) to get an idea how it looks. It makes sense to start with **Web Radio** App.
 
@@ -34,7 +34,7 @@ Obtain **FLEXATAR_API_SECRET** from [Flexatar Web Page](https://flexatar-sdk.com
 
 To make integration seamless, we provide JavaScript libraries, each utilizing an underlying i-frame but offering additional functionality and UI for different use cases.
 
-[![Webradio Animation Screenshot](screenshot1.jpg)](https://dev.flexatar-sdk.com)
+[![Webradio Animation Screenshot](screenshot1.jpg)](https://flexatar-sdk.com)
 
 ### 1. AI Assistants & WebRTC Virtual Camera
 The Virtual Camera Library [v-cam](./src/v-cam-lib) takes an audio source as input and outputs a synchronized (audio+video) stream. It includes an iframe-based UI for controlling the video output, allowing users to create Flexatars, switch between different Flexatars and adjust emotions. This solution can be used in various scenarios, such as:

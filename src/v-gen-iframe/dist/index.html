@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="stylesheet" href="./static/videogen_style.css">
+    <!-- <link rel="stylesheet" href="/css/iframe_style.css"> -->
+
+    <!-- <script src="/js/ftar_lipsync_file.js"> </script> 
+    <script src="/js/ftar_view3.js"> </script> -->
+    
+    <script src="./static/ftar_view3.js"> </script>
+    <script src="./static/ftar_lipsync_file.js"> </script>
+   
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flexatar VGen Iframe</title>
+</head>
+
+<body>
+    
+    <div class="container">
+        
+        <div class="button-panel ">
+            <button id="createMainPanelButton" onclick="showTab(createMainPanelButton,tabCreate)" class="material-symbols-outlined button-style1 active">
+                add
+                <span id="createTT" class="tooltiptext">Create flexatar</span>
+            </button>
+            <!-- <button id="waitMainPanelButton" onclick="showTab(waitMainPanelButton,tabWait)" class="material-symbols-outlined">
+                hourglass
+                <span class="tooltiptext">Creation Progress</span>
+            </button> -->
+           
+            <button id="chooseMainPanelButton" onclick="showTab(chooseMainPanelButton,tabChoose)" disabled class="material-symbols-outlined button-style1">
+                face
+                <span id="chooseTT" class="tooltiptext">Choose Flexatar</span>
+            </button>
+            <button id="settingsMainPanelButton" onclick="showTab(settingsMainPanelButton,tabSettings)" disabled class="material-symbols-outlined button-style1">
+                settings
+                <span id="settingsTT" class="tooltiptext">Video Settings</span>
+            </button>
+            <button id="audioMainPanelButton" onclick="showTab(audioMainPanelButton,tabAudio)" disabled class="material-symbols-outlined button-style1">
+                volume_up
+                <span id="audioTT" class="tooltiptext">Upload Audio</span>
+            </button>
+            <button id="recordMainPanelButton" onclick="showTab(recordMainPanelButton,tabRecord)" disabled class="material-symbols-outlined button-style1">
+                movie
+                <span id="recordTT" class="tooltiptext">Record Video</span>
+            </button>
+            <button id="videosMainPanelButton" onclick="showTab(videosMainPanelButton,tabVideos)" disabled class="material-symbols-outlined button-style1">
+                download
+                <span id="downloadTT" class="tooltiptext">Download Video</span>
+            </button>
+        </div>
+        <div class="content">
+           
+            <span id="tabCreate" class="mk-video-tab">
+               
+                <span id="flexatarCountContainer" class="top-fixed-count label-style1">
+                    <span id="ftarCountLabel">Flexatar avalable:</span> <span id="flexatarAvalibleSign"></span>
+                </span>
+
+                <span id="flexatarImageDropDownContainer" class="top-fixed-audio">
+                    
+                
+                    
+                </span>
+
+                <span id="confirmImageBlock" class="invisible">
+                    
+                    <div id="previewUploadContainer" >
+                        <img id="imgForFtarPreview" ></img>
+                        <span onclick="resetInputImgForFtar()" >&times;</span>
+                    </div>
+                    
+                    <br>
+                
+                    <button id="sendFlexatarButton" class="button-style1" onclick="sendImgToCreateFtar()">
+                        
+                        <span id="createButton" class="label-style1">CREATE FLEXATAR</span>
+                        <br>
+                        <div id="createFtarButtonLogo">
+                            <span class="material-symbols-outlined" >
+                                add
+                            </span>
+                            <img src="./static/flexatar_logo.png" alt="Italian Trulli">
+                        </div>
+                        
+                    </button>
+                </span>
+
+                <span id="imageListContanier" class="content-audio">
+
+                </span>
+
+            </span>
+
+         
+            <span id="tabChoose" class="mk-video-tab invisible"  >
+                <div id="headerChooseContainer" class="bottom-fixed-rec">
+                    <div id="slot1Label" class="button-choose-slot label-style1" >SLOT 1</div>
+                    <span id="chooseFtarPlaceholder" class="ftar-placeholder-choose" > </span>
+                    <div id="slot2Label" class="button-choose-slot label-style1" >SLOT 2</div>
+                </div> 
+                <div id="flexatarListContainerHolder" class="ftar-lists-holder">
+                    <div id="flexatarListContainer" class="ftar-list-container" style="overflow: auto;">
+                    
+    
+                    </div>
+                    <div id="flexatarListContainer1" class="ftar-list-container" style="overflow: auto;">
+                    
+    
+                    </div>
+    
+                </div>
+                  
+            </span>
+
+            <span id="tabAudio" class="mk-video-tab invisible">
+                <span id="audioCountContainer" class="top-fixed-count label-style1">
+                    Audio avalable:<span id="audioAvalibleSign"></span>
+                </span>
+                <span id="audioDropDownContainer" class="top-fixed-audio">
+
+                
+                    
+                </span>
+                <span id="completionForm" class="invisible">
+                    <div class="process-container">
+                        <div class="process-content">
+                            <div class="progress-indicator" id="progress-indicator">
+                            <div id="audioProgressBar" class="progress-bar" ></div>
+                            </div>
+                            <div class="ready-indicator" id="readyIndicator">Process Complete!</div>
+                            <div id="fileNameHolder" class="file-name"></div>
+                            <button id="cancelAudio" class="cancel-button button-style1" onclick="cancelAudio()">CANCEL</button>
+                        </div>
+                    </div>
+                </span>
+                <span id="audioListContanier" class="content-audio">
+
+                </span>
+
+               
+            </span>
+
+            <span id="tabRecord" class="mk-video-tab invisible">
+                <div id="recVideoContainer" class="content-rec">
+                    <video id="recVideoElement" class="video-element" playsinline autoplay loop></video>
+                    <button id="muteButton" class="button-record-mute material-symbols-outlined button-style1" onclick="muteAudioWhileRecording()">volume_off</button>
+    
+                </div>
+                <div  class="bottom-fixed-rec height-40" >
+              
+                    <button id="previewButton" class="button-rec button-style1" onclick="startPreview(false)">PREVIEW</button>
+                    <button id="recordButton" class="button-rec button-style1" onclick="startPreview(true)">RECORD</button>
+
+                    <button id="recStop" class="button-rec button-style1" onclick="cancelPreviewRec()" hidden>STOP</button>
+                    
+                </div>
+                <!-- Top preview block -->
+
+                <!-- <video id="recordedFlexatarVideo" width="240" height="320" style="display: none;" playsinline autoplay="true"></video> -->
+            </span>
+
+            <span id="tabVideos" class="mk-video-tab invisible">
+               
+            </span>
+
+            <span id="tabSettings" class="mk-video-tab invisible" >
+                <div class="top-fixed-settings">
+                    <div id="settingsCanvasContainer" class="canvas-container">
+                        <!-- <canvas id="myCanvas"></canvas> -->
+                        </div>
+                        <div id="backgroundZone" class="container-settings-background">
+                            <button id="removeBackgroundButton" class="button-rec button-style1" onclick="cancelBackground()" hidden>Remove</button>
+                        
+                        </div>
+                </div>
+                <div class="content-settings">
+                    <span id="chooseEffectLabel" class="top-fixed-count label-style1" >choose effect</span>
+                    <!-- <span class="label-style1" style="width: 100%; height:25px;display: flex;justify-content: center;align-items: center;">choose effect</span> -->
+                    
+                    <div class="effect-button-container" >
+                        <button id="noEffectButton" class="button-choose-effect button-style1 active" onclick="chooseEffect(0,this)">NO</button>
+                        <button id="morphEffectButton" class="button-choose-effect button-style1" onclick="chooseEffect(1,this)">MORPH</button>
+                        <button id="hybridEffectButton" class="button-choose-effect button-style1" onclick="chooseEffect(2,this)">HYBRID</button>
+                    </div>
+
+                    <div class="slider-input-container">
+                        <input type="range" min="0" max="100" value="50" id="effectSlider">
+                        <div class="effect-checkbox-container">
+                            <input type="checkbox" id="toggleEffectAnimation" >
+                            <label id="animatedCheckbox" for="toggleEffectAnimation">Animated</label>
+                        </div>
+                    </div>
+
+                    <label id="bkgColLabel" for="colorInput" class="label-color">Background color: #</label>
+                    <input type="text" id="colorInput" value="000000" class="input-color">
+
+                    <div class="anim-select-container">
+                        <label id="animLabel" for="animationSelect">Animation:</label>
+                        <select id="animationSelect" name="options"></select>
+                    </div>
+                    <div class="anim-select-container">
+                        <label id="resLabel" for="videoResolutionSelect">Resolution:</label>
+                        <select id="videoResolutionSelect" name="options">
+                            <option value="option1">480x640</option>
+                            <option value="option2">240x320</option>
+                            <!--<option value="option3">Option 3</option>
+                            <option value="option4">Option 4</option> -->
+                        </select>
+                    </div>
+                    <button class="button-settings-delete material-symbols-outlined button-style1" onclick="deleteFlexatar()">delete</button>
+                </div>
+                
+
+            </div>
+
+            </span>
+          
+        
+           
+           
+        </div>
+        <div id="loaderSign" class="loader-frame">
+            <div class="loader">
+
+            </div>
+        </div>
+    </div>
+    <div class="popup-overlay invisible" id="popup">
+        <div class="popup-window">
+          <!-- <h2>Alert</h2> -->
+          <br>
+          <p id="popupText">This is a popup window.</p>
+          <button id="alertClose" class="button-style1" onclick="hidePopup()">CLOSE</button>
+        </div>
+    </div>
+
+   
+    <div class="popup-overlay invisible" id="popupConfirm">
+        <div class="popup-window">
+          <!-- <h2>Confirm</h2> -->
+          <p id="confirmText">This is a popup window.</p>
+          <button id="confirmYes" class="button-style1" onclick="confirmChosen()">Yes</button>
+          <button id="confirmNo" class="button-style1" onclick="cancelChosen()">No</button>
+        </div>
+    </div>
+    
+    <!-- <script src="/js/videogen_script.js"> </script> -->
+    <script src="./bundle.js"> </script>
+</body>
+
+</html>
