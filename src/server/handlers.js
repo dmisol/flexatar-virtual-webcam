@@ -9,7 +9,10 @@ async function flexRequest(endpoint,reqBody){
     const url = `${flexatarApiUrl}/b2b/${endpoint}`
     const opts = {
         method: 'POST',
-        headers:{'Authorization': 'Bearer ' + flexatarApiSecret,"Content-Type":"application/json"},
+        headers:{
+            'Authorization': 'Bearer ' + flexatarApiSecret,
+            "Content-Type":"application/json",
+        },
      
     }
     if (reqBody){

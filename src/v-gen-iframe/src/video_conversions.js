@@ -15,8 +15,8 @@ const load = async () => {
     // toBlobURL is used to bypass CORS issue, urls with the same
     // domain can be used directly.
     ffmpegLoadPromies =  ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/static/ffmpeg-core.js`, 'text/javascript'),
-        wasmURL: await toBlobURL(`${baseURL}/static/ffmpeg-core.wasm`, 'application/wasm'),
+        coreURL: await toBlobURL(`${baseURL}/res/ffmpeg-core.js`, 'text/javascript'),
+        wasmURL: await toBlobURL(`${baseURL}/res/ffmpeg-core.wasm`, 'application/wasm'),
     });
     // console.log("ffmpeg ready")
 

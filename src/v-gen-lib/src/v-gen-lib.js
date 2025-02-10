@@ -76,35 +76,37 @@ class TokenController{
         this.#errorCalback = val
     }
 
-
     get id(){
         return this.#id
     }
-   
-    
-
 }
 
-class VGen extends TokenController{
-    #iframe
-    
-    constructor(iframeUrl,opts){
-        const iframe = document.createElement("iframe")
-        super(iframe,opts)
-        iframe.style.margin = "10px"
-        iframe.style.width = "400px"
-        iframe.style.height = "500px"
-        iframe.src = `${iframeUrl}?id=${this.id}`
-        this.#iframe = iframe
-    }
-    mount(element){
-        element.appendChild(this.#iframe)
-    }
-    unmount(){
-        this.#iframe.remove()
-    }
-    get element(){
-        return this.#iframe
+class VGen extends TokenController {
+    #iframe;
+
+    constructor(iframeUrl, opts = {}) {
+        const iframe = document.createElement("iframe");
+        super(iframe, opts);
+
+        // Set default options if not provided
+        const { width = '400px', height = '500px', margin = '10px' } = opts;
+
+        iframe.style.margin = margin;
+        iframe.style.width = width;
+        iframe.style.height = height;
+        iframe.src = `${iframeUrl}?id=${this.id}`;
+        this.#iframe = iframe;
     }
 
+    mount(element) {
+        element.appendChild(this.#iframe);
+    }
+
+    unmount() {
+        this.#iframe.remove();
+    }
+
+    get element() {
+        return this.#iframe;
+    }
 }

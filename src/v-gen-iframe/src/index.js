@@ -1036,6 +1036,7 @@ function setEffect(i){
         effectSlider.dispatchEvent( new Event('change'));
 }
 
+
 effectSlider.disabled = true
 let effectId = 0
 const effectButtons = [noEffectButton,morphEffectButton,hybridEffectButton]
@@ -1063,7 +1064,7 @@ function chooseEffect(effectIdx,button){
     
 }
 
-
+/*
 function effectNo(){
     renderer.effect = FtarView.effect.no()
     effectSlider.disabled = true
@@ -1081,6 +1082,8 @@ function effectHybrid(){
     effectId = 2
     setEffect(effectId)
 }
+*/
+
 toggleEffectAnimation.onchange = () => {
     setEffect(effectId)
 

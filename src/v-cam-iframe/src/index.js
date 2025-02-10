@@ -255,7 +255,7 @@ window.addEventListener('message', async (event) => {
     if (data.type === "reload_token"){
         reloadTokenResolve(data.token)
     }else if (data.type === "request_audio"){
-        console.log("obtained request_audio")
+        // console.log("obtained request_audio")
         allowAuidoOverlay.classList.remove("invisible")
         await allowAuidoPromise
         allowAuidoOverlay.classList.add("invisible")
