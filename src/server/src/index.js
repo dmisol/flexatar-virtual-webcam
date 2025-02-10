@@ -5,7 +5,30 @@ import {showPopup} from "../../util/popup.js"
 import {createVGen} from "./vgen-creator.js"
 import {createVCam} from "./vcam-creator.js"
 
+async function handleBuySubscription(containerElements) {
+    const reqBody = {
+        authtype: containerElements.authTypeInput.value,
+        user: containerElements.userInput.value,
+        testing: containerElements.checkbox.checked,
+        crt: crypto.randomUUID()
+    };
 
+    try {
+        const resp = await fetch("/buysubscription", {
+            method: 'POST',
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(reqBody)
+        });
+
+        if (!resp.ok) {
+            console.error(await resp.json());
+        } else {
+            console.log("buy subscription success");
+        }
+    } catch (error) {
+        console.error("Error buying subscription:", error);
+    }
+}
 
 buySybscription.onclick = async() => {
 
@@ -17,25 +40,7 @@ buySybscription.onclick = async() => {
                 text:"BUY",
                 onclick:async closeHandler =>{
                     closeHandler()
-                    const reqBody = {
-                        authtype:containerElements.authTypeInput.value,
-                        user:containerElements.userInput.value,
-                        testing:containerElements.checkbox.checked,
-                        crt:crypto.randomUUID()
-                    }
-                   
-                    // todo fetch with retry
-                    const resp = await fetch("/buysubscription",{
-                        method: 'POST',
-                        headers:{"Content-Type":"application/json"},
-                        body: JSON.stringify(reqBody)
-                    })
-                    if (!resp.ok){
-                        console.log(await resp.json())
-                    }else{
-                        console.log("buy subscription success")
-                    }
-
+                    await handleBuySubscription(containerElements);
                 }
                
             },{

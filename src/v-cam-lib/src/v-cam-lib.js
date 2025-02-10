@@ -247,7 +247,7 @@ class VCam {
     async requestAudioPermition(callback){
         if (this.#isAudioRequested) return
         this.#isAudioRequested = true
-        console.log("post request audio")
+        // console.log("post request audio")
         this.#iframe.contentWindow.postMessage({flexatar:{type:"request_audio"}}, "*")
         await new Promise(resolve=>{
             this.#requestAudioResolve = resolve

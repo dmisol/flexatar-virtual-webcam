@@ -1,10 +1,11 @@
 import VCAM from "./ftar-v-cam.js"
-
+let vCam
 export function createVCam(request,videoelement,holder){
 
-    const iframeUrl = "https://dev.flexatar-sdk.com/v-cam/index.html"
+    // const iframeUrl = "https://dev.flexatar-sdk.com/v-cam/index.html"
+    const iframeUrl = "http://localhost:8080"
 
-    const vCam = VCAM.getVCamElement(iframeUrl)
+    vCam = VCAM.getVCamElement(iframeUrl)
     vCam.element.scrollbarWidth="none"
     
     vCam.style.display = "none"
