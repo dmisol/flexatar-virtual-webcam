@@ -13,7 +13,6 @@ window.addEventListener('message', async (event) => {
     if (data.type === "reload_token"){
         reloadTokenResolve(data.token)
     }
-    
 })
 
 const queryString = window.location.search;
@@ -179,6 +178,15 @@ async function downloadStartupFlexatars(){
 let isPaidSubscribtion = true
 async function updateUserInfo(){
     const userInfo = await FtarView.userInfo(token)
+    if (userInfo.error){
+        if (userInfo.error === FtarView.ERR_UNAUTHORIZED){
+            showPopup("Authorization failed")
+            return
+        }
+
+        showPopup("Unknown error")
+        return
+    }
         // console.log("userInfo",userInfo)
         audioCountContainer.style.display = "none"
         // if (userInfo.AudioCount>1800){
@@ -223,6 +231,16 @@ const start = async ()=>{
     }
 
     ftarList = await FtarView.flexatarList(token,{preview:true})
+    if (ftarList.error){
+        loaderSign.classList.add("invisible")
+        if (ftarList.error === FtarView.ERR_UNAUTHORIZED){
+            showPopup("Authorization failed")
+            return
+        }
+
+        showPopup("Unknown error")
+        return
+    }
     updateCahceByList(ftarList)
     // console.log("ftarList",ftarList)
     if (!ftarList){

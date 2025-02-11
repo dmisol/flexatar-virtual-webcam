@@ -8,10 +8,7 @@ const ROOT = path.join(__dirname, "dist");
 var fs = require('fs');
 var http = require('http');
 // var https = require('https');
-var privateKey  = fs.readFileSync('/home/naospennikov/Documents/self_signed_cert/localhost.key', 'utf8');
-var certificate = fs.readFileSync('/home/naospennikov/Documents/self_signed_cert/localhost.crt', 'utf8');
 
-var credentials = {key: privateKey, cert: certificate};
 
 app.use((_, res, next) => {
   res.set({
