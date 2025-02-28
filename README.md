@@ -20,8 +20,13 @@ Last but not least, we are provideing effects like mixing different models and i
 ## Quick start 
 
 Obtain **FLEXATAR_API_SECRET** from [Flexatar Web Page](https://flexatar-sdk.com).
+
+ Install [Node.js](https://nodejs.org/en/download)
  ```
+ #linux
  export FLEXATAR_API_SECRET=your_api_key
+ #windows
+ set FLEXATAR_API_SECRET=your_api_key
  cd src/server
  npm install
  npm run build

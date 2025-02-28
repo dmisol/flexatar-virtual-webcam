@@ -1,3 +1,6 @@
+import {dataChanelConfigurer} from "./data-chan-communication/dataChanelConfigurer.js"
+import {dataChanelReceiver} from "./data-chan-communication/dataChanelReceiver.js"
+import {commandsManager} from "./data-chan-communication/commandsManager.js"
 
 function printMediaLineOrder(sdp) {
  // Split the SDP into lines
@@ -38,7 +41,7 @@ function wrapPayload(payload,iframeId){
 }
 
 export class MediaConnectionProvider{
-    constructor(postMessageProvider,holderId,iframeId){
+    constructor(postMessageProvider,holderId,iframeId,hasExternalControl){
         this.iframeId = iframeId
         this.holderId = holderId
         this.postMessageProvider = postMessageProvider
@@ -52,15 +55,86 @@ export class MediaConnectionProvider{
             iceTransportPolicy: "all",
           };
         this.peerConnection = new RTCPeerConnection(configuration);
+        const self = this
 
+        if (hasExternalControl){
+
+            this.messageManager = commandsManager(
+                (payload)=>{//onFlexatarListObtained
+                    // console.log("onFlexatarPreview",payload)
+                    if (self.onFlexatarPreview) self.onFlexatarPreview(payload);
+                },
+                (item,error)=>{//onNewFlexatarItemObtained
+                    // console.log("onFlexatarCreated",item,error)
+                    if (self.onFlexatarCreated) self.onFlexatarCreated(item,error);
+                },
+                (id,slot)=>{//onSetFlexatarToSlot
+                    // console.log("onSetFlexatarToSlot",id,slot)
+                    if (self.onSetFlexatarToSlot) self.onSetFlexatarToSlot(id,slot);
+
+                },(payload)=>{//onDeleteFlexatar
+                    // console.log("onDeleteFlexatar",payload)
+                    if (self.onDeleteFlexatar) self.onDeleteFlexatar(payload);
+                },
+                (id,error)=>{//onFlexatarRemoved
+                    // console.log("onFlexatarRemoved",id,error)
+                    if (self.onFlexatarRemoved) self.onFlexatarRemoved(id,error);
+                },
+                (payload)=>{//onSetEffect
+                    // console.log("onSetEffect",payload)
+                    if (self.onSetEffect) self.onSetEffect(payload);
+                },
+                (payload)=>{//onSetEffectAmount
+                    // console.log("onSetEffectAmount",payload)
+                    if (self.onSetEffectAmount) self.onSetEffectAmount(payload);
+                },
+                (id,slot, error)=>{//onFlexatarActivated
+                    // console.log("onFlexatarActivated",id,slot, error)
+                    if (self.onFlexatarActivated) self.onFlexatarActivated(id,slot, error);
+                },
+                (payload)=>{//onFlexatarEmotionList
+                    // console.log("onFlexatarEmotionList",payload)
+                    if (self.onFlexatarEmotionList) self.onFlexatarEmotionList(payload);
+                },
+                (payload)=>{//onSetFlexatarEmotion
+                    // console.log("onSetFlexatarEmotion",payload)
+                    if (self.onSetFlexatarEmotion) self.onSetFlexatarEmotion(payload);
+                },
+                (payload)=>{//onSetBackground
+                    // console.log("onSetBackground",payload)
+                    if (self.onSetBackground) self.onSetBackground(payload);
+                },
+                (payload)=>{//onCreateFlexatar
+                    // console.log("onCreateFlexatar")
+                    if (self.onCreateFlexatar) self.onCreateFlexatar(payload);
+                },
+                ()=>{//onReloadFlexatarList
+                    // console.log("onReloadFlexatarList")
+                    if (self.onReloadFlexatarList) self.onReloadFlexatarList();
+                }
+            )
+            
+            const {sendStringFunction,initializationError} = dataChanelConfigurer(this.peerConnection,holderId,()=>{
+                // sendStringFunction("test data chanel")
+                if (this.onDataChanelAvailable){
+                    this.onDataChanelAvailable()
+                }
+            
+
+            })
+            this.sendMessage = sendStringFunction
+            if (initializationError) console.log(initializationError)
+            const initError = dataChanelReceiver(this.peerConnection,holderId==="host" ? "iframe":"host",(stringReceived)=>{
+                this.messageManager.processMessage(stringReceived)
+                // console.log("stringReceived on",holderId,stringReceived)
+            })
+
+        }
         
-        // console.log("transiver",transiver)
-        // this.peerConnection.addTransceiver('audio', { direction: 'sendrecv' });
+
         this.peerConnection.ontrack = event => {
             
-            // console.log("ontrack",holderId)
-            // console.log(event.track)
-            // console.log(event.streams[0].getTracks())
+ 
             const track = event.track
             if (holderId == "iframe"){
                 if (track.kind == "audio"){
@@ -93,7 +167,6 @@ export class MediaConnectionProvider{
         this.peerConnection.onconnectionstatechange = () => {
             // console.log('Connection State:', this.peerConnection.connectionState);
             if (this.peerConnection.connectionState == "connected"){
-               
                 // this.isNegotiating = false
             }
            

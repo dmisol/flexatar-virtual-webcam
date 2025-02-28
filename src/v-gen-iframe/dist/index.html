@@ -101,14 +101,16 @@
                 <div id="headerChooseContainer" class="bottom-fixed-rec">
                     <div id="slot1Label" class="button-choose-slot label-style1" >SLOT 1</div>
                     <span id="chooseFtarPlaceholder" class="ftar-placeholder-choose" > </span>
-                    <div id="slot2Label" class="button-choose-slot label-style1" >SLOT 2</div>
+                    <div id="slot2Label" class="button-choose-slot label-style1 invisible" >SLOT 2</div>
+                    <div id="slot2Expand" class="button-close-expand label-style1 material-symbols-outlined" >arrow_back_ios</div>
+                    <div id="slot2Close" class="button-close-expand label-style1 material-symbols-outlined invisible" >close</div>
                 </div> 
                 <div id="flexatarListContainerHolder" class="ftar-lists-holder">
                     <div id="flexatarListContainer" class="ftar-list-container" style="overflow: auto;">
                     
     
                     </div>
-                    <div id="flexatarListContainer1" class="ftar-list-container" style="overflow: auto;">
+                    <div id="flexatarListContainer1" class="ftar-list-container invisible" style="overflow: auto;">
                     
     
                     </div>
@@ -122,6 +124,11 @@
                     Audio avalable:<span id="audioAvalibleSign"></span>
                 </span>
                 <span id="audioDropDownContainer" class="top-fixed-audio">
+                    <button id="startRecFromMicButton" class="mic-floating-button"> 
+                        <span id="starRecLogo" class="material-symbols-outlined">mic</span>
+                        <span id="stopRecLogo" class="material-symbols-outlined invisible">stop</span>
+                    </button>
+                    <p id="timerOutput"> </p>
 
                 
                     

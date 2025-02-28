@@ -2,9 +2,11 @@ import {MediaConnectionProvider} from "../../util/rtc-connection.js"
 import {fetchArrayBuffer,mediaStreamFromArrayBufer} from "../../util/util.js"
 
 // let vCamIframe
-function getVCamElement(iframeUrl,token){
-    return new VCam(iframeUrl,token)
+function getVCamElement(iframeUrl,opts){
+    return new VCam(iframeUrl,opts)
 }
+
+
 
 class VCam {
     #onoutputstream
@@ -21,12 +23,13 @@ class VCam {
             try{
                 const response = await fetch(url,opts)
                 if (!response.ok){
-                    this.#errorCalback({response})
+                    this.#errorCalback({status:response.status,message:await response.text()})
                     return 
                 }
                 const tokenJson = await response.json()
                 if (!tokenJson.token){
-                    throw new ReferenceError("token field is undefined")
+                    this.#errorCalback({status:403,message:"token_expired"})
+                    // throw new ReferenceError("token field is undefined")
                 }
                 return tokenJson.token
             }catch (exception){
@@ -60,6 +63,7 @@ class VCam {
     #id
     #videoOutReadyPromise
     constructor(iframeUrl,opts){
+        
         this.#id = crypto.randomUUID()
         this.#opts = opts
         if (opts?.token){
@@ -75,7 +79,8 @@ class VCam {
             videoOutResolver = resolve
         })
         this.#videoOutResolver = videoOutResolver
-        
+        let healthDetector
+
         window.addEventListener('message', async event => {
             let data = event.data;
             // console.log(data)
@@ -85,12 +90,14 @@ class VCam {
             if (!data) return
                
             if (data.type === 'answer') {
+ 
                 this.#mediaConnection.recvAnswer(data)
         
             } else if (data.type === 'ice-candidate') {
         
                 this.#mediaConnection.addIceCandidate(data)
             } if (data.type === 'offer') {
+
                 this.#mediaConnection.recvOffer(data)
         
             } else if (data.type === 'request_audio') {
@@ -103,6 +110,12 @@ class VCam {
                 
                 const token = await this.#reloadTokenFunc()
                 this.#iframe.contentWindow.postMessage({flexatar:{type:"reload_token",token}}, "*")
+            }else if (data.type === 'heart_beat') {
+                if (healthDetector){
+                    clearTimeout(healthDetector)
+                    healthDetector = null
+                }
+        
             }
             
         });
@@ -110,11 +123,38 @@ class VCam {
         this.#iframeLoadedPromise = new Promise(resolve=>{
             this.#iframe.onload = async ()=>{
                 this.#iframe.contentWindow.postMessage({flexatar:{token:true}}, "*");
-                this.#setupMediaConnection()
+                
+                this.#setupMediaConnection(opts.externalControl)
+                healthDetector = setTimeout(()=>{ if (this.oninvalidurl) this.oninvalidurl()},2000)
+
                 resolve()
             }
         })
-        this.#iframe.src = `${iframeUrl}?id=${this.#id}`
+       
+       
+        this.#iframe.onerror = function () {
+            console.log("error iframe")
+            if (this.oninvalidurl) this.oninvalidurl()
+        }
+        // const self = this
+        // this.#iframe.onload = function () {
+        //     console.log(" iframe loaded",self.#iframe.contentDocument)
+        //     // if (this.oninvalidurl) this.oninvalidurl()
+        // }
+        //  fetch(iframeQuery, { method: "GET" }).then(response=>{
+        //     if (!response.ok){
+        //         if (this.oninvalidurl) this.oninvalidurl()
+        //     }
+        //  }).catch(()=>{
+        //     if (this.oninvalidurl) this.oninvalidurl()
+        //  })
+        let iframeQuery =  `${iframeUrl}?id=${this.#id}`
+
+        if (opts.externalControl){
+            iframeQuery+= "&external_ctl=true"
+        }
+        console.log(iframeQuery)
+        this.#iframe.src = iframeQuery
         this.#iframe.style.width = "100%"
         this.#iframe.style.height = "100%"
         this.#iframe.style.border = "none"
@@ -122,6 +162,7 @@ class VCam {
         this.#iframe.style.top = "0"
         this.#iframe.style.left = "0"
         this.#style = this.#iframe.style
+        
 
         
     }
@@ -220,8 +261,9 @@ class VCam {
     #videoOutResolver
     #mediaConnection
     #oldTarck
-    #setupMediaConnection(){
-        this.#mediaConnection = new MediaConnectionProvider(this.#iframe.contentWindow,"host")
+    #setupMediaConnection(hasExternalControl){
+        // console.log("hasExternalControl",hasExternalControl)
+        this.#mediaConnection = new MediaConnectionProvider(this.#iframe.contentWindow,"host",undefined,hasExternalControl)
         this.#mediaConnection.ondelayedaudio  = (audioTrack)=>{
             if (this.#oldTarck){
                 this.mediastream.removeTrack(this.#oldTarck);
@@ -237,12 +279,86 @@ class VCam {
             if (this.#onoutputstream) this.#onoutputstream( this.mediastream)
             
         }
+        this.#mediaConnection.onFlexatarPreview = (flexatarItem)=>{
+            // console.log("vcam onFlexatarPreview",flexatarItem)
+            if (this.onFlexatarPreview) this.onFlexatarPreview(flexatarItem)
+        }
+        this.#mediaConnection.onFlexatarEmotionList = (emoList)=>{
+            // console.log("vcam emoList",emoList)
+            if (this.onFlexatarEmotionList) this.onFlexatarEmotionList(emoList)
+        }
+        this.#mediaConnection.onNewFlexatarItem = (flexatarItem)=>{
+            // console.log("vcam onNewFlexatarItem",flexatarItem)
+            if (this.onNewFlexatarItem) this.onNewFlexatarItem(flexatarItem)
+        }
+
+        this.#mediaConnection.onFlexatarRemoved = (flexatarId,error)=>{
+            // console.log("vcam onFlexatarRemoved",flexatarId)
+            if (this.onFlexatarRemoved) this.onFlexatarRemoved(flexatarId,error)
+        }
+        this.#mediaConnection.onFlexatarActivated = (flexatarId,slotIdx)=>{
+            // console.log("vcam onFlexatarActivated",flexatarId)
+            if (this.onFlexatarActivated) this.onFlexatarActivated(flexatarId,slotIdx)
+        }
+        this.#mediaConnection.onFlexatarCreated = (flexatarItem,error)=>{
+            // console.log("vcam onFlexatarCreated")
+            if (this.onFlexatarCreated) this.onFlexatarCreated(flexatarItem,error)
+        }
+        this.#mediaConnection.onDataChanelAvailable = ()=>{
+            if (this.onDataChanelAvailable) this.onDataChanelAvailable()
+        }
     }
 
     #requestAudioResolve
     #isAudioRequested = false
     get isAudioReady(){
         return this.#isAudioRequested
+    }
+    sendSetToSlot(ftarId,slotNumber){
+        this.#mediaConnection.sendMessage(this.#mediaConnection.messageManager.makeSetFlexatarToSlotMessage(ftarId,slotNumber))
+    }
+    setFlexatarEmotion(emoId){
+        this.#mediaConnection.sendMessage(this.#mediaConnection.messageManager.makeSetFlexatarEmotionMessage(emoId))
+    }
+    deleteFlexatar(ftarId){
+        this.#mediaConnection.sendMessage(this.#mediaConnection.messageManager.makeDeleteFlexatarMessage(ftarId))
+
+    }
+    setEffect(effect){
+        this.#mediaConnection.sendMessage(this.#mediaConnection.messageManager.makeSetEffectMessage(effect))
+
+    }
+    setEffectAmount(amount){
+        this.#mediaConnection.sendMessage(this.#mediaConnection.messageManager.makeSetEffectAmountMessage(amount))
+
+    }
+    setBackground(imgBase64){
+        // blobToDataURL(imgBase64).then(url=>{
+            this.#mediaConnection.sendMessage(this.#mediaConnection.messageManager.makeSetBackgroundMessage(imgBase64))
+        // })
+    }
+
+    createFlexatar(imgBase64){
+        this.#mediaConnection.sendMessage(this.#mediaConnection.messageManager.makeCreateFlexatarMessage(imgBase64))
+
+    }
+    setEffect(effectName){
+        this.#mediaConnection.sendMessage(this.#mediaConnection.messageManager.makeSetEffectMessage(effectName))
+
+    }
+    setEffectAmount(amount){
+        this.#mediaConnection.sendMessage(this.#mediaConnection.messageManager.makeSetEffectAmountMessage(amount))
+
+    }
+    reloadFlexatarList(){
+        this.#mediaConnection.sendMessage(this.#mediaConnection.messageManager.makeReloadFlexatarListMessage())
+
+    }
+
+
+    async requestAudioPermission(callback){
+        await this.requestAudioPermition(callback)
+
     }
     async requestAudioPermition(callback){
         if (this.#isAudioRequested) return

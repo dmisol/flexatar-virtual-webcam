@@ -1,11 +1,20 @@
+import {initVCamControlUi} from "./v-cam-control/initVCamControlUi.js"
+import {initVCamEmoCtl} from "./v-cam-control/initVCamEmoCtl.js"
+import {fileLoader} from "./v-cam-control/fileLoader.js"
+import {effectController} from "./v-cam-control/effectController.js"
 import VCAM from "./ftar-v-cam.js"
 let vCam
-export function createVCam(request,videoelement,holder){
+export function createVCam(request,videoelement,holder,addLog){
+    addLog("Waiting v-cam response...")
+    const iframeUrl = "https://flexatar-sdk.com/v-cam/index.html"
 
-    // const iframeUrl = "https://dev.flexatar-sdk.com/v-cam/index.html"
-    const iframeUrl = "http://localhost:8080"
+    // Deploy ./v-cam-iframe on local host
+    // const iframeUrl = "http://localhost:8080"
 
-    vCam = VCAM.getVCamElement(iframeUrl)
+    // externalControl - set to `true` if you want to interact with the v-cam iframe.
+    // Use externalControl if you want to implement your own UI logic.
+
+    vCam = VCAM.getVCamElement(iframeUrl,{externalControl:true})
     vCam.element.scrollbarWidth="none"
     
     vCam.style.display = "none"
@@ -18,11 +27,18 @@ export function createVCam(request,videoelement,holder){
         }
     )
     vCam.ontokenerror = (error)=>{
-        console.log(error)
+        addLog("Error: "+JSON.stringify(error))
+    }
+    vCam.oninvalidurl = (url)=>{
+        addLog("Error: iframe url is not responsive.")
+        console.log("Unresponsive",url)
+        // vCam.unmount()
     }
 
     vCam.onoutputstream = (mediaStream) => {
+        addLog("v-cam video obtained.")
         vCamTable.style.display = "block"
+        vcamExternalControls.style.display = "block"
         vCam.element.style.display = "block"
         videoelement.srcObject = mediaStream
         vCam.element.scrollbarColor = "transparent transparent"
@@ -31,7 +47,123 @@ export function createVCam(request,videoelement,holder){
     vCam.background = "./static/background0.jpg"
     vCam.mount(holder)
 
+    // --==Optional section==--
+    // Sending and listening iframes events.
+   
+    vcamExternalControls.onclick = ()=>{vCamExternalControl.style.display = "block"}
 
+
+    let removeFlexatarFromList
+    let addFlexatarToList
+    let animated = true
+    let currentEffect = "no"
+
+    vCam.onDataChanelAvailable = () =>{
+        fileLoader("vCamMakeFtarButtonHolder",
+            (imgEncoded)=>{
+
+                vCam.createFlexatar(imgEncoded)
+            },(error)=>{
+                console.log("error",error)
+            }
+        )
+        fileLoader("loadBackgroundHolder",
+            (imgEncoded)=>{
+
+                vCam.setBackground(imgEncoded)
+            },(error)=>{
+                console.log("error",error)
+            }
+        )
+
+        effectController("vCamEffectPanelHolder",
+            effectState=>{
+                currentEffect = effectState
+                vCam.setEffect({effectId:effectState,animated})
+                console.log(effectState)
+            },
+            effectAmount =>{
+                vCam.setEffectAmount(effectAmount)
+            },
+            isAnimated=>{
+
+                animated = isAnimated
+                vCam.setEffect({effectId:currentEffect,animated})
+                console.log("isAnimated",isAnimated)
+
+            }
+        )
+    }
+    
+    const {initError, removeFlexatarItem,addFlexatarItem,clear} = initVCamControlUi("vCamFtarListHolder",[],(ftarId)=>{
+        vCam.sendSetToSlot(ftarId,1)
+
+   
+    },(ftarId)=>{
+        vCam.sendSetToSlot(ftarId,2)
+        setTimeout(()=>{
+            vCam.setEffect({effectId:"hybrid",animated:true})
+        },100)
+        setTimeout(()=>{
+            vCam.setEffect({effectId:currentEffect,animated})
+        },3000)
+
+
+    },(ftarId)=>{
+        vCam.deleteFlexatar(ftarId)
+    })
+    removeFlexatarFromList = removeFlexatarItem
+    addFlexatarToList = addFlexatarItem
+
+    vCam.onFlexatarPreview = (flexatarItem)=>{
+
+        addFlexatarToList(flexatarItem.id,flexatarItem.previewImage)
+    }
+
+    vCam.onFlexatarCreated = (flexatarItem,error) =>{
+
+        if (flexatarItem.id){
+            addFlexatarToList(flexatarItem.id,flexatarItem.previewImage)
+        }else{
+            // Available errors:
+            // "bad_photo"
+            // "subscription_limit"
+            // "queue_limit"
+            addLog("Flexatar creation error:"+error)
+        }
+      
+    }
+
+
+    vCam.onFlexatarActivated = (ftarId,slotIdx)=>{
+        console.log("onFlexatarActivated",ftarId,slotIdx)
+        
+    }
+    vCam.onFlexatarRemoved = (ftarId,error)=>{
+        if (!error){
+            if (removeFlexatarFromList){
+                removeFlexatarFromList(ftarId)
+                console.log("onFlexatarRemoved",ftarId,error)
+            }
+        }
+            
+    }
+
+
+    vCam.onFlexatarEmotionList = (emoList)=>{
+
+        // emoList = JSON.parse(emoList)
+        const initError = initVCamEmoCtl("vCamEmoListHolder",emoList,(emoId)=>{
+            vCam.setFlexatarEmotion(emoId)
+
+            console.log("emoId clicked",emoId)
+        })
+        console.log(initError)
+    }
+    reloadFlexatarList.onclick = ()=>{
+        clear()
+        vCam.reloadFlexatarList()
+    }
    
     return vCam
 }
@@ -92,7 +224,7 @@ function createOverlay(callback){
     document.body.appendChild(overlay);
     window.addEventListener("resize", updateOverlay);
     window.addEventListener("scroll", updateOverlay, { passive: true });
-    vCam.requestAudioPermition(()=>{
+    vCam.requestAudioPermission(()=>{
         overlay.remove()
         window.removeEventListener("resize", updateOverlay);
         window.removeEventListener("scroll", updateOverlay);

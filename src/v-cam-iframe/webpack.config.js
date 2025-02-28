@@ -7,11 +7,11 @@ module.exports = {
     filename: 'bundle.js',
     path: path.resolve(__dirname, 'dist'),
   },
-  mode: 'development',
+  // mode: 'development',
   resolve:{
     fallback: {"fs": false,"path":  require.resolve("path-browserify")}
   },
-  // mode: 'production',
+  mode: 'production',
   module: {
     rules: [
       {
@@ -23,15 +23,6 @@ module.exports = {
   },
   devServer: {
     static: './dist',
-    // server: {
-    // type: 'https',
-    //   options: {
 
-    //     key: fs.readFileSync('/home/naospennikov/Documents/self_signed_cert/localhost.key'),
-    //     cert: fs.readFileSync('/home/naospennikov/Documents/self_signed_cert/localhost.crt'),
-    //     passphrase: 'webpack-dev-server',
-    //     requestCert: true,
-    //   },
-    // }
   },
 };

@@ -9,11 +9,7 @@ const PORT = 8081;
 const ROOT = path.join(__dirname, "dist");
 
 var http = require('http');
-// var https = require('https');
-// var privateKey  = fs.readFileSync('/home/naospennikov/Documents/self_signed_cert/localhost.key', 'utf8');
-// var certificate = fs.readFileSync('/home/naospennikov/Documents/self_signed_cert/localhost.crt', 'utf8');
 
-// var credentials = {key: privateKey, cert: certificate};
 
 
 
@@ -21,6 +17,14 @@ app.use(express.json());
 
 app.use("/main",express.static(ROOT));
 app.use("/main", serveIndex(ROOT));
+
+app.use((req, res, next) => {
+    res.setHeader("Content-Security-Policy", "default-src 'self' blob: data:;");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    next();
+});
 
 app.route("/usertoken").post(handlers.getUserToken);
 app.route("/buysubscription").post(handlers.buySubscription);

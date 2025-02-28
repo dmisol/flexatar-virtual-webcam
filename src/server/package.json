@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "webpack",
+    "build": " webpack",
+    "buildAndStart": "cd ../v-gen-lib && npm run build && cd ../v-cam-lib && npm run build && cd ../server && webpack && node server.js",
     "start": "node server.js"
   },
   "keywords": [],

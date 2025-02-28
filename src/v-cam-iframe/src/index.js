@@ -4,7 +4,28 @@ import {getFlexatarWraped,getPreviewWraped} from "./caching.js"
 import {Texts} from "./texts.js"
 import {MediaConnectionProvider} from "../../util/rtc-connection.js"
 import {checkFileType,imageMimeTypes} from "../../util/util.js"
+import {fileToStringConverter} from "../../util/fileToStringConverter.js"
 
+async function blobToDataURL(blobUrl) {
+    const response = await fetch(blobUrl);
+    const blob = await response.blob();
+
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+    });
+}
+
+const restoreFileFromString = fileToStringConverter().restoreFileFromString
+
+let effectAmount = 0.5
+const effectCodeDict = {
+    no:0,
+    morph:1,
+    hybrid:2
+}
+let nonAnimatedEffect = { mode: 0, parameter: 0 }
 
 window.onload = function() {
     window.scrollTo(0, 200); // Scrolls 200px down
@@ -15,11 +36,13 @@ allowAuidoOverlay.textContent = Texts.ALLOW_AUDIO
 const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
 let iframeId;
+let externalControl=false;
 
 urlParams.forEach((value, key) => {
     if (key === "id"){
         iframeId = value
-
+    }else if (key === "external_ctl"){
+        externalControl = value === "true"
     }
 });
 
@@ -128,8 +151,12 @@ function addMakeFlexatarButton(){
             removeLoader()
             return
         }
+        let ftarLink
+        try{
+            ftarLink = await FtarView.makeFlexatar(getTokenInst,file,"noname",{ftar:true,preview:true})
+        }catch{
 
-        const ftarLink = await FtarView.makeFlexatar(getTokenInst,file,"noname",{ftar:true,preview:true})
+        }
         removeLoader()
         if (!ftarLink){
             removeErrorSign = setErrorSign(Texts.UNKNOWN)
@@ -152,8 +179,8 @@ function addMakeFlexatarButton(){
             ftarCountSign.textContent =  userInfo.FtarCount
         })
         await getFlexatarWraped(ftarLink,getTokenInst)
-
-        const holder = await addPreview(ftarLink,true)
+        const previewImg = await getPreviewWraped(ftarLink);
+        const {holder} = await addPreview(ftarLink,previewImg,true)
         holder.click()
         emptyBlock.textContent = ""
 
@@ -168,10 +195,28 @@ function addMakeFlexatarButton(){
 }
 addMakeFlexatarButton()
 
+
+const ftarLinkDict = {}
+
+async function previewLoader(ftarList,previewReadyCallback){
+    for (const ftarLink of ftarList){
+        ftarLinkDict[ftarLink.id] = ftarLink
+        const previewImg = await getPreviewWraped(ftarLink);
+        if (previewImg){
+            previewReadyCallback(ftarLink,previewImg)
+        }
+        
+    }
+}
+
+
+
 let oldClicked
 let selecteFtar
-async function addPreview(ftarLink,first){
-    const previewImg = await getPreviewWraped(ftarLink);
+async function addPreview(ftarLink,previewImage,first){
+    ftarLinkDict[ftarLink.id] = ftarLink
+    const previewImg = previewImage;
+    // const previewImg = await getPreviewWraped(ftarLink);
             
     const holder = document.createElement("span")
     holder.className = "item-holder"
@@ -229,7 +274,7 @@ async function addPreview(ftarLink,first){
         }
         
     }
-    return holder
+    return {holder,previewImg}
 
 }
 
@@ -277,6 +322,9 @@ window.addEventListener('message', async (event) => {
         renderer.addOverlay(overlay,{x:0,y:0,width:100,height:100,mode:"back"});
        
     }else if (data.token){
+        const heartBeatObject = {}
+        heartBeatObject[iframeId] = {type:"heart_beat"}
+        window.parent.postMessage({flexatar: heartBeatObject }, '*');
 
         const token = new FtarView.GetToken(async ()=>{
         
@@ -304,10 +352,32 @@ window.addEventListener('message', async (event) => {
 
 
         const ftarList = await FtarView.flexatarList(token,{preview:true})
+       
         if (ftarList.error) return
-        for (const ftarLink of ftarList){
-            await addPreview(ftarLink)
-        }
+        
+
+
+
+        
+        // const previewList = []
+        let dataChanelReadyResolver
+        const dataChannelReadyPromise = new Promise(resolve=>{
+            dataChanelReadyResolver = resolve
+        })
+        previewLoader(ftarList,async (ftarLink,previewImage)=>{
+            addPreview(ftarLink,previewImage);
+            (async ()=>{
+                await dataChannelReadyPromise
+                if (mediaConnection.sendMessage)
+                    mediaConnection.sendMessage(mediaConnection.messageManager.makeFlexatarPreviewMessage({id:ftarLink.id,previewImage:await blobToDataURL(previewImage)}))
+            })()
+
+            // previewList.push({id:ftarLink.id,previewImage:await blobToDataURL(previewImg)})
+        })
+        // for (const ftarLink of ftarList){
+        //     const {previewImg} = await addPreview(ftarLink)
+        //     previewList.push({id:ftarLink.id,previewImage:await blobToDataURL(previewImg)})
+        // }
 
         
         
@@ -347,8 +417,138 @@ window.addEventListener('message', async (event) => {
 
         
         const ftarVideoStream = renderer.canvas.captureStream(30)
-        mediaConnection = new MediaConnectionProvider(window.parent,"iframe",iframeId)
+        mediaConnection = new MediaConnectionProvider(window.parent,"iframe",iframeId,externalControl)
+
+        mediaConnection.onDataChanelAvailable = ()=>{
+            dataChanelReadyResolver()
+            mediaConnection.sendMessage(mediaConnection.messageManager.makeFlexatarEmotionListMessage(["All"].concat(emoButtons.map(x=>x.id))))
+            
+        }
+        mediaConnection.onReloadFlexatarList = async ()=>{
+            const ftarList = await FtarView.flexatarList(getTokenInst,{preview:true})
+            if (ftarList.error) {
+                return
+            }
+         
+
+            previewLoader(ftarList,async (ftarLink,previewImage)=>{
+                    mediaConnection.sendMessage(mediaConnection.messageManager.makeFlexatarPreviewMessage({id:ftarLink.id,previewImage:await blobToDataURL(previewImage)}))
+            })
+        }
+        mediaConnection.onSetFlexatarToSlot = async (id,slot)=>{
+            const ftarObject = await getFlexatarWraped(ftarLinkDict[id],getTokenInst)
+            if (ftarObject){
+                if (slot===1){
+                    renderer.slot1 = ftarObject
+                    renderer.start()
+                }else{
+                    renderer.slot2 = ftarObject
+                    renderer.start()
+                }
+                mediaConnection.sendMessage(mediaConnection.messageManager.makeFlexatarActivatedMessage(id,slot,false))
+            }else{
+                mediaConnection.sendMessage(mediaConnection.messageManager.makeFlexatarActivatedMessage(id,slot,true))
+            }
+           
+
+        }
+        mediaConnection.onSetFlexatarEmotion = (emoId) =>{
+            // console.log("emoId,",emoId)
+            renderer.animator.currentAnimationPattern = emoId
+        }
+        mediaConnection.onDeleteFlexatar = async (ftarId) =>{
+            // console.log("onDeleteFlexatar,",ftarId)
+            const deletionResult = await FtarView.deleteFlexatar({id:ftarId,token:getTokenInst})
+            let success = false
+            if (deletionResult){
+                success = true
+                selecteFtar.element.remove()
+                if (previewListHolder.children.length>2){
+                    previewListHolder.children[2].click()
+                }else{
+                    renderer.pause()
+                }
+            }
+            mediaConnection.sendMessage(mediaConnection.messageManager.makeFlexatarRemovedMessage(ftarId,!success))
+
+        }
+        mediaConnection.onSetEffect = async (effectCfg) =>{
+            if (effectCfg.effectId !== "no"){
+                if (renderer.slot2.id === "id2"){
+
+                    return
+                }
+
+            }
+            if (effectCfg.animated){
+                if (effectCfg.effectId==="no")
+                    renderer.effect = FtarView.effect.no()
+                else if (effectCfg.effectId==="morph")
+                    renderer.effect = FtarView.effect.morph()
+                else if (effectCfg.effectId==="hybrid")
+                    renderer.effect = FtarView.effect.hybrid()
+            }else{
+                if (effectCfg.effectId==="no"){
+                    renderer.effect = FtarView.effect.no()
+                }else{
+                    const effectCode = effectCodeDict[effectCfg.effectId]
+                    nonAnimatedEffect.mode = effectCode
+                    nonAnimatedEffect.parameter = effectAmount
+                    renderer.effect =  ()=>{return nonAnimatedEffect}
+                }
+                
+            }
+        }
+
+        mediaConnection.onSetEffectAmount = async (amount) =>{
+            
+            // console.log(typeof amount,amount); 
+            nonAnimatedEffect.parameter = amount
+        }
+        mediaConnection.onSetBackground = async (backgroundBase64) =>{
+            const overlay = await flexatarSDK.newOverlay(backgroundBase64);
+            renderer.addOverlay(overlay,{x:0,y:0,width:100,height:100,mode:"back"});
+        }
+
+        mediaConnection.onCreateFlexatar = async (imgBase64Encoded) =>{
+            const file = restoreFileFromString(imgBase64Encoded)
+            const ftarLink = await FtarView.makeFlexatar(getTokenInst,file,"noname",{ftar:true,preview:true})
+            let errorString = ""
+            if (!ftarLink){
+                errorString = "unknown_error"
+                removeErrorSign = setErrorSign(Texts.UNKNOWN)
+            }else if (ftarLink.err){
+                if (ftarLink.reason){
+                     errorString = ftarLink.reason
+                }else{
+                     errorString = "unknown_error"
+                }
+                mediaConnection.sendMessage(mediaConnection.messageManager.makeFlexatarCreatedMessage({},errorString))
+
+                return
+            }
+            const previewImg = await getPreviewWraped(ftarLink);
+            await addPreview(ftarLink,previewImg,true)
+            // holder.click()
+            mediaConnection.sendMessage(mediaConnection.messageManager.makeFlexatarCreatedMessage({id:ftarLink.id,previewImage:await blobToDataURL(previewImg)},errorString))
+
+                
+        }
+
+        // mediaConnection.onSetEffect = async (effectName) =>{
+        //    const parts = effectName.split("_")
+        //    const effectId = parts[0]
+        //    const isAnimated = parts[1] === "true"
+        //    console.log("onSetEffect on iframe",effectName)
+        // }
+        // mediaConnection.onSetEffectAmount = async (amount) =>{
+        //     console.log("onSetEffectAmount on iframe",amount)
+        //  }
+
+
         mediaConnection.addAllTraks(ftarVideoStream)
+
+
         
         const sendObject = {}
         sendObject[iframeId] = await mediaConnection.offerMessage()
@@ -475,13 +675,21 @@ reloadFtarListButton.onclick = async ()=>{
    
     
     
-    for (const ftarLink of ftarList){
-      
-        const element = await addPreview(ftarLink)
+    previewLoader(ftarList,async (ftarLink,previewImage)=>{
+        const {holder} = await addPreview(ftarLink,previewImage);
+
         if (ftarLink.id === selectedFtarId){
-            element.click()
+            holder.click()
         }
-    }
+    })
+
+    // for (const ftarLink of ftarList){
+      
+    //     const {holder:element,previewImg} = await addPreview(ftarLink)
+    //     if (ftarLink.id === selectedFtarId){
+    //         element.click()
+    //     }
+    // }
     reloadIcon.classList.remove("roating")
     reloadFtarListButton.disabled = false
 }
