@@ -2,6 +2,91 @@ import convert from './video_conversions.js';
 
 import {getFlexatarWraped,getPreviewWraped,updateCahceByList} from "./caching.js"
 import {texts} from "./locale.js"
+import {recordAudioUI} from "./rec-mic-ui-v4/recordAudioUI.js"
+import {showPopup,showAlert} from "../../util/popup.js"
+
+const audioFormats = [
+    "audio/aac",
+    "audio/ogg",
+    "audio/webm",
+    "audio/webm;codecs=opus",
+    "audio/webm;codecs=pcm",
+    "audio/ogg;codecs=opus",
+    "audio/ogg;codecs=vorbis",
+    "audio/mp4",
+    "audio/mp4;codecs=aac",
+    "audio/mpeg",
+    "audio/wav"
+];
+
+const supportedFormats = audioFormats.filter(format => MediaRecorder.isTypeSupported(format));
+// console.log(supportedFormats)
+
+recordAudioUI(
+    "startRecFromMicButton",
+
+    "timerOutput",
+    ()=>{
+        
+        starRecLogo.classList.add("invisible")
+        stopRecLogo.classList.remove("invisible")
+        timerOutput.classList.remove("invisible")
+        startRecFromMicButton.classList.add("mic-record-state")
+ 
+        audioDropZone.dropZone.classList.add("invisible")
+        // audioDropDownContainer.classList.add("flex-centered")
+        timerOutput.classList.add("drop-zone")
+        // console.log("setStopRecordButtonState")
+        
+        
+    },()=>{
+   
+        
+        starRecLogo.classList.remove("invisible")
+        stopRecLogo.classList.add("invisible")
+        timerOutput.classList.add("invisible")
+        timerOutput.classList.remove("drop-zone")
+        startRecFromMicButton.classList.remove("mic-record-state")
+        audioDropZone.dropZone.classList.remove("invisible")
+        // audioDropDownContainer.classList.remove("flex-centered")
+        // console.log("setStartRecordButtonState")
+
+    },
+  
+    async (dur,url)=>{
+        // console.log(dur,url)
+        const response = await fetch(url); // Fetch the Blob from the URL
+        const blob = await response.blob(); // Convert response to Blob
+        const file =  new File([blob], "Recorded."+supportedFormats[0].split("/")[1], { type: supportedFormats[0] });
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+
+        // Set the files property of the input element
+        audioDropZone.input.files = dataTransfer.files;
+
+        // Manually trigger the 'change' event
+        const event = new Event("change", { bubbles: true });
+        audioDropZone.input.dispatchEvent(event);
+        
+    },
+
+    ()=>{
+        console.log("permission error")
+        showPopup1(texts.noMicPerm)
+    },
+   ()=>{
+        showPopup1(texts.recTooShort)
+        console.log("record to short")
+    },
+   (error)=>{
+        showPopup1(texts.somethingWenWrong)
+        console.log("unknown error",error)
+    },
+    // 10,
+    5 * 60,
+    supportedFormats[0]
+
+)
 
 let reloadTokenResolve 
 
@@ -12,12 +97,20 @@ window.addEventListener('message', async (event) => {
     data = data.flexatar
     if (data.type === "reload_token"){
         reloadTokenResolve(data.token)
+    }else  if (data.type === "heart_beat"){
+        console.log("iframe heart beat")
+        const heartBeatObject = {}
+        heartBeatObject[iframeId] = {type:"heart_beat"}
+        window.parent.postMessage({flexatar: heartBeatObject }, '*');
     }
+        
 })
 
 const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
 let token;
+
+
 /*
 let tokenVal
 urlParams.forEach((value, key) => {
@@ -138,7 +231,12 @@ async function addPreview(ftarEntry,renderer,previewHolder,previewSrc,slot){
             }else{
                 renderer.slot2 = loadedFtars[ftarEntry.id]
             }
-            renderer.effect =  ()=>{ return { mode: 2, parameter: 0.35 }}
+            if (isSlot2Active){
+                renderer.effect =  ()=>{ return { mode: 2, parameter: 0.35 }}
+            }else{
+                renderer.effect =  FtarView.effect.no()
+
+            }
 
         renderer.start()
 
@@ -180,11 +278,11 @@ async function updateUserInfo(){
     const userInfo = await FtarView.userInfo(token)
     if (userInfo.error){
         if (userInfo.error === FtarView.ERR_UNAUTHORIZED){
-            showPopup("Authorization failed")
+            showPopup1("Authorization failed")
             return
         }
 
-        showPopup("Unknown error")
+        showPopup1("Unknown error")
         return
     }
         // console.log("userInfo",userInfo)
@@ -206,7 +304,7 @@ const start = async ()=>{
     flexatarSDK = new FtarView.SDK(token)
     renderer = await flexatarSDK.newRenderer()
     if (renderer.error == "session_limit"){
-        showPopup(texts.sessionLimit)
+        showPopup1(texts.sessionLimit)
         // showPopup("Session limit reached.")
         // loaderSign.style.display = "none"
         loaderSign.classList.add("invisible")
@@ -234,17 +332,17 @@ const start = async ()=>{
     if (ftarList.error){
         loaderSign.classList.add("invisible")
         if (ftarList.error === FtarView.ERR_UNAUTHORIZED){
-            showPopup("Authorization failed")
+            showPopup1("Authorization failed")
             return
         }
 
-        showPopup("Unknown error")
+        showPopup1("Unknown error")
         return
     }
     updateCahceByList(ftarList)
     // console.log("ftarList",ftarList)
     if (!ftarList){
-        showPopup(texts.noService)
+        showPopup1(texts.noService)
         // showPopup("Service unavailable.")
         // loaderSign.style.display = "none"
         loaderSign.classList.add("invisible")
@@ -311,7 +409,7 @@ function checkFileTypeIsAudio(fileType){
     return fileType.startsWith("audio/")
 }
 
-function showPopup(text){
+function showPopup1(text){
     popup.classList.remove("invisible")
     // popup.style.display = "block"
     popupText.innerText = text
@@ -327,8 +425,11 @@ let oldTab = tabCreate;
 let oldButton = createMainPanelButton;
 async function showTab(tabButton,tab){
     if (oldTab === tab) return;
+
+    
+
     if (isRecording){
-        showPopup(texts.cantChange)
+        showPopup1(texts.cantChange)
         // showPopup("Can't change tab while recording!")
         return
     }
@@ -445,10 +546,55 @@ function replaceFileExtension(filename, newExtension) {
     return `${filename.substring(0, lastDotIndex)}.${newExtension}`;
 }
 
+
+async function blobToDataURL(blobUrl) {
+    const response = await fetch(blobUrl);
+    const blob = await response.blob();
+
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+    });
+}
+
+async function shareVideo(videoUrl,vFileName) {
+    const sendObject = {}
+    sendObject[iframeId] = {type:"share_video",url:await blobToDataURL(videoUrl),fileName:vFileName}
+    window.parent.postMessage({flexatar:sendObject}, '*');
+   
+    // try {
+    //     // Fetch the blob from the Object URL
+    //     const response = await fetch(videoUrl);
+    //     const blob = await response.blob();
+
+    //     // Create a File from the Blob (optional: specify a filename)
+    //     const file = new File([blob], vFileName, { type: blob.type });
+
+    //     // Check if Web Share API is available
+    //     if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    //         await navigator.share({
+    //             files: [file],
+    //             title: texts.shareTitleMessage,
+    //             text: texts.shareTextMessage,
+    //         });
+    //         console.log("Video shared successfully!");
+    //     } else {
+    //         showPopup1(texts.noShare)
+    //         // console.error("Web Share API not supported or file sharing not available.");
+    //     }
+    // } catch (error) {
+    //     showPopup1(texts.somethingWenWrong)
+
+
+    //     console.error("Error sharing video:", error);
+    // }
+}
+
 let isRecording = false
 async function startPreview(isRec){
     if (!ftarRecord){
-        showPopup(texts.prepAudio)
+        showPopup1(texts.prepAudio)
         // showPopup("Prepare audio first")
         return
     }
@@ -462,6 +608,7 @@ async function startPreview(isRec){
     const animTimer = currentAudioFileCell.ftarRecord.playWithPlayer(renderer,player);
 
     
+
 
     await player.play()
     if (isRec){
@@ -481,23 +628,48 @@ async function startPreview(isRec){
                 secondButtonText = "mp4"
             }
            
-             
+            function shareOrDownload(dUrl){
+                showPopup({
+                    text:texts.choose,
+                    buttons:[
+                        {
+                            text:texts.share,
+                            onclick:async closeHandler =>{
+                                closeHandler()
+                                shareVideo(dUrl,videoFileName)
+                            }
+                           
+                        },{
+                            text:texts.download,
+                            onclick:async closeHandler =>{
+                                closeHandler()
+                                const link = document.createElement('a');
+                                link.href = dUrl;
+                                link.download = videoFileName;
+                                // document.body.appendChild(link);
+                                link.click();
+                            }
+                        }
+                    ]
+                })
+            }
             
-            const videoFileName = replaceFileExtension(fileNameHolder.innerText,ext)
+            let videoFileName = replaceFileExtension(selectedAudioFileName,ext)
             const cell = new StatusCell(videoFileName,selectedImgSrc,"download",secondButtonText)
             cell.status = texts.videoReady
             // cell.status = "Video ready to download"
             cell.ondownloadpressed = () => {
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = videoFileName;
-                // document.body.appendChild(link);
-                link.click();
+
+                
+                shareOrDownload(url)
+
+               
                 // document.body.removeChild(link);
             }
             // urlMp4Promise.then(urlMp4=>{
             let urlMp4Ready
             cell.onoptiondownloadpressed = () => {
+                videoFileName = replaceFileExtension(selectedAudioFileName,"mp4")
                 // showConfirm("Convert form webm to mp4? May take time.",()=>{
                 showConfirm(texts.convert,()=>{
                     cell.onoptiondownloadpressed = null
@@ -506,15 +678,18 @@ async function startPreview(isRec){
                         cell.optContainer.innerText = texts.mp4
                         urlMp4Ready = urlMp4
                         cell.onoptiondownloadpressed = () => {
-                            const link = document.createElement('a');
-                            link.href = urlMp4;
-                            link.download = videoFileName;
-                            link.click();
+                            // const link = document.createElement('a');
+                            // link.href = urlMp4;
+                            // link.download = videoFileName;
+                            // link.click();
+                            shareOrDownload(urlMp4)
+
                         }
-                        const link = document.createElement('a');
-                        link.href = urlMp4;
-                        link.download = videoFileName;
-                        link.click();
+                        // const link = document.createElement('a');
+                        // link.href = urlMp4;
+                        // link.download = videoFileName;
+                        // link.click();
+                        shareOrDownload(urlMp4)
 
                     })
                 },()=>{})
@@ -528,7 +703,7 @@ async function startPreview(isRec){
 
             tabVideos.appendChild(cell.container)
             videosMainPanelButton.disabled = false
-            showPopup(texts.findVideo)
+            showPopup1(texts.findVideo)
             // showPopup("Find result in videos section")
 
         }
@@ -593,6 +768,7 @@ class DropZone {
         this.dropZoneText.innerText = text
         this.dropZone.appendChild(this.dropZoneText)
         const input=document.createElement('input');
+        this.input = input
         input.type="file";
         if (accept){
             input.accept = accept
@@ -736,7 +912,7 @@ imageDropZone.handleFiles = (e) =>{
         flexatarImageDropDownContainer.classList.add("invisible")
         // flexatarImageDropDownContainer.style.display = "none"
     }else{
-        showPopup(texts.notAnImage)
+        showPopup1(texts.notAnImage)
         // showPopup("This is not an image file!")
 
     }
@@ -763,13 +939,14 @@ let ftarRecord
 let audioUrl
 let oldAudioFileCell
 let currentAudioFileCell
+let selectedAudioFileName
 const audioDropZone = new DropZone(texts.dropAudio,"audio/*")
 // const audioDropZone = new DropZone("Drag & drop audio here or click to upload","audio/*")
 audioDropZone.handleFiles = async (e) =>{
     const file = e.target.files[0];
     const fileType = file.type;
     if (!checkFileTypeIsAudio(fileType)){
-        showPopup(texts.notAnAudio)
+        showPopup1(texts.notAnAudio)
         // showPopup("This is not an audio file!")
         return
     }
@@ -778,6 +955,7 @@ audioDropZone.handleFiles = async (e) =>{
     audioUrl = currentAudioUrl
     audioProgressBar.style.width = `${0}%`;
     fileNameHolder.innerText = file.name
+    selectedAudioFileName = file.name
     audioDropZone.hide()
     completionForm.classList.remove("invisible")
     // completionForm.style.display = "block"
@@ -823,7 +1001,7 @@ audioDropZone.handleFiles = async (e) =>{
                     }
                 )
                 if (!chargeResponse.ok){
-                    showPopup("Service Unavailable")
+                    showPopup1("Service Unavailable")
                     cancelAudio()
                     return
                 }
@@ -846,6 +1024,7 @@ audioDropZone.handleFiles = async (e) =>{
                     oldAudioFileCell.icon = "check_box_outline_blank"
                     cell.icon = "select_check_box"
                     currentAudioFileCell = cell
+                    selectedAudioFileName=file.name
                     
                 }
                 oldAudioFileCell = cell
@@ -871,13 +1050,13 @@ audioDropZone.handleFiles = async (e) =>{
 
             const response = await checkResponsePromise 
             if (!response.ok) {
-                showPopup("No connection to service")
+                showPopup1("No connection to service")
                 return false
             }
             const audioCheck = await response.json()
             // console.log("audioCheck",audioCheck)
             if (audioCheck.count<audioPar.duration){
-                showPopup("Out of Subscribtion")
+                showPopup1("Out of Subscribtion")
                 cancelAudio()
                 return false
             }
@@ -975,7 +1154,7 @@ backgroundDropZone.handleFiles = async (e) =>{
     const fileType = file.type;
     // console.log("fileType",fileType)
     if (!checkFileType(fileType,imageMimeTypes)){
-        showPopup(texts.notAnImage)
+        showPopup1(texts.notAnImage)
         // showPopup("This is not an image file!")
         return
     }
@@ -1124,7 +1303,7 @@ function deleteFlexatar(){
             fEntry.token = token
             const deletionResult = await FtarView.deleteFlexatar(fEntry)
             if (!deletionResult){
-                showPopup(texts.wentWrong)
+                showPopup1(texts.wentWrong)
                 return
             }
 
@@ -1225,3 +1404,22 @@ window.deleteFlexatar = deleteFlexatar
 window.hidePopup = hidePopup
 window.confirmChosen = confirmChosen
 window.cancelChosen = cancelChosen
+
+let isSlot2Active = false
+slot2Expand.onclick = ()=>{
+    slot2Label.classList.remove("invisible")
+    slot2Close.classList.remove("invisible")
+    flexatarListContainer1.classList.remove("invisible")
+    slot2Expand.classList.add("invisible")
+    renderer.effect =  ()=>{ return { mode: 2, parameter: 0.35 }}
+    isSlot2Active = true
+}
+slot2Close.onclick = ()=>{
+    slot2Label.classList.add("invisible")
+    slot2Close.classList.add("invisible")
+    slot2Expand.classList.remove("invisible")
+    flexatarListContainer1.classList.add("invisible")
+    renderer.effect =  FtarView.effect.no()
+    isSlot2Active = false
+
+}

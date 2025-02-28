@@ -60,7 +60,16 @@
         "emoJoy":"Joy",
         "emoSurprise":"Surprise",
         "emoDisgust":"Disgust",
-        "emoConfusion":"Confusion"
+        "emoConfusion":"Confusion",
+        "noMicPerm":"No permission to use microphone.",
+        "recTooShort":"Record too short.",
+        "somethingWenWrong":"Something went wrong.",
+        "choose":"Choose:",
+        "share":"SHARE",
+        "download":"DOWNLOAD",
+        "shareTitleMessage":"Flexatar Video",
+        "shareTextMessage":"Sharing a video file.",
+        "noShare":"Web Share API not supported or file sharing not available."
     }
    
    

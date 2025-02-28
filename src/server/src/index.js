@@ -1,118 +1,87 @@
-import {listItem} from "./list-item.js"
-import {createContainer} from "./sub-create-container.js"
-import {showPopup} from "../../util/popup.js"
+
 
 import {createVGen} from "./vgen-creator.js"
 import {createVCam} from "./vcam-creator.js"
 
-async function handleBuySubscription(containerElements) {
-    const reqBody = {
-        authtype: containerElements.authTypeInput.value,
-        user: containerElements.userInput.value,
-        testing: containerElements.checkbox.checked,
-        crt: crypto.randomUUID()
-    };
+import {subscriptionListUI} from "./ui/subscriptionListUI.js"
+import {buySubscriptionUI} from "./ui/buySubscriptionUI.js"
+import {actionsLoggerUI} from "./ui/actionsLoggerUI.js"
 
-    try {
-        const resp = await fetch("/buysubscription", {
+
+const addLog = actionsLoggerUI(5,500,150,"logsHolder")
+
+addLog("start")
+let vCam
+let vGen
+
+const {addSubscriptionToList} = subscriptionListUI(1,50,150,"refreshList","subscriptionListHolder",async ()=>{
+    // console.log("refresh")
+        addLog("Refresh subscription list pressed.")
+        const resp = await fetch("/listsubscription",{
             method: 'POST',
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(reqBody)
-        });
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({})
+        })
+        if (!resp.ok){
+            addLog("Refresh failed: "+await resp.text())
 
-        if (!resp.ok) {
-            console.error(await resp.json());
-        } else {
-            console.log("buy subscription success");
+            return []
         }
-    } catch (error) {
-        console.error("Error buying subscription:", error);
-    }
-}
+    
+        const respJson = await resp.json()
+        addLog("Refresh success")
+        // console.log(respJson)
+        return respJson.list
 
-buySybscription.onclick = async() => {
-
-    const containerElements = createContainer();
-    showPopup({
-        customElement:containerElements.container,
-        buttons:[
-            {
-                text:"BUY",
-                onclick:async closeHandler =>{
-                    closeHandler()
-                    await handleBuySubscription(containerElements);
-                }
-               
-            },{
-                text:"CANCEL",
-                onclick:async closeHandler =>{
-                    closeHandler()
-                }
+    },
+    {
+        onVCam:(authtype,user) =>{
+            console.log("onVCam",authtype,user)
+            if (vCam){
+                vCam.destroy()
             }
-        ]
+            vCam = createVCam({authtype,user},videoFromIframe,iframeHolder,addLog)
+        },
+        onVGen:(authtype,user) =>{
+           
+            addLog("Starting v-gen...")
+            if (vGen){
+                vGen.destroy()
+            }
+            vGen = createVGen({authtype,user},vGenHolder,addLog)
+          
 
-    })
-  
-}
+        },
+        onDelete:async (authtype,user) =>{
+            // console.log("onDelete",authtype,user)
+            addLog("Delete subscription pressed."+JSON.stringify({authtype,user}))
+            const resp = await fetch("/delsubscription",{
+                method: 'POST',
+                headers:{"Content-Type":"application/json"},
+                body: JSON.stringify({authtype,user})
+            })
+            if (resp.ok){
+                // console.log("deletion success")
+                addLog("Deletion success.")
+              
+            }else{
+                // console.log("deletion failed")
+                addLog("Delete failed :"+await resp.text())
+            }
+            return resp.ok
+        }
+    }
+)
 
-async function getSubList(body){
-    if (!body) body = {}
-    const resp = await fetch("/listsubscription",{
-        method: 'POST',
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify(body)
-    })
-    if (resp.error){
+buySubscriptionUI("buySybscription",subscriptionItem =>{
+    if (subscriptionItem.error){
+        addLog("Buy subscription error:"+subscriptionItem.error)
         return
     }
-    const respJson = await resp.json()
-    return respJson
-}
+    addLog("Buy subscription success:"+JSON.stringify(subscriptionItem))
+    addSubscriptionToList(subscriptionItem.authtype,subscriptionItem.user)
+},addLog)
 
-let vGen
-let vCam
-function addEntriesToDocument(respJson){
-    for (const entry of respJson.list){
-        const subscription = listItem(entry,{
-            vcam:(request)=>{
-                if (vCam){
-                    vCam.destroy()
-                }
-                vCam = createVCam(request,videoFromIframe,iframeHolder)
-            },
-            vgen:(request)=>{
-                if (vGen){
-                    vGen.destroy()
-                }
-                vGen = createVGen(request,vGenHolder)
-            }
-        })
-
-        subscriptionsContainer.appendChild(subscription)
-    }
-
-    if (respJson.continue){
-        showMoreButton.style.display = "block"
-        showMoreButton.onclick =  () =>{
-            showListElements({continue:respJson.continue})
-        }
-    }else{
-        showMoreButton.style.display = "none"
-    }
-}
-addEntriesToDocument({list:[{authtype:"test",user:"test@user.email"}]})
-async function showListElements(body){
-    const respJson = await getSubList(body)
-    if (!respJson) return
-    addEntriesToDocument(respJson)
-    
-    
-}
-
-
-listSubscription.onclick = async() => {
-    showListElements()
-}
 
 
 

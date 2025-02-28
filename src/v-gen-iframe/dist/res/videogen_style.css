@@ -30,6 +30,7 @@
 
 }
 
+
 .ftar-preview-size{
   cursor: pointer;
   width: 75px;
@@ -42,6 +43,10 @@
 }
 
 
+.button-flexatar-style{
+  background-color: var(--main-color-2);
+  color: var(--main-color-1);
+}
 
 .button-style1{
   background-color: var(--main-color-2);
@@ -103,8 +108,10 @@
     flex-grow: 1;
 }
 
-.drop-zone.hover {
-    background-color: var(--main-color-1-hoover);
+@media (hover: hover) {
+  .drop-zone.hover {
+      background-color: var(--main-color-1-hoover);
+  }
 }
 
 .drop-zone p {
@@ -112,6 +119,13 @@
     color: var(--drop-zone-text);
     font-size: 16px;
 }
+
+#timerOutput{
+  color: var(--drop-zone-text);
+  font-size: 16px;
+  text-align: center;
+}
+
 
 #sendFlexatarButton{
 
@@ -196,13 +210,13 @@
   /* .button-panel button:hover {
     background-color: var(--main-color-2-hoover);
   } */
-
-  .button-panel button:hover .tooltiptext{
-    visibility: visible;
-    background-color: var(--main-color-2-hoover);
-    color: var(--main-color-3);
+  @media (hover: hover) {
+    .button-panel button:hover .tooltiptext{
+      visibility: visible;
+      background-color: var(--main-color-2-hoover);
+      color: var(--main-color-3);
+    }
   }
-
   .button-panel button .tooltiptext {
     visibility: hidden;
     width: auto;
@@ -524,6 +538,22 @@
     justify-content: center;
     align-items: center;
     font-weight: bold;
+    cursor: default;
+}
+
+.button-close-expand {
+  width: 30px;
+  height: 100%;
+  font-size: 14px; 
+  border-radius: 0px;
+  border: 1px solid var(--main-background) ;
+  color:  var(--main-color-1) !important;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  cursor: pointer;
 }
 
 .ftar-placeholder-choose {
@@ -556,11 +586,17 @@
   width: 100%; 
   background-color: var(--main-color-3); 
 
-  position: sticky; 
   top: 0; 
   display: flex;
 
+  
+
   position: relative; 
+}
+
+.flex-centered{
+  align-items: center !important;  /* Centers vertically */
+  justify-content: center !important; 
 }
 
 .top-fixed-count{
@@ -666,6 +702,7 @@
     color:var(--main-color-1); */
     font-weight: bold;
 }
+
 
 
 
@@ -838,4 +875,36 @@
 }
 .invisible{
   display: none !important;
+}
+
+.mic-floating-button {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  width: 40px;
+  height: 40px;
+  background-color: var(--main-color-2); 
+  color: var(--main-color-1);
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.mic-floating-button:hover {
+  background-color: var(--main-color-2-hoover);
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
+}
+.mic-record-state{
+  background-color: var(--error-color) !important; 
+  color: var(--main-color-3) !important; 
+}
+
+.mic-record-state:hover {
+  background-color: var(--error-color-shadow) !important;
 }
