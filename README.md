@@ -82,4 +82,19 @@ Our customer is expected to request Tokens per user session from backend by Secr
 
 ## Commercial
 
-<ToDo>
+Each request to **https<nolink>://api.flexatar-sdk.com/b2b/buysubscription** incurs a charge.
+
+Upon completing the request, you will receive a 1 month subscription for the specified user, which includes:
+
+- **20 Flexatar creations**
+- **100 sessions**
+
+**Expired Subscription Mode**
+
+Once a subscription expires, the user can continue to access the Flexatar SDK; however:
+- **Flexatar creations and deletions will be disabled**
+- **Sessions can still be used at fixed cost per session**
+
+> Note: A session is defined as the use of the Flexatar SDK from a single IP address wit
+
+Visit [pricing page](https://flexatar-sdk.com/?tab=dev) to know more.
