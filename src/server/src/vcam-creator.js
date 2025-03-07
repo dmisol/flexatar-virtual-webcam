@@ -6,9 +6,10 @@ import VCAM from "./ftar-v-cam.js"
 let vCam
 export function createVCam(request,videoelement,holder,addLog){
     addLog("Waiting v-cam response...")
-    const iframeUrl = "https://flexatar-sdk.com/v-cam/index.html"
+    // const iframeUrl = "https://flexatar-sdk.com/v-cam/index.html"
 
     // Deploy ./v-cam-iframe on local host
+    const iframeUrl = "/vcam"
     // const iframeUrl = "http://localhost:8080"
 
     // externalControl - set to `true` if you want to interact with the v-cam iframe.
@@ -101,12 +102,7 @@ export function createVCam(request,videoelement,holder,addLog){
    
     },(ftarId)=>{
         vCam.sendSetToSlot(ftarId,2)
-        setTimeout(()=>{
-            vCam.setEffect({effectId:"hybrid",animated:true})
-        },100)
-        setTimeout(()=>{
-            vCam.setEffect({effectId:currentEffect,animated})
-        },3000)
+       
 
 
     },(ftarId)=>{
@@ -137,6 +133,14 @@ export function createVCam(request,videoelement,holder,addLog){
 
     vCam.onFlexatarActivated = (ftarId,slotIdx)=>{
         console.log("onFlexatarActivated",ftarId,slotIdx)
+        if (slotIdx == 2){
+            setTimeout(()=>{
+                vCam.setEffect({effectId:"hybrid",animated:true})
+            },100)
+            setTimeout(()=>{
+                vCam.setEffect({effectId:currentEffect,animated})
+            },3000)
+        }
         
     }
     vCam.onFlexatarRemoved = (ftarId,error)=>{
@@ -158,7 +162,7 @@ export function createVCam(request,videoelement,holder,addLog){
 
             console.log("emoId clicked",emoId)
         })
-        console.log(initError)
+        
     }
     reloadFlexatarList.onclick = ()=>{
         clear()

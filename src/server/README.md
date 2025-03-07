@@ -3,38 +3,34 @@
 This demo server shows the way how to integrate with Flexatar API. Allows to handle your subscriptions and flexatars.
 
 ## Quick start 
-1. Install [Node.js](https://nodejs.org/en/download)
-2. Obtain **FLEXATAR_API_SECRET** from [Flexatar Web Page](https://flexatar-sdk.com).
-3. Set the Environment Variable
 
- ```
- #linux
- export FLEXATAR_API_SECRET=your_api_key
- #windows
- set FLEXATAR_API_SECRET=your_api_key
- ```
 
-4. Install Dependencies
+- Obtain **FLEXATAR_API_SECRET** from [Flexatar Web Page](https://flexatar-sdk.com).
+- Create .env file "flexatar-demo.env" with content FLEXATAR_API_SECRET=<your api key>
+- Edit run-server.sh or run-docker.sh to link your .env file
 
- ```
- npm install
- ```
+Deploy a local demo web app showcasing integration with the Flexatar SDK.
 
-5. Build the Project
+### With Bash Script 
 
- ```
- npm run build
- ```
+ Install [Node.js](https://nodejs.org/en/download)
+  ``` 
+  ./run-server.sh
+  ```
 
-6. Start the Demo Server
+### Or With Docker 
 
- ```
- npm run start
- ```
+ Install [Docker](https://docs.docker.com/engine/install/)
 
- 7. Visit the demo server in your browser at: [localhost:8081/main](localhost:8081/main)
+  ``` 
+  ./run-docker.sh
+  ```
 
- > **Note:** UI for handling "busy state" and error messages has not been implemented.
+ 
+Visit the demo server in your browser at: [localhost:8081/main](http://localhost:8081/main)
+
+
+
 
 ## Examples
  Find how to use flexatar SDK on the front end in:

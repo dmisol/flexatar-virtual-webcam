@@ -159,9 +159,9 @@ export class MediaConnectionProvider{
         this.peerConnection.onicecandidate = event => {
             // console.log("onicecandidate")
             if (event.candidate) {
-   
-               
-                postMessageProvider.postMessage({flexatar:wrapPayload({ type: 'ice-candidate', candidate: JSON.stringify(event.candidate) },this.iframeId)}, '*');
+                
+                postMessageProvider({ type: 'ice-candidate', candidate: JSON.stringify(event.candidate) },this.iframeId)
+                // postMessageProvider.postMessage({flexatar:wrapPayload({ type: 'ice-candidate', candidate: JSON.stringify(event.candidate) },this.iframeId)}, '*');
             }
         };
         this.peerConnection.onconnectionstatechange = () => {
@@ -178,7 +178,8 @@ export class MediaConnectionProvider{
             if (this.isNegotiating) return
             this.isNegotiating = true
 
-            postMessageProvider.postMessage({flexatar:wrapPayload(await this.offerMessage(),this.iframeId)}, '*');
+            postMessageProvider(await this.offerMessage(),this.iframeId);
+            // postMessageProvider.postMessage({flexatar:wrapPayload(await this.offerMessage(),this.iframeId)}, '*');
 
             
         }
@@ -198,13 +199,15 @@ export class MediaConnectionProvider{
         await this.peerConnection.setLocalDescription(answer);
 
 
-        // console.log("send answer")
-        this.postMessageProvider.postMessage({flexatar:wrapPayload({ type: 'answer', sdp: answer.sdp },this.iframeId)}, '*');
+        // console.log("send answer",answer.sdp )
+        this.postMessageProvider({ type: 'answer', sdp: answer.sdp },this.iframeId);
+        // this.postMessageProvider.postMessage({flexatar:wrapPayload({ type: 'answer', sdp: answer.sdp },this.iframeId)}, '*');
         // console.log('answer SDP:', this.peerConnection.localDescription.sdp);
     }
     async recvAnswer(data){
         // console.log("recvAnswer")
         const remoteDesc = new RTCSessionDescription({ type: 'answer', sdp: data.sdp });
+       
         await this.peerConnection.setRemoteDescription(remoteDesc);
     }
     async addIceCandidate(data){

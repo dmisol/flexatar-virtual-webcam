@@ -6,13 +6,8 @@
 
 
  ```js
-    const iframeUrl = "https://dev.flexatar-sdk.com/v-cam/index.html"
-    // Run v-gen iframe on localhost
-    // cd ../v-gen
-    // npm install
-    // npm run build
-    // npm run start
-    // const iframeUrl = "http://localhost:8082"
+    const iframeUrl = "https://flexatar-sdk.com/v-cam/index.html"
+
 
     const vGen = VGEN.getVGenElement(iframeUrl,{token:"hardcoded token to test"})
     

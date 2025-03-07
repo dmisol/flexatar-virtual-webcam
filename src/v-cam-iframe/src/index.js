@@ -1,10 +1,27 @@
-// Add an event listener to listen for messages from the parent
 
+
+import {eventProvider} from "./message-listener-impls/eventsFromParentHtml.js"
+import {sendToParent} from "./message-sender-impls/sendToParentHtml.js"
 import {getFlexatarWraped,getPreviewWraped} from "./caching.js"
 import {Texts} from "./texts.js"
 import {MediaConnectionProvider} from "../../util/rtc-connection.js"
 import {checkFileType,imageMimeTypes} from "../../util/util.js"
 import {fileToStringConverter} from "../../util/fileToStringConverter.js"
+// import FtarView from "./ftar_view3.js"
+import "script-loader!./ftar_view3.js";
+import "script-loader!./ftar_lipsync.js";
+// import FtarLipsync from "./ftar_lipsync.js"
+
+
+
+   
+    if (typeof AndroidInterface !== "undefined") {
+        console.log("Page loaded inside WebView");
+        document.addEventListener("DOMContentLoaded", function () {
+            sendToParent({type:"onload"})
+        });
+    }
+
 
 async function blobToDataURL(blobUrl) {
     const response = await fetch(blobUrl);
@@ -57,16 +74,27 @@ const allowAuidoPromise = new Promise(resolve =>{allowAuidoOverlay.onclick = ()=
     resolve()
 }})
 
-const lipsyncerWithACtxPromise = new Promise(async resolve=>{
+function isAndroidWebView() {
+    return typeof AndroidInterface !== "undefined";
+}
 
+
+
+
+const lipsyncerWithACtxPromise = new Promise(async resolve=>{
+    // console.log("load lispsyncer")
     const lipsyncer = await lipsyncerPromise
+    // console.log("lispsyncer ready")
     await audioContextClickPromise
+    // console.log("show audio overlay")
     allowAuidoOverlay.classList.remove("invisible")
-    await allowAuidoPromise
+    if (!isAndroidWebView()){
+        await allowAuidoPromise
+    }
     allowAuidoOverlay.classList.add("invisible")
     await lipsyncer.startAudioContext()
 
-    // console.log("audioContext",lipsyncer.audioContext)
+    // console.log("audioContext",JSON.stringify(lipsyncer.audioContext))
     resolve(lipsyncer)
 })
 
@@ -289,13 +317,13 @@ let rendererResolve
 let rendererPromise = new Promise(resolve=>{
     rendererResolve = resolve
 })
-window.addEventListener('message', async (event) => {
+eventProvider( async (data) => {
 
     // Access the message data
-    let data = event.data;
-    if (!data.flexatar){return}
-    data = data.flexatar
-    
+    // let data = event.data;
+    // if (!data.flexatar){return}
+    // data = data.flexatar
+
 
     if (data.type === "reload_token"){
         reloadTokenResolve(data.token)
@@ -304,9 +332,12 @@ window.addEventListener('message', async (event) => {
         allowAuidoOverlay.classList.remove("invisible")
         await allowAuidoPromise
         allowAuidoOverlay.classList.add("invisible")
-        const sendObject = {}
-        sendObject[iframeId] = {type:"request_audio"}
-        window.parent.postMessage({flexatar: sendObject }, '*');
+
+        sendToParent({type:"request_audio"},iframeId)
+
+        // const sendObject = {}
+        // sendObject[iframeId] = {type:"request_audio"}
+        // window.parent.postMessage({flexatar: sendObject }, '*');
 
     }else if (data.type === "resolution"){
         await rendererPromise
@@ -322,17 +353,22 @@ window.addEventListener('message', async (event) => {
         renderer.addOverlay(overlay,{x:0,y:0,width:100,height:100,mode:"back"});
        
     }else if (data.token){
-        const heartBeatObject = {}
-        heartBeatObject[iframeId] = {type:"heart_beat"}
-        window.parent.postMessage({flexatar: heartBeatObject }, '*');
+
+        sendToParent({type:"heart_beat"},iframeId)
+
+        // const heartBeatObject = {}
+        // heartBeatObject[iframeId] = {type:"heart_beat"}
+        // window.parent.postMessage({flexatar: heartBeatObject }, '*');
 
         const token = new FtarView.GetToken(async ()=>{
         
                 // console.log("reload token iframe")
                 const tokenPromise = new Promise((resolve)=>{reloadTokenResolve=resolve})
-                const sendObject = {}
-                sendObject[iframeId] = {type:"reload_token"}
-                window.parent.postMessage({flexatar: sendObject }, '*');
+                // const sendObject = {}
+                // sendObject[iframeId] = {type:"reload_token"}
+                // window.parent.postMessage({flexatar: sendObject }, '*');
+
+                sendToParent({type:"reload_token"},iframeId)
                 const tok = await tokenPromise
                 return tok
             }
@@ -414,10 +450,10 @@ window.addEventListener('message', async (event) => {
         renderer.canvas.style.display = "none"
         document.body.appendChild(renderer.canvas)
 
-
+        // renderer.canvas.style.zIndex =1000
         
         const ftarVideoStream = renderer.canvas.captureStream(30)
-        mediaConnection = new MediaConnectionProvider(window.parent,"iframe",iframeId,externalControl)
+        mediaConnection = new MediaConnectionProvider(sendToParent,"iframe",iframeId,externalControl)
 
         mediaConnection.onDataChanelAvailable = ()=>{
             dataChanelReadyResolver()
@@ -550,15 +586,20 @@ window.addEventListener('message', async (event) => {
 
 
         
-        const sendObject = {}
-        sendObject[iframeId] = await mediaConnection.offerMessage()
-        window.parent.postMessage({flexatar:sendObject}, '*');
+        // const sendObject = {}
+        // sendObject[iframeId] = await mediaConnection.offerMessage()
+        // window.parent.postMessage({flexatar:sendObject}, '*');
+        sendToParent(await mediaConnection.offerMessage(),iframeId)
 
 
         
         mediaConnection.onaudioready = async audioTrack =>{
+          
             // if (confirm("Audio will start now")){
+               
+                // if (!isAndroidWebView()){
                 resolveAudioContext()
+                // }
             // }
            
             if (oldTrack)
@@ -581,8 +622,7 @@ window.addEventListener('message', async (event) => {
  
             lipsyncer.connect(renderer)
             const synchronizedAudio = lipsyncer.synchronizedStream()
-            
-           
+
             mediaConnection.addAudioTrack(synchronizedAudio.getAudioTracks()[0])
             audioTrack.onended = () => {
                 // console.log('Track has been stopped.');
@@ -593,7 +633,7 @@ window.addEventListener('message', async (event) => {
                 },700)
             };
             mediaConnection.isNegotiating = false
-            
+           
         }
     }
 
@@ -649,10 +689,6 @@ confirmButton.onclick = async () =>{
         }
     }
    
-    
-
-    
-
     trashIcon.classList.remove("invisible")
     waitIcon.classList.add("invisible")
     waitIcon.classList.remove("roating")
