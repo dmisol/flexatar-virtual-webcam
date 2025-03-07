@@ -20,7 +20,7 @@ Last but not least, we are provideing effects like mixing different models and i
 ## Quick start 
 
 - Obtain **FLEXATAR_API_SECRET** from [Flexatar Web Page](https://flexatar-sdk.com).
-- Create .env file "flexatar-demo.env" with content FLEXATAR_API_SECRET=<your api key>
+- Create .env file "flexatar-demo.env" with content FLEXATAR_API_SECRET=`<your api key>`
 - Edit run-server.sh or run-docker.sh to link your .env file
 
 
