@@ -71,16 +71,16 @@ recordAudioUI(
     },
 
     ()=>{
-        console.log("permission error")
+        // console.log("permission error")
         showPopup1(texts.noMicPerm)
     },
    ()=>{
         showPopup1(texts.recTooShort)
-        console.log("record to short")
+        // console.log("record to short")
     },
    (error)=>{
         showPopup1(texts.somethingWenWrong)
-        console.log("unknown error",error)
+        // console.log("unknown error",error)
     },
     // 10,
     5 * 60,
@@ -98,7 +98,7 @@ window.addEventListener('message', async (event) => {
     if (data.type === "reload_token"){
         reloadTokenResolve(data.token)
     }else  if (data.type === "heart_beat"){
-        console.log("iframe heart beat")
+        // console.log("iframe heart beat")
         const heartBeatObject = {}
         heartBeatObject[iframeId] = {type:"heart_beat"}
         window.parent.postMessage({flexatar: heartBeatObject }, '*');

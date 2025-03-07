@@ -6,7 +6,13 @@ function getVCamElement(iframeUrl,opts){
     return new VCam(iframeUrl,opts)
 }
 
+function sendToIframeFunProvider(contentWindow){
+ 
+    return (payload) =>{
+        contentWindow.postMessage({flexatar: payload }, '*');
 
+    }
+}
 
 class VCam {
     #onoutputstream
@@ -153,7 +159,7 @@ class VCam {
         if (opts.externalControl){
             iframeQuery+= "&external_ctl=true"
         }
-        console.log(iframeQuery)
+        // console.log(iframeQuery)
         this.#iframe.src = iframeQuery
         this.#iframe.style.width = "100%"
         this.#iframe.style.height = "100%"
@@ -263,7 +269,7 @@ class VCam {
     #oldTarck
     #setupMediaConnection(hasExternalControl){
         // console.log("hasExternalControl",hasExternalControl)
-        this.#mediaConnection = new MediaConnectionProvider(this.#iframe.contentWindow,"host",undefined,hasExternalControl)
+        this.#mediaConnection = new MediaConnectionProvider(sendToIframeFunProvider(this.#iframe.contentWindow),"host",undefined,hasExternalControl)
         this.#mediaConnection.ondelayedaudio  = (audioTrack)=>{
             if (this.#oldTarck){
                 this.mediastream.removeTrack(this.#oldTarck);

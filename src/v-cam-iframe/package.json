@@ -6,12 +6,17 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "webpack serve --mode development",
-    "build": "webpack --mode production"
+    "build": "webpack --mode production",
+    "android": "npx webpack --config webpack.config.android.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@babel/core": "^7.26.9",
+    "@babel/preset-env": "^7.26.9",
+    "babel-loader": "^10.0.0",
+    "script-loader": "^0.7.2",
     "webpack": "^5.97.1",
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "^5.2.0"

@@ -6,12 +6,7 @@
 
 
  ```js
-    const iframeUrl = "https://dev.flexatar-sdk.com/v-cam/index.html"
-    // Run v-cam iframe on localhost
-    // cd ../v-cam
-    // npm install
-    // npm run dev
-    // const iframeUrl = "http://localhost:8080"
+    const iframeUrl = "https://flexatar-sdk.com/v-cam/index.html"
 
     const vCam = VCAM.getVCamElement(iframeUrl,{token:"hardcoded token to test"})
     

@@ -19,20 +19,30 @@ Last but not least, we are provideing effects like mixing different models and i
 
 ## Quick start 
 
-Obtain **FLEXATAR_API_SECRET** from [Flexatar Web Page](https://flexatar-sdk.com).
+- Obtain **FLEXATAR_API_SECRET** from [Flexatar Web Page](https://flexatar-sdk.com).
+- Create .env file "flexatar-demo.env" with content FLEXATAR_API_SECRET=<your api key>
+- Edit run-server.sh or run-docker.sh to link your .env file
+
+
+Deploy a local demo web app showcasing integration with the Flexatar SDK.
+
+### With Bash Script 
 
  Install [Node.js](https://nodejs.org/en/download)
- ```
- #linux
- export FLEXATAR_API_SECRET=your_api_key
- #windows
- set FLEXATAR_API_SECRET=your_api_key
- cd src/server
- npm install
- npm run build
- npm run start
- ```
- Visit the demo server in your browser at: [localhost:8081/main](http://localhost:8081/main)
+  ``` 
+  ./run-server.sh
+  ```
+
+### Or With Docker 
+
+ Install [Docker](https://docs.docker.com/engine/install/)
+
+  ``` 
+  ./run-docker.sh
+  ```
+
+ 
+Visit the demo server in your browser at: [localhost:8081/main](http://localhost:8081/main)
 
 
 ## Integration
