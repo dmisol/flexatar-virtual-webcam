@@ -6,7 +6,7 @@ This demo server shows the way how to integrate with Flexatar API. Allows to han
 
 
 - Obtain **FLEXATAR_API_SECRET** from [Flexatar Web Page](https://flexatar-sdk.com).
-- Create .env file "flexatar-demo.env" with content FLEXATAR_API_SECRET=<your api key>
+- Create .env file "flexatar-demo.env" with content FLEXATAR_API_SECRET=`<your api key>`
 - Edit run-server.sh or run-docker.sh to link your .env file
 
 Deploy a local demo web app showcasing integration with the Flexatar SDK.
