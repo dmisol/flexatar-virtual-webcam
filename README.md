@@ -105,6 +105,6 @@ Once a subscription expires, the user can continue to access the Flexatar SDK; h
 - **Flexatar creations and deletions will be disabled**
 - **Sessions can still be used at fixed cost per session**
 
-> Note: A session is defined as the use of the Flexatar SDK from a single IP address wit
+> Note: A session is defined as the use of the Flexatar SDK from a single IP address within one day.
 
 Visit [pricing page](https://flexatar-sdk.com/?tab=dev) to know more.
