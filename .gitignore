@@ -63,3 +63,9 @@ raw/*.bin
 *.sublime-project
 *.sublime-workspace
 *.sh
+src/chorme-ext-overlay-bundle
+src/chrome-webcam
+src/chrome-webcam2
+
+!run-docker.sh
+!run-server.sh

@@ -104,7 +104,7 @@ Deletes subscription for given `"authtype"` and  `"user"`. Use it if you want to
 curl -X POST https://api.flexatar-sdk.com/b2b/usertoken \
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer FLEXATAR_API_SECRET" \
-     -d '{"authtype":"auth_tag","user":"user_id","restricted":true/false}'
+     -d '{"authtype":"auth_tag","user":"user_id",domain:[<list of domains>],"restricted":true/false}'
 ```
 
 ### Response
@@ -115,8 +115,8 @@ curl -X POST https://api.flexatar-sdk.com/b2b/usertoken \
 - **404** - user not found.
 
 ### Request Fields
-
-`"restricted"` - restricted token not allow to creat or delete flexatars. Use it for virtual assistants.
+- "domain" - A whitelist of domains where the user token is valid. Example: `{"domain": ["localhost:8081", "my.website.com"]}`.
+- `"restricted"` - restricted token not allow to creat or delete flexatars. Use it for virtual assistants.
 
 ### Response Fields
 `"USER_TOKEN"` - must be delivered to browser for flexatar SDK functionality.

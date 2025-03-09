@@ -1,3 +1,4 @@
+
 import {MediaConnectionProvider} from "../../util/rtc-connection.js"
 import {fetchArrayBuffer,mediaStreamFromArrayBufer} from "../../util/util.js"
 
@@ -401,3 +402,8 @@ class VCam {
 export default {
     getVCamElement
 };
+
+if (typeof window !== "undefined") {
+    console.log("Setting window.VCAM");
+    window.VCAM = module.exports;
+}

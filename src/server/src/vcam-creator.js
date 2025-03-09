@@ -8,25 +8,26 @@ export function createVCam(request,videoelement,holder,addLog){
     addLog("Waiting v-cam response...")
     // const iframeUrl = "https://flexatar-sdk.com/v-cam/index.html"
 
-    // Deploy ./v-cam-iframe on local host
+
     const iframeUrl = "/vcam"
-    // const iframeUrl = "http://localhost:8080"
 
     // externalControl - set to `true` if you want to interact with the v-cam iframe.
     // Use externalControl if you want to implement your own UI logic.
 
-    vCam = VCAM.getVCamElement(iframeUrl,{externalControl:true})
+    vCam = VCAM.getVCamElement(iframeUrl,{externalControl:true,token:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOm51bGwsImV4cCI6NTM0MTAxNDU2MiwiaXNzIjoiIiwianRpIjoiIiwibmJmIjoxNzQxMDE0NTYyLCJvd25lciI6InRlc3QuY2xpZW50IiwicHJlcGFpZCI6dHJ1ZSwic3ViIjoiIiwidGFnIjoidGVzdCIsInRhcmlmZiI6InVuaXZlcnNhbCIsInVzZXIiOiJjbGllbnRfMSJ9.ULZwmHsLSqxjykbMmZH61gt7Xejns-r5Ez0_eWZTucU"})
+
+    // vCam = VCAM.getVCamElement(iframeUrl,{externalControl:true})
     vCam.element.scrollbarWidth="none"
     
     vCam.style.display = "none"
     vCam.resolution = {width:240,height:320}
-    vCam.setupTokenFetch("/usertoken",
-        {
-            method: 'POST',
-            headers:{"Content-Type":"application/json"},
-            body: JSON.stringify(request)  
-        }
-    )
+    // vCam.setupTokenFetch("/usertoken",
+    //     {
+    //         method: 'POST',
+    //         headers:{"Content-Type":"application/json"},
+    //         body: JSON.stringify(request)  
+    //     }
+    // )
     vCam.ontokenerror = (error)=>{
         addLog("Error: "+JSON.stringify(error))
     }
