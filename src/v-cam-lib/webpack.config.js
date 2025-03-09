@@ -32,7 +32,7 @@ module.exports = function(env) {
 
    
 
-   
+   /*
     
     module: {
     //   rules: [{ test: /\.txt$/, use: 'raw-loader' }],
@@ -48,7 +48,7 @@ module.exports = function(env) {
     },
     plugins: [
          
-        ]
+        ]*/
   };
 
   

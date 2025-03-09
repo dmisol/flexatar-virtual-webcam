@@ -40,7 +40,7 @@ const {addSubscriptionToList} = subscriptionListUI(1,50,150,"refreshList","subsc
             if (vCam){
                 vCam.destroy()
             }
-            vCam = createVCam({authtype,user},videoFromIframe,iframeHolder,addLog)
+            vCam = createVCam({authtype,user,domain:["localhost:8081"]},videoFromIframe,iframeHolder,addLog)
         },
         onVGen:(authtype,user) =>{
            
