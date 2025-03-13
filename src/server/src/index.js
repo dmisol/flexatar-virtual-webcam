@@ -14,6 +14,7 @@ addLog("start")
 let vCam
 let vGen
 
+
 const {addSubscriptionToList} = subscriptionListUI(1,50,150,"refreshList","subscriptionListHolder",async ()=>{
     // console.log("refresh")
         addLog("Refresh subscription list pressed.")

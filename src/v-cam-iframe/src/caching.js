@@ -1,5 +1,6 @@
 import { getUint8ArrayFromCache,storeInCache,cacheObjectURL,retrieveObjectURLFromCache,listCacheKeys } from "../../util/util.js"
 
+import * as FtarView from "./ftar_view3_mod.js"
 
 // localStorage.clear();
 

@@ -74,4 +74,17 @@ exports.listSubscriptions = async (req, res, next) => {
     
 
 };
+exports.info = async (req, res, next) => {
+
+    const resp = await flexRequest("info",req.body)
+    
+    if (resp.ok){
+        return res.status(resp.status).json(await resp.json());
+    }else{
+        return res.status(resp.status).json({error:await resp.text()});
+    }
+   
+    
+
+};
 

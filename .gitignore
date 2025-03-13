@@ -66,6 +66,8 @@ raw/*.bin
 src/chorme-ext-overlay-bundle
 src/chrome-webcam
 src/chrome-webcam2
+src/v-cam
+flexatar-demo.env
 
 !run-docker.sh
 !run-server.sh

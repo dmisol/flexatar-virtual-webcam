@@ -38,6 +38,7 @@ app.route("/usertoken").post(handlers.getUserToken);
 app.route("/buysubscription").post(handlers.buySubscription);
 app.route("/listsubscription").post(handlers.listSubscriptions);
 app.route("/delsubscription").post(handlers.delSubscription);
+app.route("/info").post(handlers.info);
 
 var httpServer = http.createServer( app);
 

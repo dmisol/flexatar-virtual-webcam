@@ -895,9 +895,14 @@ const imageDropZone = new DropZone(texts.dropPhoto)
 // const imageDropZone = new DropZone("Drag & drop frontal photo here or click to upload")
 let imgSrc
 let currentImgFile
-imageDropZone.handleFiles = (e) =>{
+imageDropZone.handleFiles = async (e) =>{
     // console.log("file chosen",e.target.files)
-    const file = e.target.files[0];
+    let file = e.target.files[0];
+    if (file && file.type.startsWith("image/")  ) {
+        while (file.size > 4 * 1024 * 1024){
+            file = await FtarView.util.resizeImage(file)
+        }
+    }
     
     currentImgFile = file
     const fileType = file.type;

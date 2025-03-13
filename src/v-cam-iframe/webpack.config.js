@@ -19,8 +19,15 @@ module.exports = {
         exclude: /node_modules/
         
       },
+      {
+        test: /\.wasm$/,
+        type: 'asset/resource', 
+      }
     ],
   },
+  experiments: {
+    asyncWebAssembly: true, // Ensures WebAssembly files are loaded separately
+},
   devServer: {
     static: './dist',
 

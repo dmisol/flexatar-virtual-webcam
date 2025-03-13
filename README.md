@@ -32,6 +32,7 @@ Deploy a local demo web app showcasing integration with the Flexatar SDK.
   ``` 
   ./run-server.sh
   ```
+  > Note: On windows use `Git Bash` to run script.
 
 ### Or With Docker 
 

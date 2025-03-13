@@ -7,11 +7,11 @@ import {Texts} from "./texts.js"
 import {MediaConnectionProvider} from "../../util/rtc-connection.js"
 import {checkFileType,imageMimeTypes} from "../../util/util.js"
 import {fileToStringConverter} from "../../util/fileToStringConverter.js"
-// import FtarView from "./ftar_view3.js"
-import "script-loader!./ftar_view3.js";
-import "script-loader!./ftar_lipsync.js";
-// import FtarLipsync from "./ftar_lipsync.js"
-
+import * as FtarView from "./ftar_view3_mod.js"
+// import "script-loader!./ftar_view3.js";
+// import "script-loader!./ftar_lipsync.js";
+import {newInstance} from "./ftar_lipsync.js"
+const FtarLipsync = {newInstance}
 
 
    
@@ -93,7 +93,7 @@ const lipsyncerWithACtxPromise = new Promise(async resolve=>{
     }
     allowAuidoOverlay.classList.add("invisible")
     await lipsyncer.startAudioContext()
-
+    lipsyncer.audioContext
     // console.log("audioContext",JSON.stringify(lipsyncer.audioContext))
     resolve(lipsyncer)
 })
@@ -171,7 +171,7 @@ function addMakeFlexatarButton(){
         const removeLoader = setLoader()
 
        
-        const file = e.target.files[0];
+        let file = e.target.files[0];
         const fileType = file.type;
 
         if (!checkFileType(fileType,imageMimeTypes)){
@@ -181,13 +181,19 @@ function addMakeFlexatarButton(){
         }
         let ftarLink
         try{
+            if (file && file.type.startsWith("image/")  ) {
+                while (file.size > 4 * 1024 * 1024){
+                    file = await FtarView.util.resizeImage(file)
+                }
+            }
             ftarLink = await FtarView.makeFlexatar(getTokenInst,file,"noname",{ftar:true,preview:true})
-        }catch{
-
+        }catch (e) {
+            console.error(e)
         }
         removeLoader()
         if (!ftarLink){
             removeErrorSign = setErrorSign(Texts.UNKNOWN)
+            return
         }
         if (ftarLink.err){
             if (ftarLink.reason){
@@ -233,7 +239,6 @@ async function previewLoader(ftarList,previewReadyCallback){
         if (previewImg){
             previewReadyCallback(ftarLink,previewImg)
         }
-        
     }
 }
 
@@ -547,7 +552,13 @@ eventProvider( async (data) => {
         }
 
         mediaConnection.onCreateFlexatar = async (imgBase64Encoded) =>{
-            const file = restoreFileFromString(imgBase64Encoded)
+            let file = restoreFileFromString(imgBase64Encoded)
+            if (file && file.type.startsWith("image/")  ) {
+                while (file.size > 4 * 1024 * 1024){
+                    file = await FtarView.util.resizeImage(file)
+                }
+            }
+
             const ftarLink = await FtarView.makeFlexatar(getTokenInst,file,"noname",{ftar:true,preview:true})
             let errorString = ""
             if (!ftarLink){
@@ -613,6 +624,7 @@ eventProvider( async (data) => {
             audio.srcObject = mediaStream;
             audio.pause()
             audio.muted = true;
+            
 
             
 
@@ -621,8 +633,11 @@ eventProvider( async (data) => {
             lipsyncer.mediaStream = mediaStream
  
             lipsyncer.connect(renderer)
+
             const synchronizedAudio = lipsyncer.synchronizedStream()
 
+
+            // mediaConnection.addAudioTrack(mediaStream.getAudioTracks()[0])
             mediaConnection.addAudioTrack(synchronizedAudio.getAudioTracks()[0])
             audioTrack.onended = () => {
                 // console.log('Track has been stopped.');
