@@ -1,0 +1,31 @@
+{
+  "name": "v-assistant",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "sideEffects": false,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "webpack serve --mode development",
+    "build": "webpack --mode production",
+    "build-copy": "webpack --mode production && cp -r dist/* ../../../flexatar-sdk/chrome-extension/dist/vcam_ui/",
+    "android": "npx webpack --config webpack.config.android.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.26.9",
+    "@babel/preset-env": "^7.26.9",
+    "babel-loader": "^10.0.0",
+    "script-loader": "^0.7.2",
+    "terser-webpack-plugin": "^5.3.14",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.0",
+    "worker-loader": "^3.0.8"
+  },
+  "dependencies": {
+    "path-browserify": "^1.0.1"
+  }
+}

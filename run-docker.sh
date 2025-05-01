@@ -8,7 +8,7 @@ fi
 CONTAINER_NAME="flexatar-demo"
 IMAGE_NAME="flexatar-demo"
 IMAGE_TAG="latest"  # Change this if needed
-ENV_FILE="../flexatar-demo.env" 
+ENV_FILE="./flexatar-demo.env" 
 
 echo "rebuild ${REBUILD}"
 # Check if the image exists

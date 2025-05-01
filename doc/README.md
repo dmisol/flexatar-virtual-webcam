@@ -4,7 +4,7 @@
 
 ## Quick start 
 
-[Check out demo web app example to start](../src/server)
+[Check out demo web apps source code example to start](../src/server)
 
 ## Overview
 

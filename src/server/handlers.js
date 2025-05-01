@@ -1,7 +1,8 @@
 
+require('dotenv').config();
 const flexatarApiUrl = "https://api.flexatar-sdk.com"
 const flexatarApiSecret = process.env.FLEXATAR_API_SECRET;
-
+console.log(flexatarApiSecret)
 
 async function flexRequest(endpoint,reqBody){
 

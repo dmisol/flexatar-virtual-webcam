@@ -84,7 +84,7 @@ function isAndroidWebView() {
 const lipsyncerWithACtxPromise = new Promise(async resolve=>{
     // console.log("load lispsyncer")
     const lipsyncer = await lipsyncerPromise
-    // console.log("lispsyncer ready")
+    // console.log("lispsyncer ready",lipsyncer)
     await audioContextClickPromise
     // console.log("show audio overlay")
     allowAuidoOverlay.classList.remove("invisible")

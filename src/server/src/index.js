@@ -37,11 +37,14 @@ const {addSubscriptionToList} = subscriptionListUI(1,50,150,"refreshList","subsc
     },
     {
         onVCam:(authtype,user) =>{
+            vCamTable.style.display = "block"
             console.log("onVCam",authtype,user)
             if (vCam){
                 vCam.destroy()
             }
-            vCam = createVCam({authtype,user,domain:["localhost:8081"]},videoFromIframe,iframeHolder,addLog)
+            vCam = createVCam({authtype,user,
+                // domain:["localhost:8081"]
+            },videoFromIframe,iframeHolder,addLog)
         },
         onVGen:(authtype,user) =>{
            
@@ -73,6 +76,9 @@ const {addSubscriptionToList} = subscriptionListUI(1,50,150,"refreshList","subsc
         }
     }
 )
+progressButton.onclick = () => {
+    vCam.showProgress()
+}
 
 buySubscriptionUI("buySybscription",subscriptionItem =>{
     if (subscriptionItem.error){

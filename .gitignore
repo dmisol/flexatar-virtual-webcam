@@ -71,3 +71,5 @@ flexatar-demo.env
 
 !run-docker.sh
 !run-server.sh
+.env
+src/server/.env

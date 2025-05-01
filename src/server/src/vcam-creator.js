@@ -2,17 +2,292 @@ import {initVCamControlUi} from "./v-cam-control/initVCamControlUi.js"
 import {initVCamEmoCtl} from "./v-cam-control/initVCamEmoCtl.js"
 import {fileLoader} from "./v-cam-control/fileLoader.js"
 import {effectController} from "./v-cam-control/effectController.js"
-import VCAM from "./ftar-v-cam.js"
+// import VCAM from "./ftar-v-cam.js"
+import {VCAM} from "../../flexatar-package/src/index.js"
+// import {VCAM} from "flexatar-package"
+
+
 let vCam
+
+/*
+import ManagerWorker from "../../worker/manager.worker.js"
+import {RenderWorkerWarper } from "../../worker/install-render-worker.js"
+
+
+
+async function resample(float32Array,targetSampleRate,inputSampleRate,numChannels=1){
+    const frameCount = float32Array.length / numChannels;
+    const offlineContext = new OfflineAudioContext({
+        numberOfChannels: numChannels,
+        length: Math.ceil(frameCount * (targetSampleRate / inputSampleRate)),
+        sampleRate: targetSampleRate,
+    });
+    const audioBuffer = offlineContext.createBuffer(1, frameCount, inputSampleRate);
+    audioBuffer.getChannelData(0).set(float32Array);
+  
+    const anotherArray = new Float32Array(audioBuffer.length);
+    audioBuffer.copyFromChannel(anotherArray, 0, 0);
+    // console.log("anotherArray",anotherArray)
+  
+    const source = offlineContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(offlineContext.destination);
+    source.start();
+    const resampledBuffer = await offlineContext.startRendering();
+  
+  
+    return resampledBuffer
+}
+class TrackProcessor{
+    constructor(stream){
+        let mimeType
+        const supportedTypes = [
+            'audio/webm',
+            'audio/webm;codecs=opus',
+            'audio/ogg',
+            'audio/wav',
+          ];
+          
+          for (const type of supportedTypes) {
+            if (MediaRecorder.isTypeSupported(type)) {
+                mimeType = type;
+            }
+          }
+          
+        const recorder = new MediaRecorder(stream, { mimeType });
+        let firstChunk
+        const self = this
+        recorder.ondataavailable = async (event) => {
+            if (event.data.size === 0) return;
+            if (!firstChunk){
+                firstChunk = event.data
+                return
+            }
+            const blob = new Blob([firstChunk,event.data], { type: mimeType });
+            const arrayBuffer = await blob.arrayBuffer();
+            // console.log(arrayBuffer)
+
+          // Use a dummy OfflineAudioContext — sample rate guessed here
+          const offlineCtx = new OfflineAudioContext(1, 1, 16000);
+      
+          try {
+            const decoded = await offlineCtx.decodeAudioData(arrayBuffer);
+            const pcm = decoded.getChannelData(0); // Float32Array of PCM samples
+            if (self.onAudio) self.onAudio(pcm)
+                // console.log(pcm)
+            // console.log("Decoded PCM (Float32Array):", pcm);
+          } catch (err) {
+            console.error("Decode error:", err);
+          }
+        };
+        recorder.start(10);
+    }
+    // onAudio = ()=>{}
+}
+
+class VCAM{
+    constructor(request){
+        const managerWorker = new ManagerWorker()
+
+        managerWorker.onmessage = async (event)=>{
+        
+         const msg = event.data
+         if (!msg) return
+         if (msg.error){
+             console.log(msg.error)
+         }else if (msg.tokenRequest){
+             try{
+                 const response = await fetch("/usertoken",{
+                     method: 'POST',
+                     headers:{"Content-Type":"application/json"},
+                  
+                     body: JSON.stringify(request)  
+                 })
+                 if (!response.ok){
+                     // postMessage({error:{status:response.status,message:await response.text()}})
+                     // return 
+                 }
+                 const tokenJson = await response.json()
+                 console.log("tokenJson",tokenJson)
+                 if (!tokenJson.token){
+                     // postMessage({error:{status:403,message:"token_expired"}})
+                 }
+                 managerWorker.postMessage({token:tokenJson.token})
+             }catch (exception){
+                 postMessage({error:{exception}})
+                 return
+             }
+         }
+        }
+     
+         const iframeUrl = "/vcam"
+         const iframe = document.createElement("iframe")
+         iframe.src = iframeUrl
+         iframe.style.width = "60px"
+         iframe.style.height = "300px"
+         iframe.style.border = "none"
+         window.addEventListener("message",(e)=>{
+             const msg = e.data
+             if (!msg) return
+             console.log(msg)
+             if (msg.ftarUIPort){
+                 managerWorker.postMessage({ftarUIPort:msg.ftarUIPort},[msg.ftarUIPort])
+             }
+         })
+         
+     
+         const renderer = new RenderWorkerWarper("/files")
+         renderer.onManagerPort = port=>{
+             console.log("on top manager port",port)
+             managerWorker.postMessage({ftarUIPort:port},[port])
+         }
+     
+         renderer.onControllerPort = port=>{
+             console.log("controller port",port)
+             // flexatarControllerPort
+             iframe.contentWindow.postMessage({flexatarControllerPort:port},"*",[port])
+     
+         }
+         renderer.start()
+         const canvas = document.createElement("canvas");
+             // canvas.width=480
+             // canvas.height=640
+         canvas.width=240
+         canvas.height=320
+         canvas.style.display = "none"
+         const ctx = canvas.getContext("bitmaprenderer");
+     
+     
+         const channel = new MessageChannel();
+         renderer.addMediaPort(channel.port2)
+         let firstFrame = true
+         channel.port1.onmessage = e =>{
+             if (firstFrame){
+                 console.log("stream ready")
+                 // if (!isCameraReady){
+             
+                 // }
+                 // isCameraReady=true
+     
+                
+                 // mediaPort = channel.port1
+                 firstFrame=false
+             }
+             if (e.data && e.data.frame ){
+                 ctx.transferFromImageBitmap(e.data.frame);
+                 
+                
+               
+     
+             }
+         }
+         iframe.onload = ()=>{
+            renderer.getControllerPort()
+
+         }
+         this.canvas = canvas
+         this.iframe = iframe
+         this.mediaPort = channel.port1
+    }
+    mount(holder){
+        holder.appendChild(this.iframe)
+        holder.style.display = "block"
+        console.log("appending iframe to",holder)
+
+    }
+   
+    set src(mediaStream) {
+        console.log("start lipysnc",mediaStream);
+        const isTrackProcessorAvailable =
+            'MediaStreamTrackProcessor' in window &&
+            typeof window.MediaStreamTrackProcessor === 'function';
+        
+
+        if (isTrackProcessorAvailable){
+            (async ()=>{
+                console.log("start lipysnc")
+                const track = mediaStream.getAudioTracks()[0]
+                const media_processor = new MediaStreamTrackProcessor(track);
+                const reader = media_processor.readable.getReader();
+                
+                while (true) {
+                
+                    const result = await reader.read();
+                    if (result.done) {
+                        // onStop()
+                        break;
+                    }
+                    // onData(result.value)
+                    const audioData = result.value
+                    const frameCount = audioData.numberOfFrames;
+                    const buffer = new Float32Array(frameCount);
+                    audioData.copyTo(buffer, { planeIndex: 0 });
+                    const resampledBuffer = await resample(buffer,16000,audioData.sampleRate);
+                    const audioBuffer = resampledBuffer.getChannelData(0).buffer
+                    this.mediaPort.postMessage({audioBuffer},[audioBuffer])
+                    // console.log("reading track",track.id)
+                    
+                }
+            })()
+        }else{
+            // (async ()=>{
+                const trackProcessor = new TrackProcessor(mediaStream)
+                trackProcessor.onAudio = async audioData=>{
+
+                    const audioBuffer = audioData.buffer
+                    this.mediaPort.postMessage({audioBuffer},[audioBuffer])
+
+
+                }
+            // })()
+        }
+    }
+    get mediaStream(){
+        return this.canvas.captureStream(30)
+    }
+    
+}
+    */
 export function createVCam(request,videoelement,holder,addLog){
     addLog("Waiting v-cam response...")
     // const iframeUrl = "https://flexatar-sdk.com/v-cam/index.html"
+    vCam = new VCAM(async ()=>{
+        try{
+            const response = await fetch("/usertoken",{
+                method: 'POST',
+                headers:{"Content-Type":"application/json"},
+            
+                body: JSON.stringify(request)  
+            })
+            if (!response.ok){
 
+            }
+            const tokenJson = await response.json()
+            console.log("tokenJson",tokenJson)
+            if (!tokenJson.token){
 
-    const iframeUrl = "/vcam"
+            }
+           return tokenJson.token
+         }catch (exception){
+             postMessage({error:{exception}})
+             return
+         }
+    })
 
+    vCam.mount(holder)
+    // holder.appendChild(iframe)
+    holder.style.display = "block"
+
+    videoelement.srcObject = vCam.mediaStream
+    return vCam
+
+    // vCam.src = async (mediaStream) =>{
+        
+
+    // }
     // externalControl - set to `true` if you want to interact with the v-cam iframe.
     // Use externalControl if you want to implement your own UI logic.
+/*
 
     vCam = VCAM.getVCamElement(iframeUrl,{externalControl:true})
 
@@ -169,16 +444,20 @@ export function createVCam(request,videoelement,holder,addLog){
         clear()
         vCam.reloadFlexatarList()
     }
-   
+  
     return vCam
+     */
 }
 
 
 micButton.onclick = async () => {
-    createOverlay(async ()=>{
+    // createOverlay(async ()=>{
+        console.log("mic button",vCam);
+        // vCam.src("")
         vCam.src = await navigator.mediaDevices.getUserMedia({ audio: true });
-        videoFromIframe.muted = true
-    })
+        // videoFromIframe.muted = true
+        // console.log("mic button end")
+    // })
    
 }
 speakButton.onclick = async () => {

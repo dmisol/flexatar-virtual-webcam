@@ -16,7 +16,10 @@
     "express": "^4.21.2",
     "serve-index": "^1.9.1",
     "webpack": "^5.97.1",
-    "webpack-cli": "^6.0.1"
+    "webpack-cli": "^6.0.1",
+    "worker-loader": "^3.0.8"
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0"
   }
- 
 }
