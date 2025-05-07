@@ -4,11 +4,13 @@ function log(){
 
 export class FlexatarLens{
 
-    constructor(url){
+    constructor(url,className){
         const channel = new MessageChannel()
         this.portSelf = channel.port1
         this.portOut = channel.port2
         const self = this
+        this.element = document.createElement("span")
+        
       
         const portMessageHandler= (e)=>{
             const msg = e.data
@@ -17,10 +19,11 @@ export class FlexatarLens{
             if (msg.managerPort){
                 showIframeOverlay(url,500,500,()=>{
                     log("canceled")
-                }).then(({iframe,closeFn})=>{
+                    self.iframe = null
+                },className).then(({iframe,closeFn})=>{
                     this.portSelf.onmessage = null
                     iframe.contentWindow.postMessage({managerPort:this.portSelf,msgID:msg.msgID},"*",[this.portSelf])
-                    
+                    self.iframe = iframe
                     function handlerClose(e){
                         const msg = e.data
                         if (!msg) return
@@ -39,11 +42,14 @@ export class FlexatarLens{
         }
         this.portSelf.onmessage  = portMessageHandler
     }
+    destroy(){
+        if (this.iframe)this.iframe.remove()
+    }
     
 
 }
 
-function showIframeOverlay(url, width, height,onClose) {
+function showIframeOverlay(url, width, height,onClose,className) {
     return new Promise(resolve=>{
         const overlay = document.createElement('div');
         overlay.id = 'iframe-overlay';
@@ -63,10 +69,15 @@ function showIframeOverlay(url, width, height,onClose) {
         // Create iframe
         const iframe = document.createElement('iframe');
         iframe.src = url;
-        iframe.width = width;
-        iframe.height = height;
-        iframe.style.border = 'none';
-        iframe.style.borderRadius = '8px';
+        if (className){
+            iframe.className = className
+        }else{
+            iframe.width = width;
+            iframe.height = height;
+            iframe.style.border = 'none';
+            iframe.style.borderRadius = '8px';
+        }
+        
         iframe.allowFullscreen = true;
         // function closeWindow(){
 

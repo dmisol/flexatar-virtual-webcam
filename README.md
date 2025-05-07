@@ -2,6 +2,14 @@
 
 ## The Brief Introduction
 
+This SDK provides Realtime Virtual Camera for video calls.
+
+[Check video how it works on google meet](https://youtu.be/lSAOyMQc3m4)
+
+[![Google Meet Screenshot](img/call_with_flexatar_screenshot.jpg)](https://youtu.be/lSAOyMQc3m4)
+
+
+
 Our product enables to animate audio on the fly *(1)* in a browser *(2)* with your personal 3D model *(3)* called flexatar.
 
 This means
@@ -12,16 +20,13 @@ This means
 
 Last but not least, we are provideing effects like mixing different models and introducing emotions
 
-[![Webradio Animation Screenshot](screenshot2.png)](https://flexatar-sdk.com/demo/)
-
-[Please take a look at our demo](https://flexatar-sdk.com/demo/) to get an idea how it looks. It makes sense to start with **Web Radio** App.
 
 
 ## Quick start 
 
 - Obtain **FLEXATAR_API_SECRET** from [Flexatar Web Page](https://flexatar-sdk.com).
-- Create .env file "flexatar-demo.env" with content FLEXATAR_API_SECRET=`<your api key>`
-- Edit run-server.sh or run-docker.sh to link your .env file
+- Create ".env"  with content FLEXATAR_API_SECRET=`<your api key>`
+- run-server.sh or run-docker.sh
 
 
 Deploy a local demo web app showcasing integration with the Flexatar SDK.
@@ -48,12 +53,16 @@ Visit the demo server in your browser at: [localhost:8081/main](http://localhost
 
 ## Integration
 
+To integrate you need to look through examples:
+- [initialization of virtual camera](src/server/src/vcam-creator.js)
+- [Server](src/server/server.js) example that you need to implement on your backend, to make camera works.
+
 To make integration seamless, we provide JavaScript libraries, each utilizing an underlying i-frame but offering additional functionality and UI for different use cases.
 
-[![Webradio Animation Screenshot](screenshot1.jpg)](https://flexatar-sdk.com)
+[![Webradio Animation Screenshot](img/sdkUI.jpg)](https://flexatar-sdk.com)
 
 ### 1. AI Assistants & WebRTC Virtual Camera
-The Virtual Camera Library [v-cam](./src/v-cam-lib) takes an audio source as input and outputs a synchronized (audio+video) stream. It includes an iframe-based UI for controlling the video output, allowing users to create Flexatars, switch between different Flexatars and adjust emotions. This solution can be used in various scenarios, such as:
+The Virtual Camera Package [flexatar-package](./src/flexatar-package) provides functionality and UI for virtual camera. It includes an iframe-based UI for controlling the video output, allowing users to create Flexatars, switch between different Flexatars and adjust emotions. This solution can be used in various scenarios, such as:
 
 - WebRTC Virtual Camera – Acts as a virtual webcam, providing a new capture device alongside physical cameras.
 

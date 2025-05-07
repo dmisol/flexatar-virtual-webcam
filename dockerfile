@@ -4,19 +4,32 @@ WORKDIR /app
 
 
 COPY ./src/util/ util/
+COPY ./src/flexatar-package/src/ flexatar-package/src/
 
-# v-cam iframe controller
-COPY ./src/v-cam-lib/package.json v-cam-lib/package.json
-COPY ./src/v-cam-lib/webpack.config.js v-cam-lib/webpack.config.js
-COPY ./src/v-cam-lib/src/ v-cam-lib/src/
-RUN cd v-cam-lib && npm install && npm run build
+# lens
+COPY ./src/ftar-lens/package.json ftar-lens/package.json
+COPY ./src/ftar-lens/webpack.config.js ftar-lens/webpack.config.js
+COPY ./src/ftar-lens/dist/face-detection-asset/ ftar-lens/dist/face-detection-asset/
+COPY ./src/ftar-lens/dist/index.html ftar-lens/dist/index.html
+COPY ./src/ftar-lens/src/ ftar-lens/src/
+RUN cd ftar-lens && npm install && npm run build
 
-# v-cam iframe 
-COPY ./src/v-cam-iframe/package.json v-cam-iframe/package.json
-COPY ./src/v-cam-iframe/webpack.config.js v-cam-iframe/webpack.config.js
-COPY ./src/v-cam-iframe/src/ v-cam-iframe/src/
-COPY ./src/v-cam-iframe/dist/ v-cam-iframe/dist/
-RUN cd v-cam-iframe && npm install && npm run build 
+#progress
+
+COPY ./src/ftar-progress/package.json ftar-progress/package.json
+COPY ./src/ftar-progress/webpack.config.js ftar-progress/webpack.config.js
+COPY ./src/ftar-progress/dist/index.html ftar-progress/dist/index.html
+COPY ./src/ftar-progress/src/ ftar-progress/src/
+RUN cd ftar-progress && npm install && npm run build
+
+#ui min
+COPY ./src/vcam-ui-min/package.json vcam-ui-min/package.json
+COPY ./src/vcam-ui-min/webpack.config.js vcam-ui-min/webpack.config.js
+COPY ./src/vcam-ui-min/dist/res/ vcam-ui-min/dist/res/
+COPY ./src/vcam-ui-min/dist/index.html vcam-ui-min/dist/index.html
+COPY ./src/vcam-ui-min/src/ vcam-ui-min/src/
+RUN cd vcam-ui-min && npm install && npm run build
+
 
 # v-gen iframe controller
 COPY ./src/v-gen-lib/package.json v-gen-lib/package.json
@@ -40,6 +53,7 @@ COPY ./src/server/webpack.config.js server/webpack.config.js
 COPY ./src/server/src/ server/src/
 COPY ./src/server/dist/ server/dist/
 RUN cd server && npm install && npm run build 
+
 
 
 EXPOSE 8081

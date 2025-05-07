@@ -27,8 +27,9 @@ async function resample(float32Array,targetSampleRate,inputSampleRate,numChannel
   
     return resampledBuffer
 }
-class TrackProcessor{
-    constructor(stream){
+class MediaRecorderBasedTrackProcessor{
+    constructor(track){
+        const stream = new MediaStream([track])
         let mimeType
         const supportedTypes = [
             'audio/webm',
@@ -62,14 +63,18 @@ class TrackProcessor{
           try {
             const decoded = await offlineCtx.decodeAudioData(arrayBuffer);
             const pcm = decoded.getChannelData(0); // Float32Array of PCM samples
-            if (self.onAudio) self.onAudio(pcm)
+            if (self.onAudio) self.onAudio(pcm.buffer)
                 // console.log(pcm)
             // console.log("Decoded PCM (Float32Array):", pcm);
           } catch (err) {
             console.error("Decode error:", err);
           }
         };
-        recorder.start(10);
+        recorder.start(1);
+        this.recorder = recorder
+    }
+    stop(){
+        this.recorder.stop()
     }
     // onAudio = ()=>{}
 }
@@ -93,6 +98,11 @@ class ManagerWorkerWarper{
             }
         }
         this.managerWorker = managerWorker
+    }
+    destroy(){
+        this.managerWorker.onmessage = undefined
+        this.managerWorker.terminate();
+        this.managerWorker = undefined 
     }
     addPort(port){
         this.managerWorker.postMessage({ftarUIPort:port},[port])
@@ -161,6 +171,10 @@ class VCamMediaStream{
         this.selfPort.close()
         this.canvas.remove()
     }
+    set size(val){
+        this.canvas.width = val.width
+        this.canvas.height = val.height
+    }
 }
 
 class VCamControlUI{
@@ -191,17 +205,51 @@ class VCamControlUI{
             this.element.contentWindow.postMessage({flexatarControllerPort:port},"*",[port])
         })
     }
+    destroy(){
+        this.element.remove()
+    }
 }
 
 
 class VCAM{
-    constructor(tokenFn){
+    constructor(tokenFn,opts){
+        if (!opts){
+            opts = {
+                size:{
+                    width:640,
+                    height:480,
+                },
+                url:{
+                    vcam:"/vcam",
+                    lens:"/lens",
+                    progress:"/progress",
+                    files:"/files",
+                }
+            }
+        }else{
+            if (!opts.size){
+                opts.size = {
+                    width:640,
+                    height:480,
+                }
+            }
+            if (!opts.url){
+                opts.url = {
+                    vcam:"/vcam",
+                    lens:"/lens",
+                    progress:"/progress",
+                    files:"/files",
+                }
+            }
+        }
         const managerWorker = new ManagerWorkerWarper(tokenFn)
         this.managerWorker = managerWorker
-        const flexLens = new FlexatarLens("/lens")
-        const flexProgress = new FlexatarLens("/progress")
+        const flexLens = new FlexatarLens(opts.url.lens,opts.lensClassName)
+        const flexProgress = new FlexatarLens(opts.url.progress,opts.progressClassName)
+        this.flexLens=flexLens
+        this.flexProgress=flexProgress
         
-        const iframeUrl = "/vcam"
+        const iframeUrl = opts.url.vcam
         const vCamUi = new VCamControlUI(iframeUrl)
         vCamUi.managerPort.then(port=>{
             managerWorker.addPort(port)
@@ -210,7 +258,7 @@ class VCAM{
         })
 
         const iframe = vCamUi.element
-     
+        this.element = iframe
         iframe.style.width = "60px"
         iframe.style.height = "300px"
         iframe.style.border = "none"
@@ -224,7 +272,7 @@ class VCAM{
         // })
          
      
-        const renderer = new RenderWorkerWarper("/files")
+        const renderer = new RenderWorkerWarper(opts.url.files,opts.size)
         renderer.onManagerPort = port=>{
             console.log("on top manager port",port)
             managerWorker.addPort(port)
@@ -232,114 +280,198 @@ class VCAM{
         renderer.getControllerPort().then(port=>{
         vCamUi.controllerPort = port
         })
+        renderer.onReady = ()=>{
+            if (this.onReady)this.onReady()
+        }
 
-        //  renderer.onControllerPort = port=>{
-        //      console.log("controller port",port)
-        //      // flexatarControllerPort
-        //      iframe.contentWindow.postMessage({flexatarControllerPort:port},"*",[port])
-        //  }
+        this.renderer = renderer;
 
-        //  renderer.start()
-         const vCamStream = new VCamMediaStream()
-         this.vCamStream = vCamStream
-
-        //  const canvas = document.createElement("canvas");
-        //      // canvas.width=480
-        //      // canvas.height=640
-        //  canvas.width=240
-        //  canvas.height=320
-        //  canvas.style.display = "none"
-        //  const ctx = canvas.getContext("bitmaprenderer");
-     
-     
-        //  const channel = new MessageChannel();
-         renderer.addMediaPort(vCamStream.portToSend)
-        //  let firstFrame = true
-        //  channel.port1.onmessage = e =>{
-        //      if (firstFrame){
-        //          console.log("stream ready")
-        //          // if (!isCameraReady){
-             
-        //          // }
-        //          // isCameraReady=true
-     
-                
-        //          // mediaPort = channel.port1
-        //          firstFrame=false
-        //      }
-        //      if (e.data && e.data.frame ){
-        //          ctx.transferFromImageBitmap(e.data.frame);
-                 
-                
-               
-     
-        //      }
-        //  }
-        //  iframe.onload = ()=>{
-        //     renderer.getControllerPort()
-
-        //  }
-        //  this.canvas = canvas
-         this.iframe = iframe
-        //  this.mediaPort = channel.port1
+        const vCamStream = new VCamMediaStream(opts.size)
+        this.vCamStream = vCamStream
+        renderer.addMediaPort(vCamStream.portToSend)
+        this.iframe = iframe
     }
+    get lensElement(){
+
+    }
+    get progressElement(){
+        
+    }
+    get uiElement(){
+        
+    }
+    get canvas(){
+        
+    }
+
     mount(holder){
         holder.appendChild(this.iframe)
         holder.style.display = "block"
         console.log("appending iframe to",holder)
 
     }
+    destroy(){
+        this.iframe.remove()
+        this.managerWorker.destroy()
+        this.vCamStream.destroy()
+        this.flexLens.destroy()
+        this.flexProgress.destroy()
+        this.renderer.destroy()
+
+    }
     showProgress(){
         this.managerWorker.showProgress()
     }
-   
+    currentTrackProcessor
+    currentReader
     set src(mediaStream) {
         console.log("start lipysnc",mediaStream);
-        const isTrackProcessorAvailable =
-            'MediaStreamTrackProcessor' in window &&
-            typeof window.MediaStreamTrackProcessor === 'function';
-        
 
-        if (isTrackProcessorAvailable){
-            (async ()=>{
-                console.log("start lipysnc")
-                const track = mediaStream.getAudioTracks()[0]
-                const media_processor = new MediaStreamTrackProcessor(track);
-                const reader = media_processor.readable.getReader();
-                
-                while (true) {
-                
-                    const result = await reader.read();
-                    if (result.done) {
-                        // onStop()
-                        break;
-                    }
-                    // onData(result.value)
-                    const audioData = result.value
-                    const frameCount = audioData.numberOfFrames;
-                    const buffer = new Float32Array(frameCount);
-                    audioData.copyTo(buffer, { planeIndex: 0 });
-                    const resampledBuffer = await resample(buffer,16000,audioData.sampleRate);
-                    const audioBuffer = resampledBuffer.getChannelData(0).buffer
-                    this.vCamStream.port.postMessage({audioBuffer},[audioBuffer])
-                    // console.log("reading track",track.id)
-                    
-                }
-            })()
-        }else{
-            // (async ()=>{
-                const trackProcessor = new TrackProcessor(mediaStream)
-                trackProcessor.onAudio = async audioData=>{
-                    console.log("onaudio")
-                    const audioBuffer = audioData.buffer
-                    this.vCamStream.port.postMessage({audioBuffer},[audioBuffer])
-                }
-            // })()
+        const isTrackProcessorAvailable =
+                'MediaStreamTrackProcessor' in window &&
+                typeof window.MediaStreamTrackProcessor === 'function';
+         
+        // const TrackProcessor = isTrackProcessorAvailable ? NativeTrackProcessor : MediaRecorderBasedTrackProcessor    
+        if (this.currentTrackProcessor){
+            this.currentTrackProcessor.stop()
+            this.currentTrackProcessor = null
         }
+        if (!mediaStream) {
+            setTimeout(
+                ()=>{
+                    this.vCamStream.port.postMessage({closeMouth:true})
+                },
+                700
+            )
+            return
+        }
+        getAudioTrack(mediaStream).then(trackMono=>{
+
+            this.currentTrackProcessor = isTrackProcessorAvailable ? (new NativeTrackProcessor(trackMono)) : (new MediaRecorderBasedTrackProcessor(trackMono))
+            this.currentTrackProcessor.onAudio = audioBuffer=>{
+                // console.log("audioBuffer")
+                this.vCamStream.port.postMessage({audioBuffer},[audioBuffer])
+
+            }
+        })
+
     }
     get mediaStream(){
         return this.vCamStream.stream
     }
-    
+    get delay(){
+        const isTrackProcessorAvailable =
+            'MediaStreamTrackProcessor' in window &&
+            typeof window.MediaStreamTrackProcessor === 'function';
+        return isTrackProcessorAvailable ? 0.45 : 0.95
+        // return isTrackProcessorAvailable ? 0.45 : 0.87
+    }
+
+    set size(val){
+        this.renderer.size = val
+        this.vCamStream.size = val
+    }
 }
+
+class NativeTrackProcessor{
+    constructor(audioTrack){
+        this.active = true;
+        const self = this;
+        (async ()=>{
+            console.log("start lipysnc")
+            const track = audioTrack
+            // const track = mediaStream.getAudioTracks()[0]
+            const media_processor = new MediaStreamTrackProcessor(track);
+            const reader = media_processor.readable.getReader();
+            self.reader = reader
+            while (self.active) {
+            
+                const result = await reader.read();
+                if (result.done) {
+                    // onStop()
+                    break;
+                }
+                // onData(result.value)
+                const audioData = result.value
+                const frameCount = audioData.numberOfFrames;
+                const buffer = new Float32Array(frameCount);
+                audioData.copyTo(buffer, { planeIndex: 0 });
+                const resampledBuffer = await resample(buffer,16000,audioData.sampleRate);
+                const audioBuffer = resampledBuffer.getChannelData(0).buffer
+                // console.log("Audio")
+                self.onAudio(audioBuffer)
+                // this.vCamStream.port.postMessage({audioBuffer},[audioBuffer])
+                // console.log("reading track",track.id)
+                
+            }
+        })()
+    }
+    onAudio = ()=>{}
+    async stop(){
+        await this.reader.cancel()
+        this.reader.releaseLock();
+        this.reader = null
+        this.active = false
+
+    }
+}
+
+async function getAudioTrack(input) {
+    // Case 1: Input is already an audio track
+    if (input instanceof MediaStreamTrack && input.kind === 'audio') {
+      return input;
+    }
+  
+    // Case 2: Input is a MediaStream
+    if (input instanceof MediaStream) {
+      const audioTracks = input.getAudioTracks();
+      if (audioTracks.length === 0) throw new Error('No audio track found in MediaStream');
+      return audioTracks[0]
+      
+    }
+    throw new Error('Unsupported input type');
+  }
+
+
+
+  async function convertToMonoTrack(stream) {
+    return new Promise((resolve, reject) => {
+      const context = new (window.AudioContext || window.webkitAudioContext)();
+  
+      const source = context.createMediaStreamSource(stream);
+      const merger = context.createChannelMerger(1); // mono output
+  
+      // Sum channels into mono
+      source.connect(merger, 0, 0);
+  
+      const dest = context.createMediaStreamDestination();
+      merger.connect(dest);
+  
+      const monoTrack = dest.stream.getAudioTracks()[0];
+      if (!monoTrack) return reject(new Error('Mono track creation failed'));
+  
+      resolve(monoTrack);
+    });
+  }
+
+  async function delayAudioTrack(track, delayMs = 450) {
+    if (!(track instanceof MediaStreamTrack) || track.kind !== 'audio') {
+      throw new Error('Input must be an audio MediaStreamTrack');
+    }
+  
+    const stream = new MediaStream([track]);
+    const context = new (window.AudioContext || window.webkitAudioContext)();
+  
+    const source = context.createMediaStreamSource(stream);
+    const delayNode = context.createDelay();
+    delayNode.delayTime.value = delayMs / 1000; // convert ms to seconds
+  
+    const dest = context.createMediaStreamDestination();
+    source.connect(delayNode).connect(dest);
+  
+    const delayedTrack = dest.stream.getAudioTracks()[0];
+    if (!delayedTrack) throw new Error('Failed to create delayed audio track');
+  
+    return delayedTrack;
+  }
 export {VCAM,Manager,ManagerConnection,VCamMediaStream,ManagerWorkerWarper,RenderWorkerWarper,FlexatarLens}

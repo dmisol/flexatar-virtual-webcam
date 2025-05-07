@@ -76,9 +76,7 @@ const {addSubscriptionToList} = subscriptionListUI(1,50,150,"refreshList","subsc
         }
     }
 )
-progressButton.onclick = () => {
-    vCam.showProgress()
-}
+
 
 buySubscriptionUI("buySybscription",subscriptionItem =>{
     if (subscriptionItem.error){

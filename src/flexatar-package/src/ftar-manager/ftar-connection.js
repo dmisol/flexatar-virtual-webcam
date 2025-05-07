@@ -648,27 +648,12 @@ export async function makeFtarFromQueue(token,imgId){
 
 async function startMakeFtarFromQueue(token,onNewFlexatar) {
 
-    // const isQueueInProgress = await QueueStorage.getByKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS,"")
-    // if (isQueueInProgress) return
-    // QueueStorage.saveWithKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS,"",true)
-    // chrome.storage.local.get(null, (items) => {
-    //     log("all keys",Object.keys(items))
-    //  });
+
     const ftarListToMake = await QueueStorage.getList(QueueStorage.Lists.FTAR_MAKE_QUEUE_LIST_ID)
     if (ftarListToMake.error === "not_authorized"){
         return {error:ftarListToMake.error}
     }
-    /*
-    if (ftarListToMake.error === "not_authorized"){
-        log("setting current user")
-        await setCurrentUser()
-        await QueueStorage.saveWithKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS,"",false)
-        await startMakeFtarFromQueue(token)
-        return 
-        // const uInfo = await userInfo()
-       
-    }
-    */
+
     log("ftarListToMake",ftarListToMake)
     const isQueueInProgress = await QueueStorage.getByKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS,"")
 
@@ -803,11 +788,10 @@ class Manager{
         const {currentUserId} = await chrome.storage.local.get({ currentUserId:null })
         
         if (currentUserId && !noCache){
-            // log("cached user id",currentUserId)
+
             const ftarCountKey = currentUserId+"_FtarCount"
             const count = (await chrome.storage.local.get([ftarCountKey]))[ftarCountKey]
 
-            // log("cached ftar count at key",ftarCountKey, "count is" ,count)
             if (!(count === undefined || count === null)){
                 return {user_id:currentUserId,FtarCount:count}
             }
@@ -819,10 +803,7 @@ class Manager{
         await chrome.storage.local.set({ currentUserId:userId })
 
         await setFtarCount(userId,userInf.FtarCount)
-        // const ftarCountRecord = {}
-        // console.log("user info downloaded",userInf)
-        // ftarCountRecord[userId+"_FtarCount"] = userInf.FtarCount
-        // await chrome.storage.local.set(ftarCountRecord)
+
 
         return userInf
       
@@ -833,14 +814,13 @@ class Manager{
     portsMustBeDeleted = []
     async handShakePorts(){
         const self = this
-        // const portsMustBeDeleted = []
+
         for (const port of this.ports){
             const timeout = setTimeout(
                 ()=>{
                     console.log("manager port not responding")
                     this.portsMustBeDeleted.push(port)
-                    // port.close()
-                    // self.ports = self.ports.filter(fn => fn !== port);
+
                     port.removeEventListener("message",handle) 
                 },
                 5000

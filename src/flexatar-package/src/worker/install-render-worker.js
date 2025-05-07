@@ -1,10 +1,10 @@
 import RenderWorker from "./render.worker.js"
 function log(){
     console.log("[RENDER_WORKER_WARPER]",...arguments)
-  }
+}
 
 export class RenderWorkerWarper {
-    constructor(url){
+    constructor(url,size={width:640,height:480}){
         const worker = new RenderWorker({ type: "module" });
         const self = this
         worker.onmessage = e =>{
@@ -24,6 +24,8 @@ export class RenderWorkerWarper {
                 self.onIsInUse(msg)
 
     
+            }else if (msg.initComplete){
+                if (this.onReady) this.onReady()
             }
         }
         
@@ -63,7 +65,8 @@ export class RenderWorkerWarper {
                             model:buffers[8],
                             shards:[buffers[9]]
                         },
-                    }
+                    },
+                    size
                 },buffers)
             }
         ).catch((e)=>{
@@ -74,9 +77,15 @@ export class RenderWorkerWarper {
     }
     // start(){
     //     const worker = this.worker
-        
+    set size(val){
+        this.worker.postMessage({changeSize:val})
+    }  
         
     // }
+    destroy(){
+        this.worker.terminate()
+        this.worker = undefined
+    }
     getControllerPort(){
         const self = this
         return new Promise(resolve=>{

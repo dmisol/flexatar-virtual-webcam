@@ -100,3 +100,25 @@
     color: #999;
     font-size: 16px;
 }
+
+
+.flexatar-lens{
+    width:50%;
+    min-width:300px;
+   
+    aspect-ratio: 1/1;
+    height: auto;
+    border: none;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+.flexatar-progress{
+  width:50%;
+  min-width:300px;
+  aspect-ratio: 1/1;
+  height: auto;
+  border: none;
+  border-radius: 8px;
+  box-sizing: border-box;
+}

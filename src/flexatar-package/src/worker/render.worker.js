@@ -132,7 +132,7 @@ let renderer
 let offscreen
 let ftarManagerConnection
 let flexatarSDK
-async function initRender(url1,url2){
+async function initRender(url1,url2,size){
 
    
 
@@ -156,10 +156,10 @@ async function initRender(url1,url2){
     flexatarSDK = new FtarView.SDK(token,
         url1,url2
     )
-    offscreen = new OffscreenCanvas(480,640);
+    offscreen = new OffscreenCanvas(size.width,size.height);
     // offscreen = new OffscreenCanvas(240,320);
-    offscreen.width = 640
-    offscreen.height = 480
+    // offscreen.width = 640
+    // offscreen.height = 480
     log("starting render")
 
     renderer = await flexatarSDK.getRenderer(offscreen)
@@ -173,7 +173,7 @@ async function initRender(url1,url2){
         ctx.textAlign = 'center';
 
         // Draw text
-        ctx.fillText('No Subscription', 320, 240);
+        ctx.fillText('No Subscription', Math.round(size.width/2), Math.round(size.height/2));
         
         let fistFrameNotSent = true
         renderer.start = async ()=>{
@@ -203,8 +203,8 @@ async function initRender(url1,url2){
     let {id:ftarId} = await connection.getCurrentFtar()
 
     // console.log("ftarMsg",ftarMsg)
-    renderer.canvas.width = 640
-    renderer.canvas.height = 480
+    renderer.canvas.width = size.width
+    renderer.canvas.height = size.height
     // renderer.canvas.width = 640
     // renderer.canvas.height = 480
     if (!ftarId) ftarId = "default";
@@ -235,67 +235,28 @@ async function initRender(url1,url2){
         
         for (const port of mediaPorts){
 
-            /*
-            (async ()=>{
-                const frame = new VideoFrame(renderer.canvas, { timestamp: performance.now() });
 
-                const plane = new Uint8Array(frame.allocationSize());
-
-                // Copy video frame data into buffer
-                await frame.copyTo(plane);
-                try{
-                    port.postMessage({frame:{
-                        buffer:plane.buffer,
-                        width: frame.displayWidth,
-                        height: frame.displayHeight,
-                        timestamp: frame.timestamp,
-                        format: frame.format
-                    }},[plane.buffer])
-                }catch{
-                    console.log("reader stopped")
-                    // await reader.cancel();
-                }
-                
-                frame.close()
-            })()
-            
-            */
-            // const bitmap = offscreen.transferToImageBitmap();
             createImageBitmap(offscreen).then(bitmap=>{
             port.postMessage({frame:bitmap},[bitmap])
 
            });
             
-            // bitmap.close()
-            // port.postMessage({frame:"some data"})
-            // console.log("draw frame")
+
         }
         if (mediaPorts.length === 0) renderer.pause()
-        // console.log("draw frame",mediaPorts.length)
-        // for (const c of canvases){
-        //     c.ctx.drawImage(offscreen, 0, 0);
-            // const bitmap = offscreen.transferToImageBitmap();
-            // c.ctx.transferFromImageBitmap(bitmap);
-            // port.postMessage({frame:bitmap},[bitmap])
-            // // bitmap.close()
-            // // port.postMessage({frame:"some data"})
-            // console.log("draw frame")
-        // }
+
         
     }
     log("rend init fin")
     renderResolve()
+    postMessage({initComplete:true})
 }
 let renderResolve
 const rendererPromise = new Promise(resolve=>{
     renderResolve = resolve
 })
 
-// function copyArrayBuffer(buffer) {
-//     const copy = new ArrayBuffer(buffer.byteLength); // Create new buffer
-//     new Uint8Array(copy).set(new Uint8Array(buffer)); // Copy data
-//     return copy;
-//   }
+
 
 let ports = []
 let mediaPorts = []
@@ -366,7 +327,7 @@ onmessage = (event) => {
         msg.mediaPort.onmessage = e =>{
             const msg1 = e.data
             if (!msg1)return
-            if (msg1.audioBuffer ){
+            if (msg1.audioBuffer){
                 if (!processAudio) return 
                 // console.log("render worker audio buffer")
                 aPacker.addBuffer(msg1.audioBuffer,(packedAudio)=>{
@@ -379,9 +340,10 @@ onmessage = (event) => {
                 },()=>{
                     console.log("fail")
                 })
-
             }
-            else if (msg1.closing){
+            else if (msg1.closeMouth){
+                renderer.speechState = [0,0,0.1,0,0]
+            }else if (msg1.closing){
                 mediaPorts = mediaPorts.filter(fn => fn !== msg.mediaPort);
                 msg.mediaPort.close()
                 console.log("media port, closing port ",mediaPorts.length)
@@ -391,10 +353,14 @@ onmessage = (event) => {
         // msg.mediaPort.postMessage({ready:true})
 
         // ports.push(msg.mediaPort)
+    }else if (msg.changeSize){
+        renderer.canvas.width = msg.changeSize.width
+        renderer.canvas.height = msg.changeSize.height
     }else if (msg.initBuffers){
         initRender(
             arrayBufferToDataURL(msg.initBuffers[0]),
-            arrayBufferToDataURL(msg.initBuffers[1])
+            arrayBufferToDataURL(msg.initBuffers[1]),
+            msg.size
         )
         const nnBuffers = msg.nnBuffers;
         const opts = {

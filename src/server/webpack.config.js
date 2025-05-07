@@ -1,4 +1,5 @@
 const path = require('path');
+const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = {
   entry: './src/index.js',
@@ -6,11 +7,12 @@ module.exports = {
     filename: 'bundle.js',
     path: path.resolve(__dirname, 'dist'),
   },
-  mode: 'development',
+  // mode: 'development',
+    mode: 'production',
   resolve:{
     fallback: {"fs": false,"path": false}
   },
-//   mode: 'production',
+
   module: {
     rules: [
       {
@@ -32,15 +34,18 @@ module.exports = {
       }
     ],
   },
-  devServer: {
-    static: './dist',
-    proxy: [
-      {
-        context: ['/api'],
-        target: 'https://dev.vgen.flexatar-sdk.com',
-        secure: true,
-        changeOrigin: true
-      },
-    ],
-  },
+  optimization: {
+      usedExports: true,
+      minimize: true,
+      minimizer: [
+        new TerserPlugin({
+          terserOptions: {
+            compress: {
+              dead_code: true,
+              drop_console: true, // <-- This removes console.* calls
+            },
+          },
+        }),
+      ],
+    },
 };

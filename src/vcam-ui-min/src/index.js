@@ -345,6 +345,9 @@ function addMakeFlexatarButton(){
 
     let removeErrorSign
     createDropZone(holder,async (e)=>{
+        let file = e.target.files[0];
+
+        if (!file) return
         log("photo obtained")
         if (removeErrorSign){
             removeErrorSign()
@@ -354,7 +357,6 @@ function addMakeFlexatarButton(){
         const removeLoader = setLoader()
 
        
-        let file = e.target.files[0];
         const fileType = file.type;
        
         if (!checkFileType(fileType,imageMimeTypes)){
@@ -742,6 +744,9 @@ createDropZone(dropBkgElement,async (e)=>{
     
 
     let file = e.target.files[0];
+    if (!file){
+        return
+    }
     const fileType = file.type;
 
     if (!checkFileType(fileType,imageMimeTypes)){
