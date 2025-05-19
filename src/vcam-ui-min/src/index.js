@@ -63,15 +63,18 @@ const flexatarControllerPortPromise = new Promise(resolve=>{
                 imageBackgroundContainer.firstElementChild?.click()
             }
         }else{
+            const currentElement = selecteFtar.element
             const deletionResult = await deleteFtar(selecteFtar.ftarId)
     
             if (deletionResult){
-                selecteFtar.element.remove()
+                currentElement.remove()
                 if (previewListHolder.children.length>0){
-                    previewListHolder.children[0]?.click()
+                    if (currentElement === selecteFtar.element)
+                        previewListHolder.children[0]?.click()
                 }else{
-                    emptyBlock.textContent = Texts.EMPTY
                     selecteFtar.ftarId = null
+                    emptyBlock.textContent = Texts.EMPTY
+                    
                 }
             }
         }

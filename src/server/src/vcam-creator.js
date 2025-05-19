@@ -1,6 +1,6 @@
 
 import {VCAM} from "../../flexatar-package/src/index.js"
-
+import * as CamCon from "./vcam-connection.js"
 
 
 let vCam
@@ -141,11 +141,18 @@ let stopAudioFn = ()=>{
 }
 let stream
 let streamDelayed
+const constraints = {
+    audio: {
+      noiseSuppression: true,
+      echoCancellation: true,
+      autoGainControl: true
+    }
+  };
 micButton.onclick = async () => {
     stopAudioFn()
 
     console.log("mic button",vCam);
-    stream =  await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream =  await navigator.mediaDevices.getUserMedia(constraints);
     streamDelayed = createDelayedMediaStream(stream,vCam.delay)
     videoElement.srcObject.addTrack(streamDelayed.getAudioTracks()[0])
 
@@ -175,3 +182,24 @@ stopButton.onclick = async () => {
     vCam.src = null
     stopAudioFn()
 }
+
+
+connectVirtualCameraButton.onclick = async ()=>{
+    const sig = new CamCon.WebSocketClient()
+    sig.onAnswer = answer =>{
+        console.log("ANSWER",answer)
+        rtcClient.acceptAnswer(answer)
+    }
+    sig.onCandidate = candidate =>{
+        console.log("candidate",candidate)
+        rtcClient.acceptCandidate(candidate)
+    }
+    const rtcClient = new CamCon.RTCClient(CamCon.createFakeStream())
+    rtcClient.onCandidate = candidate=>{
+        console.log("send candidate")
+        sig.sendMessage(candidate)
+
+    }
+    sig.sendMessage(await rtcClient.createOffer())
+}
+

@@ -55,7 +55,7 @@ app.route("/info").post(handlers.info);
 
 var httpServer = http.createServer( app);
 
-httpServer.listen(PORT);
+httpServer.listen(PORT,"0.0.0.0");
 
 // var httpsServer = https.createServer(credentials, app);
 

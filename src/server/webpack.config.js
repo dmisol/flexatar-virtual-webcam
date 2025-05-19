@@ -34,18 +34,18 @@ module.exports = {
       }
     ],
   },
-  optimization: {
-      usedExports: true,
-      minimize: true,
-      minimizer: [
-        new TerserPlugin({
-          terserOptions: {
-            compress: {
-              dead_code: true,
-              drop_console: true, // <-- This removes console.* calls
-            },
-          },
-        }),
-      ],
-    },
+  // optimization: {
+  //     usedExports: true,
+  //     minimize: true,
+  //     minimizer: [
+  //       new TerserPlugin({
+  //         terserOptions: {
+  //           compress: {
+  //             dead_code: true,
+  //             drop_console: true, // <-- This removes console.* calls
+  //           },
+  //         },
+  //       }),
+  //     ],
+  //   },
 };

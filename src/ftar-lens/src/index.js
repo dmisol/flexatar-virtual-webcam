@@ -150,10 +150,16 @@ function setupPort(port){
                 waitIcon.classList.add("invisible")
             }
             log("detections",detections)
+        }else if (msg.needAuthorize) {
+            waitIcon.classList.add("invisible")
+            needAuthorizeButton.classList.remove("invisible")
         }
     }
 }
-
+needAuthorizeButton.onclick = ()=>{
+    portSelf.postMessage({needAuthorize:true})
+    closeThisWindow()
+}
 
 let oldChosen
 chooseButton.onclick = () =>{

@@ -25,9 +25,17 @@ Last but not least, we are provideing effects like mixing different models and i
 ## Quick start 
 
 - Obtain **FLEXATAR_API_SECRET** from [Flexatar Web Page](https://flexatar-sdk.com).
-- Create ".env"  with content FLEXATAR_API_SECRET=`<your api key>`
+- Create ".env" file with content FLEXATAR_API_SECRET=`<your api key>`
 - run-server.sh or run-docker.sh
 
+### 📁 flexatar-virtual-webcam
+- 📁 doc
+- 📁 img
+- 📁 src
+- 📄 .env
+- 📄 run-server.sh 
+- 📄 run-docker.sh 
+- 📄 ...
 
 Deploy a local demo web app showcasing integration with the Flexatar SDK.
 
@@ -49,6 +57,7 @@ Deploy a local demo web app showcasing integration with the Flexatar SDK.
 
  
 Visit the demo server in your browser at: [localhost:8081/main](http://localhost:8081/main)
+![Demo Page Screenshot](img/demo_serv.jpg)
 
 
 ## Integration
@@ -56,6 +65,11 @@ Visit the demo server in your browser at: [localhost:8081/main](http://localhost
 To integrate you need to look through examples:
 - [initialization of virtual camera](src/server/src/vcam-creator.js)
 - [Server](src/server/server.js) example that you need to implement on your backend, to make camera works.
+
+> Note: FLEXATAR_API_SECRET - provides access to user subscription management, allows **user token** creation.
+> To initialize camera and access user's flexatars you need **user token**.
+
+> IMPORTANT: Use FLEXATAR_API_SECRET on your backend **ONLY**, for security reasons.
 
 To make integration seamless, we provide JavaScript libraries, each utilizing an underlying i-frame but offering additional functionality and UI for different use cases.
 

@@ -152,6 +152,7 @@ p{
     fill: var(--main-color-1); /* White icon color */
 }
 
+
 @keyframes spinner {
     0% { transform: translate(-50%,-50%) rotate(0deg) ; }
     100% { transform: translate(-50%,-50%) rotate(360deg) ; }
@@ -168,6 +169,11 @@ p{
 
 
 }
+#needAuthorizeButton{
+    width:100px;
+    height: 35px;
+}
+
 #closeButton{
     position: absolute;
     top: 20px;

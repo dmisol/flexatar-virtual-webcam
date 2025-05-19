@@ -334,7 +334,10 @@ async function makeFlexatar(token,imgFile,flexatarName,opts,onFtarId){
     const url = ftar_api_url + "/make"
 
     const result = await makeFtar(url,token,imgFile,flexatarName,opts,fetchWithToken,onFtarId)
-   
+    if (!result){
+        log("make ftar unexpected")
+        return {error:ERR_UNEXPECTED} 
+    }
     if (result.error){
         if (result.error.status === 401)
             return {error:ERR_UNAUTHORIZED}
@@ -402,6 +405,7 @@ class GetToken {
         const token = await promise
         this.token = token
         this.#getTokenPromise = null
+        log("GetToken",token)
         return token
     }
 
@@ -599,19 +603,17 @@ export async function makeFtarFromQueue(token,imgId){
             // err: true, reason: 'subscription_limit'
 
             if (ftarLink.error || ftarLink.err){
-                // log("flexatar error",ftarLink)
+                log("flexatar error",ftarLink)
+                await QueueStorage.moveListEntry(
+                    QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID,
+                    QueueStorage.Lists.FTAR_ERROR_LIST_ID,
+                    imgId,
+                    currentUserId
+                )
+                await QueueStorage.shortenList(QueueStorage.Lists.FTAR_ERROR_LIST_ID,5)
                 if (ftarLink.reason !== "bad_photo"){
                     await QueueStorage.saveWithKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS,"",false)
                     return ftarLink
-                }else{
-                    await QueueStorage.moveListEntry(
-                        QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID,
-                        QueueStorage.Lists.FTAR_ERROR_LIST_ID,
-                        imgId,
-                        currentUserId
-                    )
-                    await QueueStorage.shortenList(QueueStorage.Lists.FTAR_ERROR_LIST_ID,5)
-
                 }
             }else{
                 await QueueStorage.moveListEntry(
@@ -741,6 +743,9 @@ class Manager{
         const self = this
         this.progressPorts.push(port)
         port.onmessage = async e =>{
+            await userInfoLoader.enqueue(async ()=>{
+                return await self.getUserInfo()
+            })
             const msg = e.data
             if (!msg) return
             if (msg.progressLists){
@@ -758,6 +763,7 @@ class Manager{
                 await QueueStorage.saveWithKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS,"",false)
             }else if (msg.clearMakeQueue){
                 await QueueStorage.clearList(QueueStorage.Lists.FTAR_MAKE_QUEUE_LIST_ID)
+                await QueueStorage.clearList(QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID)
                 const progressLists = await makeProgressLists()
                 port.postMessage({progressLists})
 
@@ -838,10 +844,22 @@ class Manager{
         }
     }
     makeFtar(arrayBuffer){
+        const self = this
         this.lensPorts.forEach(async port=>{
+            const uInfo = await userInfoLoader.enqueue(async ()=>{
+                return await self.getUserInfo()
+            })
+            // log("uInfo",uInfo)
+           
             await sendWithResponse(port,{managerPort:true})
             log("lens port connected and answered")
-            port.postMessage({imageBuffer:arrayBuffer},[arrayBuffer])
+            if (uInfo.error){
+                port.postMessage({needAuthorize:true},[arrayBuffer])
+            
+            }else{
+                port.postMessage({imageBuffer:arrayBuffer},[arrayBuffer])
+
+            }
         })
         // startFaceParserUi(arrayBuffer)
     }
@@ -853,6 +871,9 @@ class Manager{
         port.onmessage = async e =>{
             const msg = e.data;
             if (!msg) return
+            await userInfoLoader.enqueue(async ()=>{
+                return await self.getUserInfo()
+            })
             if (msg.imagesList){
                 const imagesList = msg.imagesList
                 log("imagesList",imagesList)
@@ -898,6 +919,9 @@ class Manager{
                     })
                 }
                 self.showProgress()
+            }else  if (msg.needAuthorize){
+               
+                self.onNeedAuthorize()
             }else  if (msg.closing){
                 self.lensPorts = self.lensPorts.filter(fn => fn !== port);
                 console.log("lens port count",self.lensPorts.length)
@@ -906,6 +930,7 @@ class Manager{
 
         }
     }
+    onNeedAuthorize = ()=>{log("need authorize")}
 
     addPort(port){
         const self = this
@@ -934,6 +959,7 @@ class Manager{
             }
             // const uInfo = await this.getUserInfo()
             const userId = uInfo.user_id
+            log("userId",userId)
             if (msg.ftarList){
                 const ftarList = await getFtarList(this.token,msg,userId)
                 
