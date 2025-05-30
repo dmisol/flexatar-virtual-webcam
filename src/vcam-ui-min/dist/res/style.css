@@ -167,7 +167,7 @@ body::-moz-scrollbar {
     color: var(--main-color-1);
     /* word-wrap:break-word; */
     white-space: pre-wrap;
-    font-size: 0.9em;
+    font-size: 0.7em;
     /* font-size: calc(25vw ); */
     text-align: center;
     padding-bottom: 5px;

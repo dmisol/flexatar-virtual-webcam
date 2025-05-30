@@ -7,8 +7,8 @@ module.exports = {
     filename: 'bundle.js',
     path: path.resolve(__dirname, 'dist'),
   },
-  // mode: 'development',
-    mode: 'production',
+  mode: 'development',
+    // mode: 'production',
   resolve:{
     fallback: {"fs": false,"path": false}
   },

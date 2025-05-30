@@ -119,6 +119,25 @@ class ManagerWorkerWarper{
 
 }
 
+function createTextBitmap(text, width, height) {
+  const offscreen = new OffscreenCanvas(width, height);
+  const ctx = offscreen.getContext("2d");
+
+  // Background (optional)
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, width, height);
+
+  // Text
+  ctx.fillStyle = "white";
+  ctx.font = `${Math.floor(width/10)}px sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, width / 2, height / 2);
+
+  // Return a promise that resolves with the ImageBitmap
+  return offscreen.transferToImageBitmap();
+}
+
 class VCamMediaStream{
     constructor(opts){
     const canvas = document.createElement("canvas");
@@ -133,7 +152,8 @@ class VCamMediaStream{
     document.body.appendChild(canvas)
 
     const ctx = canvas.getContext("bitmaprenderer");
-    
+    const bitmap = createTextBitmap("WARMING UP",canvas.width,canvas.height)
+    ctx.transferFromImageBitmap(bitmap);
 
 
     const channel = new MessageChannel();
@@ -259,8 +279,8 @@ class VCAM{
 
         const iframe = vCamUi.element
         this.element = iframe
-        iframe.style.width = "60px"
-        iframe.style.height = "300px"
+        iframe.style.width =  opts.vCamUI?.width ? opts.vCamUI?.width :"60px"
+        iframe.style.height = opts.vCamUI?.height ? opts.vCamUI?.height :"300px"
         iframe.style.border = "none"
         // window.addEventListener("message",(e)=>{
         //     const msg = e.data
@@ -301,7 +321,7 @@ class VCAM{
         
     }
     get canvas(){
-        
+        return this.vCamStream.canvas
     }
 
     mount(holder){
@@ -330,7 +350,7 @@ class VCAM{
         const isTrackProcessorAvailable =
                 'MediaStreamTrackProcessor' in window &&
                 typeof window.MediaStreamTrackProcessor === 'function';
-         
+      
         // const TrackProcessor = isTrackProcessorAvailable ? NativeTrackProcessor : MediaRecorderBasedTrackProcessor    
         if (this.currentTrackProcessor){
             this.currentTrackProcessor.stop()

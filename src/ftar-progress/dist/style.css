@@ -13,7 +13,8 @@ body{
     color:white;
     display: flex;
     height: 100vh; /* Full window height */
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 

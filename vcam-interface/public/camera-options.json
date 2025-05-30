@@ -1,0 +1,34 @@
+{
+  "name": "Demo Camera",
+  "description": "Demonstration how the virtual camera plugin works",
+  "version": "1.0",
+  "author": "Flexatar",
+  "icon": "",
+  "tags": ["virtual camera", "demo"],
+  "default_config": {
+    "video": {
+      "width": 640,
+      "height": 480,
+      "frameRate": 30
+    },
+    "audio": {
+      "enabled": false
+    }
+  },
+  "capabilities": {
+    "video": true,
+    "audio": false
+  },
+
+  "requirements": {
+    "microphone": false,
+    "camera": false
+  },
+  "permissions": {
+    "media": {
+      "video": false,
+      "audio": false
+    }
+  },
+  "delay": 450
+}

@@ -1,0 +1,17 @@
+
+
+body {
+  margin: 0px;
+  width:100vw;
+  height:100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+canvas {
+  width: 100vw;
+  height: auto;
+  aspect-ratio: 4 / 3; /* Change to desired ratio */
+  display: flex;
+}
