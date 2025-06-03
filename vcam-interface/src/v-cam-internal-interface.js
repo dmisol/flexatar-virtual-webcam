@@ -88,10 +88,27 @@ class WHIPServer{
         };
         this.localTracks = []
         this.pc.ontrack = e =>{
-            console.log("track received")
+            console.log("[VCAM][WHIPServer]track received1",e.track)
+            // if (onReceiver) onReceiver()
+            if (e.track){
+                console.log("e.track",e.track)
+                self.localTracks.push(e.track)
+                if (onTrack) onTrack(e.track)
+            }else{
+                console.log("[VCAM][WHIPServer] no audio")
+                // if (transceiver.receiver.track){
+                    // const checkInterval = setInterval(() => {
+                    //     const receiverTrack = transceiver.receiver.track;
+                    //     console.log("transceiver.receiver.track",transceiver.receiver.track)
+                    //     if (receiverTrack && receiverTrack.readyState !== 'ended') {
+                    //         clearInterval(checkInterval);
+                    //         console.log("[VCAM][WHIPServer] track received later")
+                    //         if (onTrack) onTrack(receiverTrack)
 
-            self.localTracks.push(e.track)
-            if (onTrack) onTrack(e.track)
+                    //     }
+                    // }, 100);
+                // }
+            }
         }
         
         this.candidateListPromise = new Promise(resolve=>{
@@ -155,7 +172,7 @@ function getMessageProvider(){
 }
 
 
-export function makeWHIPServer(onMediaProvided){
+export function makeWHIPServer(onMediaProvided,onDisconnected){
   const servers = {};
   const clients = {};
   window.addEventListener("message", async e=>{
@@ -168,7 +185,7 @@ export function makeWHIPServer(onMediaProvided){
       const whipServer = new WHIPServer(async track=>{
         console.log("[VCAM] ontrack",track)
 
-        const whipClient = new WHIPClient(await onMediaProvided(),()=>{
+        const whipClient = new WHIPClient(await onMediaProvided(track),()=>{
           delete clients[connectionId]
         })
         clients[connectionId]=whipClient
@@ -182,12 +199,15 @@ export function makeWHIPServer(onMediaProvided){
         delete servers[connectionId]
       })
       servers[connectionId] = whipServer
-
+      whipServer.onDisconnected = ()=>{
+        if (onDisconnected) onDisconnected()
+      }
       whipServer.makeAnswer(msg).then(answer=>{
         answer.type = msg.type
         answer.id = connectionId
         getMessageProvider().postMessage(answer,"*")
       })
+      
 
     } if (msg.answer && msg.type === "VCAM_MEDIA"){
        clients[connectionId].acceptAnswer(msg)

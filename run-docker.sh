@@ -30,5 +30,6 @@ fi
 
 docker run \
     --env-file .env --name ${CONTAINER_NAME} -d -p 8081:8081 ${IMAGE_NAME}:${IMAGE_TAG}
+echo "Available: http://localhost:8081/main/"
     
     

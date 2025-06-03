@@ -1,8 +1,6 @@
 
 import {VCAM} from "../../flexatar-package/src/index.js"
-import WHIPClient from "../../../vcam-interface/src/whip-client.js"
-import WHIPServer from "../../../vcam-interface/src/whip-server.js"
-import * as CamCon from "./vcam-connection.js"
+// import * as CamCon from "./vcam-connection.js"
 
 
 let vCam
@@ -186,58 +184,24 @@ stopButton.onclick = async () => {
 }
 
 
-connectVirtualCameraButton.onclick = async ()=>{
-    const sig = new CamCon.WebSocketClient()
-    sig.onAnswer = answer =>{
-        console.log("ANSWER",answer)
-        rtcClient.acceptAnswer(answer)
-    }
-    sig.onCandidate = candidate =>{
-        console.log("candidate",candidate)
-        rtcClient.acceptCandidate(candidate)
-    }
-    const rtcClient = new CamCon.RTCClient(CamCon.createFakeStream())
-    rtcClient.onCandidate = candidate=>{
-        console.log("send candidate")
-        sig.sendMessage(candidate)
+// connectVirtualCameraButton.onclick = async ()=>{
+//     const sig = new CamCon.WebSocketClient()
+//     sig.onAnswer = answer =>{
+//         console.log("ANSWER",answer)
+//         rtcClient.acceptAnswer(answer)
+//     }
+//     sig.onCandidate = candidate =>{
+//         console.log("candidate",candidate)
+//         rtcClient.acceptCandidate(candidate)
+//     }
+//     const rtcClient = new CamCon.RTCClient(CamCon.createFakeStream())
+//     rtcClient.onCandidate = candidate=>{
+//         console.log("send candidate")
+//         sig.sendMessage(candidate)
 
-    }
-    sig.sendMessage(await rtcClient.createOffer())
-}
+//     }
+//     sig.sendMessage(await rtcClient.createOffer())
+// }
 
 
-const iframe = document.createElement("iframe")
-iframe.src = "http://localhost:5173/"
-iframe.onload = () => {
-   
-}
-iframe.allow = "microphone"
-document.body.appendChild(iframe)
-setupConnection.onclick = async ()=>{
-    const micStream =  await navigator.mediaDevices.getUserMedia(constraints);
-    const whipClient = new WHIPClient(micStream.getAudioTracks())
-
-    const whipServer = new WHIPServer(track=>{
-      console.log("[App] ontrack",track)
-      videoFromVCam.srcObject = new MediaStream([track])
-    })
-
-    window.addEventListener("message",e=>{
-        const msg = e.data
-        if (!msg) return;
-        if (msg.answer && msg.id === "SRC_MEDIA"){
-            whipClient.acceptAnswer(msg)
-        }else if (msg.offer && msg.id === "VCAM_MEDIA"){
-            whipServer.makeAnswer(msg).then(answer=>{
-                answer.id = msg.id
-                iframe.contentWindow.postMessage(answer,"*")
-
-            })
-        }
-
-    })
-    const offer = await whipClient.makeOffer()
-    offer.id = "SRC_MEDIA"
-    iframe.contentWindow.postMessage(offer,"*")
-}
 

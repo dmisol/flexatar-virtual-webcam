@@ -122,3 +122,12 @@
   border-radius: 8px;
   box-sizing: border-box;
 }
+
+#vCamPluginContainer{
+  display: block;
+}
+#vCamOutput iframe {
+  display: block;
+  width:360px;
+  height:360px;
+}

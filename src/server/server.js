@@ -12,11 +12,10 @@ const VCAM = path.join(__dirname, "../vcam-ui-min/dist");
 const VGEN = path.join(__dirname, "../v-gen-iframe/dist");
 const LENS = path.join(__dirname, "../ftar-lens/dist");
 const PROGRESS = path.join(__dirname, "../ftar-progress/dist");
+const VCAM_PLUGIN = path.join(__dirname, "../../vcam-interface/dist");
 const FILES = path.join(ROOT, "files");
 
 var http = require('http');
-
-
 
 
 app.use(express.json());
@@ -38,6 +37,9 @@ app.use("/lens", serveIndex(LENS));
 
 app.use("/progress",express.static(PROGRESS));
 app.use("/progress", serveIndex(PROGRESS));
+
+app.use("/vcam-plugin",express.static(VCAM_PLUGIN));
+app.use("/vcam-plugin", serveIndex(VCAM_PLUGIN));
 
 app.use((req, res, next) => {
     res.setHeader("Content-Security-Policy", "default-src 'self' blob: data:;");

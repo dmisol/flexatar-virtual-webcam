@@ -6,6 +6,7 @@ import {createVCam} from "./vcam-creator.js"
 import {subscriptionListUI} from "./ui/subscriptionListUI.js"
 import {buySubscriptionUI} from "./ui/buySubscriptionUI.js"
 import {actionsLoggerUI} from "./ui/actionsLoggerUI.js"
+import {VCamConnection, AudioDelayManager} from "./vcam-plugin-system.js"
 
 
 const addLog = actionsLoggerUI(5,500,150,"logsHolder")
@@ -88,6 +89,46 @@ buySubscriptionUI("buySybscription",subscriptionItem =>{
 },addLog)
 
 
+setupConnection.onclick = async ()=>{
+    
 
+    vcamPluginIframe.src = vcamPluginUrl.value
+    vCamOutput.style.display = "flex"
+   
+}
+let existingConnection
+let audioTrack
+connectVcamMedia.onclick = async ()=>{
+    const micStream =  await navigator.mediaDevices.getUserMedia({audio:true});
+    console.log("setupConnection",existingConnection)
+   
+    // vcamPluginIframe.onload =  async ()=>{
+        
+        if (existingConnection){
+            existingConnection.close()
+            existingConnection = null
+            connectVcamMedia.textContent="CONNECT"
+            pluginVideoHolder.firstChild.remove()
+            if (audioTrack)audioTrack.stop()
+
+
+        }else{
+            const currentConnection =  new VCamConnection(true)
+            const videoTrack = await currentConnection.getVCamMedia(vcamPluginIframe)
+            audioTrack = micStream.getAudioTracks()[0]
+            currentConnection.addAudioTrack(micStream.getAudioTracks()[0])
+            console.log("videoTrack",videoTrack)
+            const videoElement = document.createElement("video")
+            pluginVideoHolder.appendChild(videoElement)
+            videoElement.srcObject  = new MediaStream([videoTrack]) 
+            videoElement.playsInline = true
+            videoElement.play()
+            existingConnection = currentConnection
+            connectVcamMedia.textContent="DISCONNECT"
+        }
+       
+    // }
+   
+}
 
 

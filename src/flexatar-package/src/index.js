@@ -302,6 +302,8 @@ class VCAM{
         })
         renderer.onReady = ()=>{
             if (this.onReady)this.onReady()
+
+          
         }
 
         this.renderer = renderer;
@@ -310,6 +312,7 @@ class VCAM{
         this.vCamStream = vCamStream
         renderer.addMediaPort(vCamStream.portToSend)
         this.iframe = iframe
+
     }
     get lensElement(){
 

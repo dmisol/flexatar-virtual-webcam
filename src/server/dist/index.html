@@ -30,9 +30,18 @@
     <h1>Flexatar Demo Page</h1>
     <h2>Demonstrates how to integrate the Flexatar SDK into your website.</h2>
     <p>In testing mode, you won’t be charged for Flexatar creation, but the Flexatar will include a watermark. We do not guarantee Flexatar creation in testing mode, and the rules may change. Therefore, do not use testing mode in production.</p>
+    
+    <h2>You need API secret to make it works.</h2>
+    <a href="https://flexatar-sdk.com">Get API Secret</a>
+    <p>Create file with name ".env" and content FLEXATAR_API_SECRET=`your api key` in root folder of repository.</p>
+
+    <h2>Integrate virtual camera. Follow this example.</h2>
+    <h3>Create subscription for you client/user.</h3>
     <button id="buySybscription">Buy Subscription</button>
     <button id="refreshList">Refresh List</button>
    
+    <h3>Clicking "v-cam" button you will obtain user token and will run our SDK using it.</h3>
+
     <div id="subscriptionListHolder" ></div>
     <br>
     <div id="logsHolder"></div>
@@ -87,10 +96,40 @@
    </button>
 
     <div id="vGenHolder" ></div>
-    <button id="setupConnection" >VCam connection</button>
-    <video id="videoFromVCam" playsinline autoplay loop style="width: 240; height:320px;"></video>
-
    
+    <h2>Virtual Camera Plug-In</h2>
+    <p>Embed virtual camera plugin in your system.
+        <a href="https://github.com/dmisol/flexatar-virtual-webcam/tree/main/vcam-interface">Know more ...</a>
+    </p>
+    <span id="vCamPluginContainer">
+            <p>
+            <a href="https://vgen.flexatar-sdk.com">Get flexatar virtual camera plugin url.</a>
+        </p>
+        <label for="vcamPluginUrl">Plugin URL:</label>
+        <!-- <input type="text" id="vcamPluginUrl" value="https://flexatar-sdk.com/vcam-plugin/index.html"/> -->
+        <input type="text" id="vcamPluginUrl" value="/vcam-plugin"/>
+        <!-- <input type="text" id="vcamPluginUrl" value="http://localhost:5173/"/> -->
+        <button id="setupConnection" >INSTALL</button>
+        
+    </span>
+    
+     <span id="vCamOutput" style="display: none;">
+        <span>
+            <p>Virtual Camera Iframe:</p>
+            <iframe id="vcamPluginIframe" ></iframe>
+            
+        </span>
+        <button id="connectVcamMedia" style="height: 30px;">CONNECT</button>
+        <span>
+            <p>Virtual Camera output:</p>
+        
+            <span id="pluginVideoHolder"></span>
+        </span>
+        
+        <!-- <video id="videoFromVCam" playsinline autoplay loop style="width: 240; height:320px;"></video> -->
+     </span>
+   
+     <span style="height: 200px;"></span>
 
     <!-- <div id="iframeHolder1" style="width: 70px;height: 320px; display: inline-block;"></div>
     <video id="videoFromIframe1" playsinline autoplay loop></video> -->

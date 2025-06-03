@@ -16,6 +16,7 @@ function createFakeStream(){
     document.body.append(canvas)
     // Step 2: Capture MediaStream from canvas
     const stream = canvas.captureStream(30); // 30 FPS
+   
     (async ()=>{
         function drawLoop() {
             ctx.fillStyle = "blue";
@@ -29,16 +30,21 @@ function createFakeStream(){
             ctx.font = "bold 40px sans-serif ";
             ctx.f
             ctx.fillText("VIRTUAL CAMERA", 130, 200);
-          
-            requestAnimationFrame(drawLoop);
+            // if (isActive)
+              requestAnimationFrame(drawLoop);
           }
           drawLoop();  
     })()
-    
+
     return stream
+
 }
 const videoTracks = createFakeStream().getVideoTracks()
+
 makeWHIPServer(audio =>{
-  return videoTracks
+ 
+
+  return [videoTracks[0].clone()]
+
 })
 
