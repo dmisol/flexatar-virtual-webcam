@@ -22,6 +22,23 @@ function log(){
 console.log("poast getFtarPreview")
 // const channel = new MessageChannel();
 const connection = new Ftar.ManagerConnection()
+connection.onEffectMessage = msg =>{
+    flexatarControllerPort.postMessage(msg)
+
+}
+connection.onSlot2 = msg =>{
+    log("slot2 ",msg.slot2)
+    flexatarControllerPort.postMessage(msg,[msg.slot2])
+}
+
+connection.onEffectStateRequest = msg => {
+    log("effectStateRequest")
+    flexatarControllerPortPromise.then(port=>{
+        port.postMessage(msg)
+    })
+
+}
+
 window.parent.postMessage({ftarUIPort:connection.outPort},"*",[connection.outPort])
 
 let flexatarControllerPort  
@@ -30,6 +47,14 @@ const flexatarControllerPortPromise = new Promise(resolve=>{
         if (e.data && e.data.flexatarControllerPort){
             log("ftar ui flexatarControllerPort",e.data.flexatarControllerPort)
             flexatarControllerPort = e.data.flexatarControllerPort
+            flexatarControllerPort.onmessage = (e) =>{
+                const msg = e.data;
+                if (!msg) return
+                if (msg.effectStateResponse){
+                    log("effectStateResponse")
+                    connection.sendEffectState(msg)
+                } 
+            }
             resolve(flexatarControllerPort)
         }else if (e.data && e.data.closing){
             console.log("iframe controller port close")
@@ -107,11 +132,11 @@ const flexatarControllerPortPromise = new Promise(resolve=>{
                 return
             }
         
-            for(const {id} of list){
+            for(const {id,is_myx} of list){
                 const imgArrayBuffer = await connection.getPreview(id)
                 const blob = new Blob([imgArrayBuffer], { type: "image/jpg" }); // Change type if needed
                 const imgSrc = URL.createObjectURL(blob);
-                const {holder}= await addPreview({id},imgSrc)
+                const {holder}= await addPreview({id,is_myx},imgSrc)
             }
         }else{
             emptyBlock.textContent = Texts.EMPTY
@@ -159,7 +184,7 @@ connection.onNewFlexatar = async ftarLink => {
     const imgArrayBuffer = await connection.getPreview(ftarLink.id)
     const blob = new Blob([imgArrayBuffer], { type: "image/jpg" }); // Change type if needed
     const imgSrc = URL.createObjectURL(blob);
-    const {holder}= await addPreview({id:ftarLink.id},imgSrc,true)
+    const {holder}= await addPreview({id:ftarLink.id,is_myx:ftarLink.is_myx},imgSrc,true)
     
     // holder.click()
 }
@@ -183,11 +208,11 @@ connection.ready.then(async ()=>{
             return
         }
         // let firstFtar = true
-        for(const {id} of list){
+        for(const {id,is_myx} of list){
             const imgArrayBuffer = await connection.getPreview(id)
             const blob = new Blob([imgArrayBuffer], { type: "image/jpg" }); // Change type if needed
             const imgSrc = URL.createObjectURL(blob);
-            const {holder}= await addPreview({id},imgSrc)
+            const {holder} = await addPreview({id,is_myx},imgSrc)
             // if (firstFtar){
             //     holder.click()
             //     firstFtar = false
@@ -428,28 +453,15 @@ async function addPreview(ftarLink,previewImage,first){
 
     const loader = document.createElement("span")
     loader.className = "loader"
-    // if (!oldClicked){
-    //     holder.classList.add("selected-item")
-    //     oldClicked = holder
-    //     selecteFtar = {element:holder,ftarId:ftarLink.id}
-    // }
 
-
-    // if (first && previewListHolder.childNodes.length>1){
-        
-        // previewListHolder.appendChild(holder);
         if (first){
             previewListHolder.insertBefore(holder, previewListHolder.firstChild);
 
         }else{
             previewListHolder.appendChild(holder);
-            // previewListHolder.insertBefore(holder, previewListHolder.children[previewListHolder.children.length-1]);
 
         }
-    // }else{
-    //     previewListHolder.appendChild(holder)
 
-    // }
     holder.onclick = async() =>{
         
        
@@ -465,22 +477,13 @@ async function addPreview(ftarLink,previewImage,first){
         selecteFtar = {element:holder,ftarId:ftarLink.id}
 
         holder.appendChild(loader)
-        const ftarBuffer = await connection.getFlexatar(ftarLink.id)
+        const ftarBuffer = await connection.getFlexatar(ftarLink.id,ftarLink.is_myx)
         console.log("ftarBuffer",ftarBuffer)
         if (flexatarControllerPort){
             flexatarControllerPort.postMessage({slot1:ftarBuffer,id:ftarLink.id},[ftarBuffer])
             // flexatarControllerPortPromise.then(port=>{port.postMessage({slot1:ftarBuffer,id:ftarLink.id},[ftarBuffer])})
-
         }
-        // const response = await sendWithResponse({changeSlot1:ftarLink.id})
-        
-     
 
-
-        // window.parent.postMessage({changeSlot1:ftarLink.id,uiToRenderEngine:true},"*")
-        // await new Promise(resolve=>{
-        //     previewLoadPromiseResolvers.slot1[ftarLink.id] = resolve
-        // })
 
         loader.remove()
         // try{
@@ -821,4 +824,7 @@ ftarLogButton.onclick = (e)=>{
     // e.preventDefault()
     connection.showProgress()
     log("show creation log")
+}
+effectsButton.onclick = () => {
+    connection.showEffects()
 }

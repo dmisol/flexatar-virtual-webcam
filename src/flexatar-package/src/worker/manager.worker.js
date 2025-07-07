@@ -28,7 +28,9 @@ let manager
         // return tokenJson.token
 
     })
-    
+    manager.onMediaPort = port =>{
+        postMessage({onMediaPort:port},[port])
+    }
 
 onmessage = (event) => {
     const msg = event.data
@@ -47,5 +49,9 @@ onmessage = (event) => {
     }else if (msg.ftarProgressPort){
         console.log("msg.ftarProgressPort",msg.ftarProgressPort)
         manager.addProgressPort(msg.ftarProgressPort)
+    }
+    else if (msg.ftarEffectsPort){
+        console.log("msg.ftarEffectsPort",msg.ftarEffectsPort)
+        manager.addEffectPort(msg.ftarEffectsPort)
     }
 }

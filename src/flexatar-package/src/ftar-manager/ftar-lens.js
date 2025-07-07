@@ -17,6 +17,7 @@ export class FlexatarLens{
             if (!msg) return
             log("port message" ,msg )
             if (msg.managerPort){
+                if  (self.iframeWillInstalled) self.iframeWillInstalled()
                 showIframeOverlay(url,500,500,()=>{
                     log("canceled")
                     self.iframe = null

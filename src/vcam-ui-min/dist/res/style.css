@@ -62,6 +62,7 @@ body::-moz-scrollbar {
 #createFlexatarHolder:hover{
   background-color: var(--hoover-color);
 }
+
 .item-holder {
     position: relative;
     display: block;
@@ -249,6 +250,22 @@ body::-moz-scrollbar {
     cursor: pointer;
   }
   #ftarLogButton:hover{
+    background-color: var(--hoover-color);
+  }
+
+
+  #effectsButton{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color:var(--main-color-1); 
+    border-bottom: 2px solid var(--main-color-1);
+    font-size: 0.75em;
+    background-color: var(--main-color-2);
+    cursor: pointer;
+    padding-top: 3px;
+  }
+  #effectsButton:hover{
     background-color: var(--hoover-color);
   }
 

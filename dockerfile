@@ -24,6 +24,15 @@ COPY ./src/ftar-progress/dist/style.css src/ftar-progress/dist/style.css
 COPY ./src/ftar-progress/src/ src/ftar-progress/src/
 RUN cd src/ftar-progress && npm install && npm run build
 
+#effect
+
+COPY ./src/ftar-effect/package.json src/ftar-effect/package.json
+COPY ./src/ftar-effect/webpack.config.js src/ftar-effect/webpack.config.js
+COPY ./src/ftar-effect/dist/index.html src/ftar-effect/dist/index.html
+COPY ./src/ftar-effect/dist/style.css src/ftar-effect/dist/style.css
+COPY ./src/ftar-effect/src/ src/ftar-effect/src/
+RUN cd src/ftar-effect && npm install && npm run build
+
 #ui min
 COPY ./src/vcam-ui-min/package.json src/vcam-ui-min/package.json
 COPY ./src/vcam-ui-min/webpack.config.js src/vcam-ui-min/webpack.config.js

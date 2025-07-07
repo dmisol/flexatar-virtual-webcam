@@ -1,0 +1,339 @@
+:root {
+    --main-color-1: #f68b1e;
+    --main-color-2: #344d23;
+    --select-color: #4c8a22;
+    --hoover-color: #6e8d59;
+    --error-color: #bb2121;
+    --white: #fff;
+    --black: black;
+    --disabled: rgb(65, 65, 65);
+    --main-color-2-hoover: #6e8d59;
+    --main-color-1-hoover: #ffd6b5;
+}
+
+body {
+    background-color: black;
+    color: white;
+    display: flex;
+    height: 95vh;
+    /* Full window height */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+
+.trash-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 50px;
+    transform: translate(-50%, -50%);
+    aspect-ratio: 1 / 1;
+    fill: var(--main-color-1);
+    /* White icon color */
+}
+
+
+#closeButton {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: auto;
+    cursor: pointer;
+}
+
+#progressContainer {
+    width: 100%;
+    height: 90%;
+    display: block;
+    /* flex-direction: column;
+    gap: 15px; */
+}
+
+.image-row {
+    overflow-x: auto;
+    overflow-y: hidden;
+    width: 100%;
+    white-space: nowrap;
+    /* display: flex;
+    gap: 5px; */
+}
+
+.header-row {
+    display: flex;
+    gap: 15px;
+}
+
+.image-item {
+    width: 50px;
+    height: auto;
+    display: inline-block;
+
+}
+
+.success {
+    border: 1px solid var(--main-color-2);
+}
+
+.error {
+    border: 1px solid var(--error-color);
+}
+
+.queue {
+    border: 1px solid var(--main-color-1);
+}
+
+h2 {
+    color: var(--main-color-1);
+    /* margin-top: 10px;
+    margin-bottom: 10px;
+    margin-top: 10px; */
+    padding: 0px;
+}
+
+h3 {
+    color: var(--main-color-1);
+    margin-top: 5px;
+    margin-bottom: 5px;
+
+    padding: 0px;
+}
+
+#queueHolder {
+    display: flex;
+    flex-direction: column;
+}
+
+#buttonPanel {
+    margin-top: 10px;
+    display: flex;
+    gap: 15px
+}
+
+#buttonPanel svg {
+    background-color: var(--main-color-2);
+    color: var(--main-color-1);
+    border: none;
+    width: auto;
+    padding: 5px;
+    width: 25px;
+    cursor: pointer;
+}
+
+#queueHolder {
+    border: 2px solid var(--white);
+    padding: 5px;
+}
+
+.blinking-border {
+    animation: blinkBorder 1s step-start infinite !important;
+
+}
+
+
+@keyframes blinkBorder {
+    50% {
+        border-color: transparent;
+    }
+}
+
+.selected-button {
+    border: 2px solid var(--main-color-1) !important;
+}
+
+.invisible {
+    display: none !important;
+}
+
+.title {
+    margin: 0 auto;
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    align-content: center;
+}
+
+#canNotCreateFlexatarSign {
+    color: var(--error-color);
+}
+
+#ftarCountPanel {
+    display: inline;
+}
+
+#reloadIcon {
+    width: 20px;
+    cursor: pointer;
+    fill: var(--main-color-1);
+    color: var(--main-color-1);
+}
+
+.roating {
+    animation: spinner 4s steps(10) infinite;
+
+
+}
+
+@keyframes spinner {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.loader {
+    position: absolute;
+    /* Position relative to the container */
+    top: 0;
+    /* Align to the top of the image */
+    right: 0;
+    /* Align to the left of the image */
+    margin: 5px;
+    border: 5px solid #838383;
+    border-radius: 50%;
+    border-top: 5px solid var(--main-color-1);
+    width: 10px;
+    height: 10px;
+    animation: spinner 4s steps(10) infinite;
+    /* display: flex; */
+
+}
+
+.selected-item {
+    border: 3px solid var(--main-color-1) !important;
+}
+
+#uiHolder {
+    width: 100%;
+    height: 80%;
+    display: flex;
+}
+
+#previewListHolder {
+    width: 80px;
+    height: 100%;
+    overflow-y: scroll;
+}
+
+#effectControlLayout {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height:auto
+   
+}
+
+#previewHolder {
+   margin: 0 auto; 
+   padding:5px;
+}
+
+.item-holder {
+    position: relative;
+    display: block;
+    width: 100%;
+    max-width: 100px;
+    height: auto;
+    cursor: pointer;
+    box-sizing: border-box;
+    margin: 0 auto;
+    padding: 0px;
+    border: 0px;
+    /* min-height: calc(50%); */
+}
+
+.button-choose-effect {
+    flex-grow: 1;
+    height: 100%;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 0px;
+    border: 1px solid var(--button-border-color);
+    /* background-color: var(--main-color-2);
+    color:var(--main-color-1); */
+    font-weight: bold;
+}
+
+.button-style1 {
+    background-color: var(--main-color-2);
+    color: var(--main-color-1);
+}
+
+@media (hover: hover) {
+    .button-style1:hover {
+        background-color: var(--main-color-2-hoover);
+    }
+}
+
+.button-style1.active {
+    background-color: var(--main-color-1);
+    color: var(--main-color-3);
+}
+
+
+.button-style1.active:hover {
+    background-color: var(--main-color-1);
+}
+
+.button-style1:disabled {
+    background-color: var(--disabled-color);
+}
+
+.button-style1:disabled:hover {
+    background-color: var(--disabled-color);
+    cursor: not-allowed;
+}
+
+/* Checkbox container */
+.effect-checkbox-container {
+    display: flex;
+    align-items: center;
+    /* Align checkbox and label */
+    gap: 5px;
+    /* Space between checkbox and label */
+    width: 100px;
+    /* Fixed width for the checkbox container */
+}
+
+
+/* Optional: Style for checkbox label */
+.effect-checkbox-container label {
+    font-size: 1rem;
+    color: var(--white);
+    cursor: pointer;
+}
+
+.slider-input-container {
+    display: flex;
+    align-items: center;
+    /* Align items vertically centered */
+    gap: 10px;
+    /* Space between elements */
+    width: 100%;
+    /* Full width container */
+    margin-top: 10px;
+}
+
+/* Slider */
+.slider-input-container input[type="range"] {
+    flex: 1;
+    /* Take up remaining space */
+    margin: 0;
+    /* Remove default margin */
+}
+.cursor-not-allowed{
+    cursor: not-allowed !important;
+}
+.effect-button-container{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+
+}

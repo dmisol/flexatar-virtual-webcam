@@ -44,6 +44,7 @@ export function createVCam(request,videoelement,holder,addLog){
             lens:"/lens",
             progress:"/progress",
             files:"/files",
+            effects: "/effect",
         },
         // lensClassName:"flexatar-lens",
         // progressClassName:"flexatar-progress",

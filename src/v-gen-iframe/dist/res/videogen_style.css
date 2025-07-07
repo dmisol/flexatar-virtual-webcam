@@ -52,6 +52,7 @@
   background-color: var(--main-color-2);
   color: var(--main-color-1);
 }
+
 @media (hover: hover) {
   .button-style1:hover{
     background-color: var(--main-color-2-hoover);
