@@ -4,6 +4,11 @@ import { RenderWorkerWarper } from "./worker/install-render-worker.js"
 import { Manager, ManagerConnection } from "./ftar-manager/ftar-connection.js"
 import { FlexatarLens } from "./ftar-manager/ftar-lens.js"
 
+function log() {
+    console.log("[FTAR PACK]", ...arguments)
+}
+
+
 async function resample(float32Array, targetSampleRate, inputSampleRate, numChannels = 1) {
     const frameCount = float32Array.length / numChannels;
     const offlineContext = new OfflineAudioContext({
@@ -80,8 +85,16 @@ class MediaRecorderBasedTrackProcessor {
 }
 
 class ManagerWorkerWarper {
-    constructor(tokenFunc) {
+    constructor(tokenFunc, managerName,
+        defaultBackgroundsFn = async () => {
+            return []
+        }) {
         const managerWorker = new ManagerWorker()
+
+
+        managerWorker.postMessage({ initManager: true })
+
+        managerWorker.postMessage({ managerName })
         const self = this;
         managerWorker.onmessage = async (event) => {
             const msg = event.data
@@ -90,6 +103,11 @@ class ManagerWorkerWarper {
                 console.log(msg.error)
             } else if (msg.onMediaPort) {
                 self.onMediaPort(msg.onMediaPort)
+            } else if (msg.defaultBackgroundsRequest) {
+                defaultBackgroundsFn().then(defaultBackgrounds => {
+                    managerWorker.postMessage({ defaultBackgrounds })
+                })
+
             } else if (msg.tokenRequest) {
                 tokenFunc().then(token => {
                     managerWorker.postMessage({ token })
@@ -118,6 +136,9 @@ class ManagerWorkerWarper {
     addEffectsPort(port) {
         this.managerWorker.postMessage({ ftarEffectsPort: port }, [port])
     }
+    addRetargPort(port) {
+        this.managerWorker.postMessage({ ftarRetargPort: port }, [port])
+    }
     showProgress() {
         this.managerWorker.postMessage({ showProgress: true })
     }
@@ -145,21 +166,22 @@ function createTextBitmap(text, width, height) {
 
 class VCamMediaStream {
     constructor(opts) {
-        const canvas = document.createElement("canvas");
+        const canvas = opts.canvas ? opts.canvas : document.createElement("canvas");
         // canvas.width=480
         // canvas.height=640
         canvas.width = opts?.width ?? 240
         canvas.height = opts?.height ?? 320
-        canvas.style.display = "none"
+        if (!opts.canvas) canvas.style.display = "none"
         this.canvas = canvas
         canvas.flexatarCanvas = true
 
-        document.body.appendChild(canvas)
+        if (!opts.canvas) document.body.appendChild(canvas)
 
         const ctx = canvas.getContext("bitmaprenderer");
         this.ctx = ctx
         const bitmap = createTextBitmap("WARMING UP", canvas.width, canvas.height)
         ctx.transferFromImageBitmap(bitmap);
+        bitmap.close()
 
 
         const channel = new MessageChannel();
@@ -167,7 +189,8 @@ class VCamMediaStream {
         this.selfPort = channel.port1
         let firstFrame = true
         this.isActive = true
-        // const self = this
+        this.onLipState = () => { }
+        const self = this
         channel.port1.onmessage = e => {
 
             if (e.data && e.data.frame) {
@@ -178,8 +201,15 @@ class VCamMediaStream {
                 }
 
                 // console.log("drawing")
-                if (this.isActive)
+                if (this.isActive) {
                     ctx.transferFromImageBitmap(e.data.frame);
+                    e.data.frame.close()
+                }
+            } else if (e.data && e.data.lipState) {
+                // console.log("[VCAM MEDIA STREAM] msg from port",e.data.lipState)
+                this.onLipState(e.data.lipState)
+            } else if (e.data && e.data.canvasRatio) {
+                if (self.onCanvasRatio) self.onCanvasRatio(e.data.canvasRatio);
             } else if (e.data && e.data.log) {
                 console.log("[VCAM MEDIA STREAM] msg from port", e.data);
             }
@@ -188,6 +218,7 @@ class VCamMediaStream {
 
     setFrame(frame) {
         this.ctx.transferFromImageBitmap(frame);
+        frame.close()
     }
 
     get portToSend() {
@@ -213,6 +244,20 @@ class VCamMediaStream {
         this.canvas.width = val.width
         this.canvas.height = val.height
     }
+    makeAnimVector(audioBuffer) {
+        this.selfPort.postMessage({ getLipState: audioBuffer }, [audioBuffer])
+    }
+    setAnimVector(v) {
+        this.selfPort.postMessage({ setLipState: v })
+
+    }
+    setSize(val) {
+        this.selfPort.postMessage({ setSize: val })
+
+    }
+    setVoiceProcessingParameters(val) {
+        this.selfPort.postMessage({ setVoiceProcessingParameters: val })
+    }
 }
 
 class VCamControlUI {
@@ -234,6 +279,20 @@ class VCamControlUI {
             window.addEventListener("message", handler)
 
         })
+        // log("promise for managerPortUnauthorized")
+        this.managerPortUnauthorized = new Promise(resolve => {
+            const handler1 = (e) => {
+                const msg = e.data
+                if (!msg) return
+                console.log("managerPortUnauthorized msg", msg)
+                if (msg.ftarUIPortUnauthorized) {
+                    resolve(msg.ftarUIPortUnauthorized)
+                    window.removeEventListener("message", handler1)
+                }
+            }
+            window.addEventListener("message", handler1)
+
+        })
     }
     /**
      * @param {Transferable} port
@@ -247,6 +306,74 @@ class VCamControlUI {
         this.element.remove()
     }
 }
+
+// (function polyfillMediaStreamTrackProcessor() {
+//   if (typeof window.MediaStreamTrackProcessor !== "undefined") {
+//     return; // already supported
+//   }
+
+class SafariMediaStreamTrackProcessor {
+    constructor(track) {
+        this.track = track;
+        this.video = document.createElement('video');
+        this.canvas = document.createElement('canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.readable = new ReadableStream({
+            start: (controller) => {
+                this.controller = controller;
+                this.isProcessing = true;
+                this.video.muted = true;
+                this.video.playsInline = true;
+                this.video.srcObject = new MediaStream([this.track]);
+                this.video.play();
+
+                this.video.addEventListener('playing', () => {
+                    const videoSettings = this.track.getSettings();
+                    this.canvas.width = videoSettings.width;
+                    this.canvas.height = videoSettings.height;
+                    this.processFrame();
+                }, { once: true });
+            },
+            cancel: () => {
+                this.isProcessing = false;
+                const stream = this.video.srcObject;
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    this.video.srcObject = null;
+                }
+            }
+        });
+    }
+
+    processFrame() {
+        if (!this.isProcessing || this.controller.desiredSize === 0) {
+            requestAnimationFrame(() => this.processFrame());
+            return;
+        }
+
+        try {
+            this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+            const frameData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+
+            // We are faking a VideoFrame object here to maintain a consistent API
+            // const fakeVideoFrame = {
+            //     close: () => { }, // A dummy close method
+            //     displayWidth: this.canvas.width,
+            //     displayHeight: this.canvas.height,
+            //     data: frameData.data
+            // };
+            frameData.close = () => { }
+            this.controller.enqueue(frameData);
+            requestAnimationFrame(() => this.processFrame());
+        } catch (error) {
+            showMessage(`Frame processing failed: ${error.message}`);
+            this.controller.close();
+        }
+    }
+}
+// Expose to global context
+// window.MediaStreamTrackProcessor = SafariMediaStreamTrackProcessor;
+// })();
 
 
 class VCAM {
@@ -262,7 +389,7 @@ class VCAM {
                     effects: "/effects",
                     lens: "/lens",
                     progress: "/progress",
-                    files: "/files",
+                    files: "http://localhost/files",
                 }
             }
         } else {
@@ -276,29 +403,67 @@ class VCAM {
                 opts.url = {
                     vcam: "/vcam",
                     effects: "/effects",
+                    retarg: "/retarg",
                     lens: "/lens",
                     progress: "/progress",
                     files: "/files",
                 }
             }
         }
-        const managerWorker = new ManagerWorkerWarper(tokenFn)
+        let needGallery = false
+        const isAuthorized = false
+        if (!isAuthorized) {
+            needGallery = true
+        }
+
+        // const managerWorkerUnauthorized = new ManagerWorkerWarper(async () => {
+        //     const response = await fetch(`https://api.flexatar-sdk.com/myxtoken`)
+        //     // log("requesting token")
+        //     if (!response.ok) {
+        //         return
+        //     }
+        //     const tokenJson = await response.json()
+
+        //     if (!tokenJson.token) {
+        //         return
+        //     }
+        //     // log("myx token obtained")
+        //     return tokenJson.token
+        // },needGallery ? "unauthorized":"empty")
+        // },"unauthorized")
+
+
+
+
+        // const managerWorker = new ManagerWorkerWarper(async ()=>{
+        //     return {token:null}
+        // },"authorized")
+        const managerWorker = new ManagerWorkerWarper(tokenFn, "authorized", opts.defaultBackgroundsFn)
+
         this.managerWorker = managerWorker
         const flexLens = new FlexatarLens(opts.url.lens, opts.lensClassName)
         const flexProgress = new FlexatarLens(opts.url.progress, opts.progressClassName)
         const flexEffects = new FlexatarLens(opts.url.effects, opts.effectsClassName)
+        const flexRetarg = new FlexatarLens(opts.url.retarg, opts.effectsClassName)
+
         this.flexLens = flexLens
         this.flexProgress = flexProgress
         this.flexEffects = flexEffects
+        this.flexRetarg = flexRetarg
 
         const iframeUrl = opts.url.vcam
+
         const vCamUi = new VCamControlUI(iframeUrl)
         vCamUi.managerPort.then(port => {
             managerWorker.addPort(port)
             managerWorker.addFtarLensPort(flexLens.portOut)
             managerWorker.addProgressPort(flexProgress.portOut)
             managerWorker.addEffectsPort(flexEffects.portOut)
+            managerWorker.addRetargPort(flexRetarg.portOut)
         })
+        // vCamUi.managerPortUnauthorized.then(port => {
+        //     managerWorkerUnauthorized.addPort(port)
+        // })
 
         const iframe = vCamUi.element
         this.element = iframe
@@ -316,27 +481,126 @@ class VCAM {
 
 
         const renderer = new RenderWorkerWarper(opts.url.files, opts.size)
+        let isVideoRunning = false
+        let currentVideoStream
+        renderer.onVideoFromCameraMesssage = async msg => {
+            log("onVideoFromCameraMesssage", msg)
+            if (msg.videoStreamFromCameraRequest) {
+
+                if (isVideoRunning) return
+
+
+                isVideoRunning = true
+                const videoStream = await navigator.mediaDevices.getUserMedia({ video: true })
+                videoStream.getTracks().forEach(t => t.stop())
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                log("videoStreamFromCameraRequest in content script", msg.videoStreamFromCameraRequest, devices)
+
+                let cameras = devices.filter(d => d.kind === "videoinput" && d.label === msg.videoStreamFromCameraRequest);
+                if (cameras.length === 0) {
+                    isVideoRunning = false
+                    return
+                }
+                const constraints = {
+                    video: { deviceId: { exact: cameras[0].deviceId } }
+                };
+
+                navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
+                    const messageChannelCameraFrames = new MessageChannel()
+                    renderer.worker.postMessage({ messagePortCameraFrames: messageChannelCameraFrames.port2 }, [messageChannelCameraFrames.port2])
+
+                    // iframe.contentWindow.postMessage({ messagePortCameraFrames: messageChannelCameraFrames.port2 }, "*", [messageChannelCameraFrames.port2])
+
+
+                    if (currentVideoStream) currentVideoStream.getTracks().forEach(x => x.stop())
+                    currentVideoStream = stream
+                    const track = stream.getVideoTracks()[0];
+                    // const ProcessorClass =
+                    //     typeof MediaStreamTrackProcessor !== "undefined"
+                    //         ? MediaStreamTrackProcessor
+                    //         : typeof SafariMediaStreamTrackProcessor !== "undefined"
+                    //             ? SafariMediaStreamTrackProcessor
+                    //             : null;
+                    
+                    const processor = new MediaStreamTrackProcessor(track);
+                    const reader = processor.readable.getReader();
+                    let counter = 0
+                    async function pumpFrames() {
+                        while (true) {
+                            const result = await reader.read();
+                            if (result.done) break;
+                            const frame = result.value; // VideoFrame
+                            if (reader.desiredSize < 0) {
+                                frame.close();
+                                continue;
+                            }
+                            counter++
+                            if (counter % 1 === 0) {
+                                // log("frame",frame)
+                                // bundle.js:1 Uncaught (in promise) TypeError: Failed to execute 'createImageBitmap' on 'Window': The provided value is not of type '(Blob or HTMLCanvasElement or HTMLImageElement or HTMLVideoElement or ImageBitmap or ImageData or OffscreenCanvas or SVGImageElement or VideoFrame)'.
+                                createImageBitmap(frame).then(bitmap => {
+                                    const currentFrameTS = performance.now()
+                                    messageChannelCameraFrames.port1.postMessage({ setHeadMotionStateByFrame: bitmap, ts: currentFrameTS }, [bitmap])
+
+                                });
+                                frame.close()
+                            }
+
+
+
+                        }
+
+                        renderer.worker.postMessage({ setHeadMotionStateByPattern: true })
+                        // iframe.contentWindow.postMessage({ setHeadMotionStateByPattern: true }, "*")
+                        isVideoRunning = false
+                        messageChannelCameraFrames.port1.postMessage({ closing: true })
+                        messageChannelCameraFrames.port1.close()
+
+                    }
+
+                    pumpFrames();
+                    log("stream obtained")
+                })
+            } else if (msg.videoStreamFromCameraStopRequest) {
+                if (currentVideoStream) {
+                    currentVideoStream.getTracks().forEach(x => x.stop())
+                    currentVideoStream = null
+
+                }
+            }
+
+        }
+
+        renderer.setupRetargeting(opts.url.files)
+
         renderer.onManagerPort = port => {
             console.log("on top manager port", port)
             managerWorker.addPort(port)
         }
+        // renderer.onManagerUnauthorizedPort = port => {
+        //     console.log("on top manager port", port)
+        //     managerWorkerUnauthorized.addPort(port)
+        // }
         renderer.getControllerPort().then(port => {
             vCamUi.controllerPort = port
         })
 
 
         renderer.onReady = () => {
+            renderer.setRoundOverlay(true)
+
             if (this.onReady) this.onReady()
         }
-        managerWorker.onMediaPort = port=>{
+        managerWorker.onMediaPort = port => {
             renderer.addMediaPort(port)
 
         }
-       
-        
+
+
         this.renderer = renderer;
 
-        const vCamStream = new VCamMediaStream(opts.size)
+        // const vCamStream = new VCamMediaStream(opts.size)
+        const vCamStream = new VCamMediaStream({ canvas: opts.canvas, ...opts.size })
         this.vCamStream = vCamStream
         renderer.addMediaPort(vCamStream.portToSend)
         this.iframe = iframe

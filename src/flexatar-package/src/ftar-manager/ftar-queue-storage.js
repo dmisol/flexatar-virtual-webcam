@@ -1,165 +1,181 @@
 
 
-function log(){
-    console.log("[FTAR_QUEUE_STORAGE]",...arguments)
+function log() {
+    console.log("[FTAR_QUEUE_STORAGE]", ...arguments)
 }
-export async function getCurrentUserId(userId){
-    const {currentUserId} = userId ? {currentUserId:userId}: await chrome.storage.local.get({ currentUserId:null })
-    if (!currentUserId) return {error:"not_authorized"}
-    return currentUserId
-}
+export async function setCurrentUserId(userId, userIdKey = "currentUserId") {
+    const storageSetSetup = {}
+    storageSetSetup[userIdKey] = userId
 
+    await chrome.storage.local.set(storageSetSetup)
+
+}
+export async function getCurrentUserId(userId, userIdKey = "currentUserId") {
+
+    if (userId) return userId;
+    const keySetup = {}
+    keySetup[userIdKey] = null
+    const currentUserId = await chrome.storage.local.get(keySetup)
+    log("currentUserId", currentUserId)
+    if (!currentUserId) return { error: "not_authorized" }
+    return currentUserId[userIdKey]
+}
 const FTAR_MAKE_QUEUE_LIST_ID = "_make_queue"
 const FTAR_PROCESSING_QUEUE_LIST_ID = "_processing_queue"
+const FTAR_SENDING_REQUEST_QUEUE_LIST_ID = "_sending_request_queue"
 const FTAR_ERROR_LIST_ID = "_error_queue"
 const FTAR_SUCCESS_LIST_ID = "_success_queue"
 const FTAR_BACKGROUND_LIST_ID = "_background_list"
+const FTAR_PRESET_LIST_ID = "_preset_list"
 
 export const Lists = {
     FTAR_MAKE_QUEUE_LIST_ID,
     FTAR_PROCESSING_QUEUE_LIST_ID,
     FTAR_ERROR_LIST_ID,
     FTAR_SUCCESS_LIST_ID,
-    FTAR_BACKGROUND_LIST_ID
+    FTAR_BACKGROUND_LIST_ID, FTAR_PRESET_LIST_ID,FTAR_SENDING_REQUEST_QUEUE_LIST_ID
 }
 
-export async function addToList(listID,listOfImgId,userId){
+export async function addToList(listID, listOfImgId, userId) {
     // const {currentUserId} = userId ? {currentUserId:userId}:await chrome.storage.local.get({ currentUserId:null })
     // if (!currentUserId) return {error:"not_authorized"}
     const currentUserId = await getCurrentUserId(userId)
     if (currentUserId.error) return currentUserId
 
-    const key = currentUserId+listID
+    const key = currentUserId + listID
     const objSchema = {}
     objSchema[key] = []
     const listOfImgIdSaved = (await chrome.storage.local.get(objSchema))[key]
     const listOfImgIdNew = listOfImgIdSaved.concat(listOfImgId)
     objSchema[key] = listOfImgIdNew
     await chrome.storage.local.set(objSchema)
-    return {success:true}
+    return { success: true }
 }
 
-export async function addToListAtBeginning(listID,listOfImgId,userId){
+export async function addToListAtBeginning(listID, listOfImgId, userId) {
     // const {currentUserId} = userId ? {currentUserId:userId}:await chrome.storage.local.get({ currentUserId:null })
     // if (!currentUserId) return {error:"not_authorized"}
     const currentUserId = await getCurrentUserId(userId)
     if (currentUserId.error) return currentUserId
 
-    const key = currentUserId+listID
+    const key = currentUserId + listID
     const objSchema = {}
     objSchema[key] = []
     const listOfImgIdSaved = (await chrome.storage.local.get(objSchema))[key]
     const listOfImgIdNew = listOfImgId.concat(listOfImgIdSaved)
     objSchema[key] = listOfImgIdNew
     await chrome.storage.local.set(objSchema)
-    return {success:true}
+    return { success: true }
 }
 
-async function writeToList(listID,listOfImgId,userId){
+async function writeToList(listID, listOfImgId, userId) {
     // const {currentUserId} = userId ? {currentUserId:userId}:await chrome.storage.local.get({ currentUserId:null })
     // if (!currentUserId) return {error:"not_authorized"}
     const currentUserId = await getCurrentUserId(userId)
     if (currentUserId.error) return currentUserId
-    const key = currentUserId+listID
+    const key = currentUserId + listID
     const objSchema = {}
     objSchema[key] = []
     // const listOfImgIdSaved = (await chrome.storage.local.get(objSchema))[key]
     const listOfImgIdNew = listOfImgId
     objSchema[key] = listOfImgIdNew
     await chrome.storage.local.set(objSchema)
-    return {success:true}
+    return { success: true }
 }
 
 
-export async function getList(listID,userId) {
+export async function getList(listID, userId) {
     // const {currentUserId} = userId ? {currentUserId:userId}: await chrome.storage.local.get({ currentUserId:null })
     // if (!currentUserId) return {error:"not_authorized"}
     const currentUserId = await getCurrentUserId(userId);
     if (currentUserId.error) return currentUserId;
 
-    const key = currentUserId+listID;
+    const key = currentUserId + listID;
     const objSchema = {};
     objSchema[key] = [];
     const listOfImgIdSaved = (await chrome.storage.local.get(objSchema))[key];
     return listOfImgIdSaved;
 }
 
-export async function clearList(listID){
-    log("clear list",listID)
+export async function clearList(listID, userId) {
+    log("clear list", listID)
     // const {currentUserId} = await chrome.storage.local.get({ currentUserId:null })
     // if (!currentUserId) return {error:"not_authorized"}
-    const currentUserId = await getCurrentUserId()
+    const currentUserId = await getCurrentUserId(userId)
     if (currentUserId.error) return currentUserId
-    const key = currentUserId+listID
-   
-    await chrome.storage.local.remove([key])
-    log("clear list done",listID)
-}
-async function printList(listID){
+    const key = currentUserId + listID
 
-    const currentUserId = await getCurrentUserId()
-    if (currentUserId.error) return currentUserId
-    const key = currentUserId+listID
-    
-    log(key,(await chrome.storage.local.get([key]))[key])
+    await chrome.storage.local.remove([key])
+    log("clear list done", key)
 }
-export async function clearAllLists(){
-    for ( const [key,val] of Object.entries(Lists)){
-        clearList(val)
-        log(key,"removed")
+async function printList(listID, userId) {
+
+    const currentUserId = await getCurrentUserId(userId)
+    if (currentUserId.error) return currentUserId
+    const key = currentUserId + listID
+
+    log(key, (await chrome.storage.local.get([key]))[key])
+}
+export async function clearAllLists(userId) {
+    for (const [key, val] of Object.entries(Lists)) {
+        clearList(val, userId)
+        log(key, "removed")
     }
 }
 
 
-export async function printAllLists(){
-    for ( const [key,val] of Object.entries(Lists)){
-        printList(val)
-        
+export async function printAllLists(userId) {
+    for (const [key, val] of Object.entries(Lists)) {
+        printList(val, userId)
+
     }
 }
 
 export const Prefixes = {
-    FTAR_SRC_IMG:"_src_img_",
-    IS_QUEUE_IN_PROGRESS:"_is_queue_in_progress_",
-    BACKGROUND_SRC_IMAGE:"_src_background_",
-    BACKGROUND_CURRENT_ID:"_current_id_background_"
+    FTAR_SRC_IMG: "_src_img_",
+    IS_QUEUE_IN_PROGRESS: "_is_queue_in_progress_",
+    BACKGROUND_SRC_IMAGE: "_src_background_",
+    BACKGROUND_CURRENT_ID: "_current_id_background_",
+    CURRENT_VIEWPORT_SIZE: "_current_viewport_size_",
+    CURRENT_VIEWPORT_SIZE: "_current_viewport_size_",
+    RETARGETING_CALIBRATION: "_retargeting_calibration_"
 }
-export async function saveWithKey(keyPrefix,keyModifier,val,userId){
+export async function saveWithKey(keyPrefix, keyModifier, val, userId) {
     const currentUserId = await getCurrentUserId(userId)
     if (currentUserId.error) return currentUserId
-    const key = currentUserId+keyPrefix+keyModifier
+    const key = currentUserId + keyPrefix + keyModifier
     const objSchema = {}
     objSchema[key] = val
-    try{
+    try {
         await chrome.storage.local.set(objSchema)
-        return {success:true}
-    }catch(e){
+        return { success: true }
+    } catch (e) {
         log(e)
-        return {error:"unknown"}
+        return { error: "unknown" }
     }
 
 }
 
-export async function getByKey(keyPrefix,keyModifier,userId){
+export async function getByKey(keyPrefix, keyModifier, userId,def=null) {
     const currentUserId = await getCurrentUserId(userId)
     if (currentUserId.error) return currentUserId
-    const key = currentUserId+keyPrefix+keyModifier
+    const key = currentUserId + keyPrefix + keyModifier
     const objSchema = {}
     objSchema[key] = null
-   
+
     const retrieved = await chrome.storage.local.get(objSchema)
-    return retrieved[key] 
+    return retrieved[key] === null ? def : retrieved[key]
 }
 
-export async function removeByKey(keyPrefix,keyModifier,userId){
+export async function removeByKey(keyPrefix, keyModifier, userId) {
     const currentUserId = await getCurrentUserId(userId)
     if (currentUserId.error) return currentUserId
-    const key = currentUserId+keyPrefix+keyModifier
+    const key = currentUserId + keyPrefix + keyModifier
     // const objSchema = {}
     // objSchema[key] = null
-   
-   await chrome.storage.local.remove([key])
-    
+
+    await chrome.storage.local.remove([key])
+
 }
 
 // export async function storeImageToMakeFtar(msg){
@@ -177,31 +193,31 @@ export async function removeByKey(keyPrefix,keyModifier,userId){
 
 
 
-export async function removeFromList(listId,ftarImgId,userId,prop="id"){
-    const queueList = await getList(listId,userId)
+export async function removeFromList(listId, ftarImgId, userId, prop = "id") {
+    const queueList = await getList(listId, userId)
     let condition = ftarImgId[prop]
-    if (!condition){
+    if (!condition) {
         condition = ftarImgId
     }
-    log("queueList",queueList,listId)
-    const newList = queueList.filter(x => (x[prop] || x) !==condition)
-    log("newList",newList)
+    log("queueList", queueList, listId)
+    const newList = queueList.filter(x => (x[prop] || x) !== condition)
+    log("newList", newList)
 
-    await writeToList(listId,newList,userId)
+    await writeToList(listId, newList, userId)
 }
 
-export async function shortenList(listId,maxElementCount,userId){
-    let queueList = await getList(listId,userId)
-    if (queueList.length>maxElementCount){
-        const toDelete = queueList.slice(maxElementCount,queueList.length)
-        queueList = queueList.slice(0,maxElementCount)
-        for (const entry of toDelete){
-            await removeByKey(Prefixes.FTAR_SRC_IMG,entry.id,userId)
+export async function shortenList(listId, maxElementCount, userId) {
+    let queueList = await getList(listId, userId)
+    if (queueList.length > maxElementCount) {
+        const toDelete = queueList.slice(maxElementCount, queueList.length)
+        queueList = queueList.slice(0, maxElementCount)
+        for (const entry of toDelete) {
+            await removeByKey(Prefixes.FTAR_SRC_IMG, entry.id, userId)
 
         }
     }
 
-    await writeToList(listId,queueList,userId)
+    await writeToList(listId, queueList, userId)
 }
 
 
@@ -211,28 +227,52 @@ export async function shortenList(listId,maxElementCount,userId){
 //     return {success:true}
 // }
 
-export async function moveListEntry(fromListId,toListId,value,userId){
-    await removeFromList(fromListId,value,userId)
-    await addToListAtBeginning(toListId,[value],userId)
+export async function moveListEntry(fromListId, toListId, value, userId) {
+    await removeFromList(fromListId, value, userId)
+    await addToListAtBeginning(toListId, [value], userId)
 }
 
-export function addBackgroundToStorage(dataUrl,userId){
-    return new Promise(resolve=>{
+export function addBackgroundToStorage(dataUrl, userId) {
+    return new Promise(resolve => {
         const imageId = crypto.randomUUID()
-        getList(Lists.FTAR_BACKGROUND_LIST_ID,userId).then(result=>{
-            log("background list",result)
-            
-            addToList(Lists.FTAR_BACKGROUND_LIST_ID,[imageId],userId).then(result=>{
-                log("add to list",result)
-                saveWithKey(Prefixes.BACKGROUND_SRC_IMAGE,imageId,dataUrl,userId).then(result=>{
-                    log("BACKGROUND_SRC_IMG saved",result)
+        log("background imageId", imageId)
+        getList(Lists.FTAR_BACKGROUND_LIST_ID, userId).then(result => {
+            log("background list", result)
+
+            addToList(Lists.FTAR_BACKGROUND_LIST_ID, [imageId], userId).then(result => {
+                log("add to list", result)
+                saveWithKey(Prefixes.BACKGROUND_SRC_IMAGE, imageId, dataUrl, userId).then(result => {
+                    log("BACKGROUND_SRC_IMG saved", result)
                     resolve(imageId)
                 })
-    
+
             })
         })
-            
+
     })
-    
+
 
 }
+
+
+// export function addPresetToStorage(dataUrl, userId) {
+//     return new Promise(resolve => {
+//         const imageId = crypto.randomUUID()
+//          log("background imageId", imageId)
+//         getList(Lists.FTAR_PRESET_LIST_ID, userId).then(result => {
+//             log("background list", result)
+
+//             addToList(Lists.FTAR_PRESET_LIST_ID, [imageId], userId).then(result => {
+//                 log("add to list", result)
+//                 saveWithKey(Prefixes.BACKGROUND_SRC_IMAGE, imageId, dataUrl, userId).then(result => {
+//                     log("BACKGROUND_SRC_IMG saved", result)
+//                     resolve(imageId)
+//                 })
+
+//             })
+//         })
+
+//     })
+
+
+// }

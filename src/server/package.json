@@ -20,6 +20,7 @@
     "worker-loader": "^3.0.8"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "terser-webpack-plugin": "^5.3.14"
   }

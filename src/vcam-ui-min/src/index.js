@@ -3,230 +3,288 @@
 // import {eventProvider} from "./message-listener-impls/eventsFromParentHtml.js"
 // import {sendToParent} from "./message-sender-impls/sendToParentHtml.js"
 // import {getFlexatarWraped,getPreviewWraped} from "./caching.js"
-import {Texts} from "./texts.js"
+import { Texts } from "./texts.js"
 // import {MediaConnectionProvider} from "../../util/rtc-connection.js"
-import {checkFileType,imageMimeTypes} from "../../util/util.js"
-import {fileToStringConverter} from "../../util/fileToStringConverter.js"
-import {Manager,ManagerConnection} from "../../flexatar-package/src/ftar-manager/ftar-connection.js"
+import { checkFileType, imageMimeTypes } from "../../util/util.js"
+import { fileToStringConverter } from "../../util/fileToStringConverter.js"
+import { Manager, ManagerConnection } from "../../flexatar-package/src/ftar-manager/ftar-connection.js"
 
 const Ftar = {
-    Manager,ManagerConnection
+    Manager, ManagerConnection
 }
 
 
-function log(){
-    console.log("[FTAR_UI]",...arguments)
+function log() {
+    console.log("[FTAR_UI]", ...arguments)
 }
 
 
 console.log("poast getFtarPreview")
 // const channel = new MessageChannel();
 const connection = new Ftar.ManagerConnection()
-connection.onEffectMessage = msg =>{
+// let activeConnection = connection
+
+connection.onEffectMessage = msg => {
     flexatarControllerPort.postMessage(msg)
 
 }
-connection.onSlot2 = msg =>{
-    log("slot2 ",msg.slot2)
-    flexatarControllerPort.postMessage(msg,[msg.slot2])
+connection.onSlot2 = msg => {
+    // log("slot2 ", msg.slot2)
+    flexatarControllerPort.postMessage(msg, [msg.slot2])
+}
+
+connection.onSlot1 = msg => {
+    log("slot1 from effect", msg.ftarLink1)
+    flexatarControllerPort.postMessage(msg, [msg.slot1])
 }
 
 connection.onEffectStateRequest = msg => {
     log("effectStateRequest")
-    flexatarControllerPortPromise.then(port=>{
+    flexatarControllerPortPromise.then(port => {
         port.postMessage(msg)
     })
 
 }
 
-window.parent.postMessage({ftarUIPort:connection.outPort},"*",[connection.outPort])
+window.parent.postMessage({ ftarUIPort: connection.outPort }, "*", [connection.outPort])
 
-let flexatarControllerPort  
-const flexatarControllerPortPromise = new Promise(resolve=>{
-    window.addEventListener("message",e=>{
-        if (e.data && e.data.flexatarControllerPort){
-            log("ftar ui flexatarControllerPort",e.data.flexatarControllerPort)
+// const connectionUnauthorized = new Ftar.ManagerConnection()
+log("posting ftarUIPortUnauthorized port")
+// window.parent.postMessage({ ftarUIPortUnauthorized: connectionUnauthorized.outPort }, "*", [connectionUnauthorized.outPort])
+
+
+let flexatarControllerPort
+const flexatarControllerPortPromise = new Promise(resolve => {
+    window.addEventListener("message", e => {
+        if (e.data && e.data.flexatarControllerPort) {
+            log("ftar ui flexatarControllerPort", e.data.flexatarControllerPort)
             flexatarControllerPort = e.data.flexatarControllerPort
-            flexatarControllerPort.onmessage = (e) =>{
+            flexatarControllerPort.onmessage = (e) => {
                 const msg = e.data;
                 if (!msg) return
-                if (msg.effectStateResponse){
+                if (msg.effectStateResponse) {
                     log("effectStateResponse")
                     connection.sendEffectState(msg)
-                } 
+                }
             }
             resolve(flexatarControllerPort)
-        }else if (e.data && e.data.closing){
+        } else if (e.data && e.data.closing) {
             console.log("iframe controller port close")
-            if (flexatarControllerPort){
-                flexatarControllerPort.postMessage({closing:true})
+            if (flexatarControllerPort) {
+                flexatarControllerPort.postMessage({ closing: true })
                 flexatarControllerPort.close()
                 flexatarControllerPort = null
             }
             connection.close()
+            // connectionUnauthorized.close()
         }
     })
-       
+
 })
 
 
 
-    confirmButton.onclick = async () =>{
-        confirmButton.classList.add("invisible")
-        trashIcon.classList.add("invisible")
+confirmButton.onclick = async () => {
+    confirmButton.classList.add("invisible")
+    trashIcon.classList.add("invisible")
+    crossIcon.classList.add("invisible")
+    waitIcon.classList.remove("invisible")
+    waitIcon.classList.add("roating")
+    trashButton.disabled = true
+
+    if (isBkgBlockExpanded) {
+        if (noBackgroundButton !== oldBkg) {
+            await connection.deleteBackground(oldBkg.id)
+
+            if (oldBkg)
+                oldBkg.remove()
+            imageBackgroundContainer.firstElementChild?.click()
+        }
+    } else {
+        const currentElement = globalSelectedFtarElement
+        const deletionResult = await deleteFtar(globalSelectedFtar)
+
+        if (deletionResult) {
+            currentElement.remove()
+            if (previewListHolder.children.length > 0) {
+                if (currentElement === globalSelectedFtarElement)
+                    previewListHolder.children[0]?.click()
+            } else {
+                globalSelectedFtar = null
+                emptyBlock.textContent = Texts.EMPTY
+
+            }
+        }
+    }
+
+
+    trashIcon.classList.remove("invisible")
+    waitIcon.classList.add("invisible")
+    waitIcon.classList.remove("roating")
+    isTrashPressed = !isTrashPressed
+
+}
+
+async function loadFtarListPreviews(noCache, selectedFtar) {
+    // const listUnauthorized = await connectionUnauthorized.getList({ preview: true, noCache: false })
+
+
+    const list = await connection.getList({ preview: true, noCache })
+    log("list", list)
+    // return
+    if (list.error) {
+        showSubscriptionError()
+        return
+    }
+
+    // if (!selectedFtar) {
+    //     selectedFtar = list[0]?.id
+    // }
+    // if (!selectedFtar) {
+    //     selectedFtar = listUnauthorized[0]?.id
+    // }
+
+    log("selectedFtar", selectedFtar)
+    for (const listElement of list) {
+        const imgArrayBuffer = await connection.getPreview(listElement)
+        const blob = new Blob([imgArrayBuffer], { type: "image/jpg" }); // Change type if needed
+        const imgSrc = URL.createObjectURL(blob);
+        const { holder } = await addPreview(listElement, imgSrc, null, selectedFtar.id, connection)
+    }
+
+    // for (const { id, is_myx } of listUnauthorized) {
+    //     const imgArrayBuffer = await connectionUnauthorized.getPreview(id)
+    //     const blob = new Blob([imgArrayBuffer], { type: "image/jpg" }); // Change type if needed
+    //     const imgSrc = URL.createObjectURL(blob);
+    //     const { holder } = await addPreview({ id, isUnauthorized: true }, imgSrc, null, selectedFtar, connectionUnauthorized)
+    // }
+}
+
+reloadFtarListButton.onclick = async () => {
+    log("reload clicked")
+    reloadFtarListButton.disabled = true
+    reloadIcon.classList.add("roating")
+
+    // updateUserInfo({noCache:true})
+
+    // const selectedFtarId = selecteFtar.element.id
+    while (previewListHolder.children.length > 0) {
+        previewListHolder.children[0]?.remove()
+    }
+    // let selectedFtar = (await connection.getSelectedFtar()).selectedFtar
+    // if (!selectedFtar) {
+    //     selectedFtar =( await connectionUnauthorized.getSelectedFtar()).selectedFtar
+    // }
+
+    // selecteFtar = { ftarId: selectedFtar }
+    let currentFtar = await connection.getCurrentFtar()
+    await loadFtarListPreviews(true, currentFtar)
+
+    // const reloadPromise = reload()
+    // const currentFtar = await connection.getCurrentFtar()
+    // if (currentFtar) {
+    //     log("request listUnauthorized")
+
+    //     log("listUnauthorized", listUnauthorized)
+
+    //     selecteFtar = { ftarId: currentFtar.id }
+
+    //    
+
+    // } else {
+    //     emptyBlock.textContent = Texts.EMPTY
+    // }
+    reloadIcon.classList.remove("roating")
+    reloadFtarListButton.disabled = false
+}
+
+trashButton.onclick = () => {
+    if (isTrashPressed) {
         crossIcon.classList.add("invisible")
-        waitIcon.classList.remove("invisible")
-        waitIcon.classList.add("roating")
-        trashButton.disabled = true
-
-        if (isBkgBlockExpanded){
-            if (noBackgroundButton !== oldBkg){
-                await connection.deleteBackground(oldBkg.id)
-            
-                if (oldBkg)
-                    oldBkg.remove()
-                imageBackgroundContainer.firstElementChild?.click()
-            }
-        }else{
-            const currentElement = selecteFtar.element
-            const deletionResult = await deleteFtar(selecteFtar.ftarId)
-    
-            if (deletionResult){
-                currentElement.remove()
-                if (previewListHolder.children.length>0){
-                    if (currentElement === selecteFtar.element)
-                        previewListHolder.children[0]?.click()
-                }else{
-                    selecteFtar.ftarId = null
-                    emptyBlock.textContent = Texts.EMPTY
-                    
-                }
-            }
-        }
-        
-      
         trashIcon.classList.remove("invisible")
-        waitIcon.classList.add("invisible")
-        waitIcon.classList.remove("roating")
-        isTrashPressed = !isTrashPressed
-    
+        confirmButton.classList.add("invisible")
+    } else {
+        confirmButton.classList.remove("invisible")
+        trashIcon.classList.add("invisible")
+        crossIcon.classList.remove("invisible")
     }
+    isTrashPressed = !isTrashPressed
 
-    reloadFtarListButton.onclick = async ()=>{
-        reloadFtarListButton.disabled = true
-        reloadIcon.classList.add("roating")
-
-        // updateUserInfo({noCache:true})
-    
-        // const selectedFtarId = selecteFtar.element.id
-        while (previewListHolder.children.length>0){
-            previewListHolder.children[0]?.remove()
-        }
-        // const reloadPromise = reload()
-        const currentFtar = await connection.getCurrentFtar()
-        if (currentFtar){
-            selecteFtar = {ftarId:currentFtar.id}
-            const list = await connection.getList({preview:true,noCache:true})
-            if (list.error){
-                showSubscriptionError()
-                return
-            }
-        
-            for(const {id,is_myx} of list){
-                const imgArrayBuffer = await connection.getPreview(id)
-                const blob = new Blob([imgArrayBuffer], { type: "image/jpg" }); // Change type if needed
-                const imgSrc = URL.createObjectURL(blob);
-                const {holder}= await addPreview({id,is_myx},imgSrc)
-            }
-        }else{
-            emptyBlock.textContent = Texts.EMPTY
-        }
-        reloadIcon.classList.remove("roating")
-        reloadFtarListButton.disabled = false
-    }
-
-    trashButton.onclick = () => {
-        if (isTrashPressed){
-            crossIcon.classList.add("invisible")
-            trashIcon.classList.remove("invisible")
-            confirmButton.classList.add("invisible")
-        }else{
-            confirmButton.classList.remove("invisible")
-            trashIcon.classList.add("invisible")
-            crossIcon.classList.remove("invisible")
-        }
-        isTrashPressed = !isTrashPressed
-       
-    }
+}
 
 
 // })
 
 reloadIcon.classList.add("roating")
 
-function updateUserInfo(opts){
+function updateUserInfo(opts) {
     log("try to obtain user info")
-    connection.userInfo(opts).then(inf=>{
-        log("user info",inf)
+    connection.userInfo(opts).then(inf => {
+        log("user info", inf)
         // ftarCountSign.textContent =  inf.FtarCount
 
     })
 }
 
-function showSubscriptionError(){
+function showSubscriptionError() {
     reloadIcon.classList.remove("roating")
     plusCircle.classList.add('rotated');
     makeTextHolder.textContent = Texts.SUBSCRIPTION_END
 }
 connection.onNewFlexatar = async ftarLink => {
-    log("new flexatar",ftarLink)
+    log("new flexatar", ftarLink)
     if (ftarLink.error) return
-    const imgArrayBuffer = await connection.getPreview(ftarLink.id)
+    const imgArrayBuffer = await connection.getPreview(ftarLink)
     const blob = new Blob([imgArrayBuffer], { type: "image/jpg" }); // Change type if needed
     const imgSrc = URL.createObjectURL(blob);
-    const {holder}= await addPreview({id:ftarLink.id,is_myx:ftarLink.is_myx},imgSrc,true)
-    
+    const { holder } = await addPreview(ftarLink, imgSrc, true, ftarLink.id, connection)
+
     // holder.click()
 }
-connection.ready.then(async ()=>{
+Promise.all([connection.ready]).then(async () => {
     // updateUserInfo()
 
-    const currentFtar = await connection.getCurrentFtar()
-    if (currentFtar.error){
+    // const currentFtar = await connection.getCurrentFtar()
+    // if (currentFtar.error) {
+    //     showSubscriptionError()
+    //     return
+    // }
+    // log("page ready, current ftar is", currentFtar)
+    // if (currentFtar) {
+    //     selecteFtar = { ftarId: currentFtar.id }
+    // activeConnection = (await connection.getManagerName()) === "empty" ? connectionUnauthorized : connection
+    // loadBackgroundList()
+
+    let currentFtar = await connection.getCurrentFtar()
+    // if (!selectedFtar) {
+    //     selectedFtar = (await connectionUnauthorized.getSelectedFtar()).selectedFtar
+    // }
+    await loadFtarListPreviews(false, currentFtar)
+    /*
+    const list = await connection.getList({ preview: true })
+    log("ftar list:", list)
+    if (list.error) {
         showSubscriptionError()
+
         return
     }
-    log("page ready, current ftar is",currentFtar)
-    if (currentFtar){
-        selecteFtar = {ftarId:currentFtar.id}
-
-        const list = await connection.getList({preview:true})
-        log("ftar list:",list)
-        if (list.error){
-            showSubscriptionError()
-            
-            return
-        }
-        // let firstFtar = true
-        for(const {id,is_myx} of list){
-            const imgArrayBuffer = await connection.getPreview(id)
-            const blob = new Blob([imgArrayBuffer], { type: "image/jpg" }); // Change type if needed
-            const imgSrc = URL.createObjectURL(blob);
-            const {holder} = await addPreview({id,is_myx},imgSrc)
-            // if (firstFtar){
-            //     holder.click()
-            //     firstFtar = false
-            // }
-        }
-    }else{
-        log("setting empt block")
-        emptyBlock.textContent = Texts.EMPTY
+    // let firstFtar = true
+    for (const { id, is_myx } of list) {
+        const imgArrayBuffer = await connection.getPreview(id)
+        const blob = new Blob([imgArrayBuffer], { type: "image/jpg" }); // Change type if needed
+        const imgSrc = URL.createObjectURL(blob);
+        const { holder } = await addPreview({ id, is_myx }, imgSrc)
     }
-    
+    */
+    // } else {
+    //     log("setting empt block")
+    //         emptyBlock.textContent = Texts.EMPTY
+    // }
+
     reloadIcon.classList.remove("roating")
 })
 // window.parent.postMessage({getFtarPreview:true,uiToRenderEngine:true},"*")
-const previewLoadPromiseResolvers = {slot1:{},slot2:{}}
+const previewLoadPromiseResolvers = { slot1: {}, slot2: {} }
 /*
 channel.port1.addEventListener("message",event=>{
     const {data} = event
@@ -248,7 +306,7 @@ channel.port1.addEventListener("message",event=>{
 })
 */
 
-   
+
 
 
 async function blobToDataURL(blobUrl) {
@@ -266,13 +324,13 @@ const restoreFileFromString = fileToStringConverter().restoreFileFromString
 
 let effectAmount = 0.5
 const effectCodeDict = {
-    no:0,
-    morph:1,
-    hybrid:2
+    no: 0,
+    morph: 1,
+    hybrid: 2
 }
 let nonAnimatedEffect = { mode: 0, parameter: 0 }
 
-window.onload = function() {
+window.onload = function () {
     window.scrollTo(0, 200); // Scrolls 200px down
 };
 
@@ -281,7 +339,7 @@ allowAuidoOverlay.textContent = Texts.ALLOW_AUDIO
 const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
 let iframeId;
-let externalControl=false;
+let externalControl = false;
 
 
 function fileToArrayBuffer(file) {
@@ -290,7 +348,7 @@ function fileToArrayBuffer(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsArrayBuffer(file);
-        reader.onload = () => resolve({buffer:reader.result,fileType,fileName});
+        reader.onload = () => resolve({ buffer: reader.result, fileType, fileName });
         reader.onerror = error => reject(error);
     });
 }
@@ -298,39 +356,43 @@ function fileToArrayBuffer(file) {
 
 
 
-let inputHolder
 
-function createDropZone(element,handler){
-    const input=document.createElement('input');
-    inputHolder = document.createElement('form');
+
+function createDropZone(element, handler) {
+    const input = document.createElement('input');
+    const inputHolder = document.createElement('form');
     inputHolder.appendChild(input)
-    input.type="file";
+    input.type = "file";
 
-    input.accept="image/*"
+    input.accept = "image/*"
 
-    input.onchange = e => handler(e)
+    input.onchange = e => {
+        handler(e);
+        inputHolder.reset();
+    }
 
-    element.onclick = () =>{
+    element.onclick = () => {
         input.click()
     }
-    element.ondragover = (e)=>{
+    element.ondragover = (e) => {
         e.preventDefault();
         element.classList.add('hover');
     }
-    
-    element.ondragleave = (e)=>{
+
+    element.ondragleave = (e) => {
         element.classList.remove('hover');
     }
-    element.ondrop = e =>{
+    element.ondrop = e => {
         e.preventDefault();
-        log("on drop",e.dataTransfer)
+        log("on drop", e.dataTransfer)
         element.classList.remove('hover');
         const files = e.dataTransfer.files;
         handler({ target: { files } });
+         inputHolder.reset();
     }
 }
 
-async function createFtar(file){
+async function createFtar(file) {
     const fileMessage = await fileToArrayBuffer(file)
     fileMessage.makeFtar = true
     return await connection.makeFlexatar(file)
@@ -338,7 +400,7 @@ async function createFtar(file){
 
 }
 
-function addMakeFlexatarButton(){
+function addMakeFlexatarButton() {
 
     const holder = createFlexatarHolder
     const circle = plusCircle
@@ -346,24 +408,24 @@ function addMakeFlexatarButton(){
     text.textContent = Texts.DROP_PHOTO
 
     const blockOverlay = makeOverlayElement
-  
-    
-    const setErrorSign = (infoText)=>{
+
+
+    const setErrorSign = (infoText) => {
         circle.classList.add('rotated');
         text.textContent = infoText
-        return ()=>{
+        return () => {
             circle.classList.remove('rotated');
             text.textContent = Texts.DROP_PHOTO
         }
     }
-    
-    const setLoader = ()=>{
+
+    const setLoader = () => {
         circle.style.display = "none"
         text.style.display = "none"
         blockOverlay.style.display = "block"
 
 
-        return ()=>{
+        return () => {
             circle.style.display = "block"
             text.style.display = "block"
             blockOverlay.style.display = "none"
@@ -372,32 +434,33 @@ function addMakeFlexatarButton(){
 
 
     let removeErrorSign
-    createDropZone(holder,async (e)=>{
+    createDropZone(holder, async (e) => {
         let file = e.target.files[0];
 
         if (!file) return
         log("photo obtained")
-        if (removeErrorSign){
+        if (removeErrorSign) {
             removeErrorSign()
             removeErrorSign = null
         }
 
         const removeLoader = setLoader()
 
-       
+
         const fileType = file.type;
-       
-        if (!checkFileType(fileType,imageMimeTypes)){
+
+        if (!checkFileType(fileType, imageMimeTypes)) {
             removeErrorSign = setErrorSign(Texts.NOT_PHOTO)
             removeLoader()
             return
         }
 
         const ftarLink = await createFtar(file)
+        log("ftarLink", ftarLink)
         removeLoader()
-        inputHolder.reset()
-        log("ftarLink",ftarLink)
-       
+
+
+
 
     })
 
@@ -408,8 +471,8 @@ addMakeFlexatarButton()
 
 const ftarLinkDict = {}
 
-async function previewLoader(ftarList,previewReadyCallback){
-    for (const ftarLink of ftarList){
+async function previewLoader(ftarList, previewReadyCallback) {
+    for (const ftarLink of ftarList) {
         ftarLinkDict[ftarLink.id] = ftarLink
         /*
         const previewImg = await getPreviewWraped(ftarLink);
@@ -424,11 +487,14 @@ async function previewLoader(ftarList,previewReadyCallback){
 
 let oldClicked
 let selecteFtar
-async function addPreview(ftarLink,previewImage,first){
+let globalSelectedFtar
+let globalSelectedFtarElement
+let globalCurrentConnection
+async function addPreview(ftarLink, previewImage, first, selectedFtarId, connectionProvider) {
     ftarLinkDict[ftarLink.id] = ftarLink
     const previewImg = previewImage;
     // const previewImg = await getPreviewWraped(ftarLink);
-            
+
     const holder = document.createElement("span")
     holder.className = "item-holder"
 
@@ -437,14 +503,14 @@ async function addPreview(ftarLink,previewImage,first){
     preview.src = previewImg
     preview.draggable = false
     preview.style.cursor = "pointer"
-    preview.style.display = 'block'; 
-    preview.style.width = '100%'; 
-    preview.style.height = 'auto'; 
-    preview.style.margin = '0px'; 
-    preview.style.padding = '0px'; 
-    preview.style.boxSizing = 'border-box'; 
-    preview.style.lineHeight = '0px'; 
-    preview.style.verticalAlign = 'top'; 
+    preview.style.display = 'block';
+    preview.style.width = '100%';
+    preview.style.height = 'auto';
+    preview.style.margin = '0px';
+    preview.style.padding = '0px';
+    preview.style.boxSizing = 'border-box';
+    preview.style.lineHeight = '0px';
+    preview.style.verticalAlign = 'top';
 
     preview.style.objectFit = 'contain';
     holder.appendChild(preview)
@@ -454,56 +520,61 @@ async function addPreview(ftarLink,previewImage,first){
     const loader = document.createElement("span")
     loader.className = "loader"
 
-        if (first){
-            previewListHolder.insertBefore(holder, previewListHolder.firstChild);
+    if (first) {
+        previewListHolder.insertBefore(holder, previewListHolder.firstChild);
 
-        }else{
-            previewListHolder.appendChild(holder);
+    } else {
+        previewListHolder.appendChild(holder);
 
-        }
+    }
 
-    holder.onclick = async() =>{
-        
-       
+    holder.onclick = async () => {
 
-        if (oldClicked){
-            
+
+
+        if (oldClicked) {
+
             oldClicked.classList.remove("selected-item")
         }
-      
+
         oldClicked = holder
         holder.classList.add("selected-item")
-        if (selecteFtar.ftarId === ftarLink.id) return
-        selecteFtar = {element:holder,ftarId:ftarLink.id}
+        // if (globalSelectedFtar === ftarLink.id) return
+
+        globalSelectedFtar = ftarLink.id
+        globalSelectedFtarElement = holder
+        globalCurrentConnection = connectionProvider
+
+        // selecteFtar = { element: holder, ftarId: ftarLink.id }
 
         holder.appendChild(loader)
-        const ftarBuffer = await connection.getFlexatar(ftarLink.id,ftarLink.is_myx)
-        console.log("ftarBuffer",ftarBuffer)
-        if (flexatarControllerPort){
-            flexatarControllerPort.postMessage({slot1:ftarBuffer,id:ftarLink.id},[ftarBuffer])
-            // flexatarControllerPortPromise.then(port=>{port.postMessage({slot1:ftarBuffer,id:ftarLink.id},[ftarBuffer])})
+        // await connection.setSelectedFtar(null)
+        // await connectionUnauthorized.setSelectedFtar(null)
+        // await connectionProvider.setSelectedFtar(ftarLink.id)
+        const ftarBuffer = await connection.getFlexatar(ftarLink, true)
+
+        console.log("ftarBuffer", ftarBuffer)
+
+        if (flexatarControllerPort) {
+            flexatarControllerPort.postMessage({ slot1: ftarBuffer, id: ftarLink.id }, [ftarBuffer])
+            flexatarControllerPort.postMessage({ noEffect: true })
+
         }
 
 
         loader.remove()
-        // try{
-            
-        //     // SEND MESSAGE TO SETUP FLEXATAR TO SLOT !
-        //     /*
-        //     renderer.slot1 = await getFlexatarWraped(ftarLink,getTokenInst)
-        //     renderer.start()
-        //     */
-        // }finally{
-           
-        // }
-        
+
+
     }
-    console.log("selecteFtar",selecteFtar,ftarLink.id)
-    if (selecteFtar && selecteFtar.ftarId === ftarLink.id){
-        selecteFtar.element = holder
+    // console.log("selecteFtar", selecteFtar, ftarLink.id)
+
+    if (selectedFtarId === ftarLink.id) {
+        // globalSelectedFtar = selectedFtarId
+        globalSelectedFtarElement = holder
+        // selecteFtar.element = holder
         holder.click()
     }
-    return {holder,previewImg}
+    return { holder, previewImg }
 
 }
 
@@ -512,14 +583,14 @@ async function addPreview(ftarLink,previewImage,first){
 trashButton.classList.remove("invisible")
 let isTrashPressed = false
 
-function requestUserInfo(){
-    
+function requestUserInfo() {
+
 
 }
 requestUserInfo()
 
-async function deleteFtar(ftarId){
-    return (await connection.deleteFlexatar(ftarId)).success
+async function deleteFtar(ftarId) {
+    return (await globalCurrentConnection.deleteFlexatar(ftarId)).success
 
 }
 
@@ -531,39 +602,39 @@ reloadFtarListButton.classList.remove("invisible")
 
 
 let isDragging = false;
-let  startY,  scrollY;
+let startY, scrollY;
 let speedTimer
 
 document.addEventListener('mousedown', (e) => {
-    if (timer)clearInterval(timer)
+    if (timer) clearInterval(timer)
     isDragging = true;
     startY = e.screenY;
 
     scrollY = window.scrollY;
-    
+
 });
-let oldY= 0
-let speed =0
+let oldY = 0
+let speed = 0
 let avarspeed = 0
 let deltaY
 let scrollStarted = false
 document.addEventListener('mousemove', (e) => {
     if (!isDragging) return; // Exit if not dragging
     e.preventDefault();
-    
+
     deltaY = startY - e.screenY;
-   
-    if (!scrollStarted) if (Math.abs(deltaY) < 10  )  {
-        
+
+    if (!scrollStarted) if (Math.abs(deltaY) < 10) {
+
         return;
     }
-    if (!scrollStarted){
+    if (!scrollStarted) {
         avarspeed = 0
-        speedTimer = setInterval(()=>{
-            speed = deltaY-oldY
+        speedTimer = setInterval(() => {
+            speed = deltaY - oldY
             oldY = deltaY
-            avarspeed = (avarspeed + speed)*0.5
-        },100)
+            avarspeed = (avarspeed + speed) * 0.5
+        }, 100)
     }
     scrollStarted = true
     document.body.style.pointerEvents = "none"
@@ -572,29 +643,29 @@ document.addEventListener('mousemove', (e) => {
 
 });
 let timer
-function stopDarg(){
-   
+function stopDarg() {
+
     isDragging = false;
     oldY = 0
-    if (speedTimer)clearInterval(speedTimer)
-   
+    if (speedTimer) clearInterval(speedTimer)
+
     document.body.style.pointerEvents = "auto"
     if (!scrollStarted) return
-    scrollStarted=false
+    scrollStarted = false
     scrollY = window.scrollY;
-    speed=avarspeed*0.5
-    timer = setInterval(()=>{
+    speed = avarspeed * 0.5
+    timer = setInterval(() => {
         scrollY += speed
         window.scrollTo(0, scrollY);
         speed *= 0.9
-        if (Math.abs(speed)<1){
+        if (Math.abs(speed) < 1) {
             clearInterval(timer)
         }
-    },50)
+    }, 50)
     const t = timer
-    setTimeout(()=>{
+    setTimeout(() => {
         clearInterval(t)
-    },2000)
+    }, 2000)
 
 
 }
@@ -602,40 +673,41 @@ document.addEventListener('mouseup', stopDarg);
 document.addEventListener('mouseleave', stopDarg);
 
 
-expandEmoButton.onclick = () =>{
+
+emotionText.onclick = expandEmoButton.onclick = () => {
     emoContainer.classList.remove("invisible")
     closeEmoButton.classList.remove("invisible")
     expandEmoButton.classList.add("invisible")
 }
-closeEmoButton.onclick = () =>{
+closeEmoButton.onclick = () => {
     emoContainer.classList.add("invisible")
     closeEmoButton.classList.add("invisible")
     expandEmoButton.classList.remove("invisible")
 }
 
-  
-const emoButtons = [Joy,Anger,Sadness,Surprise,Disgust,Confusion]
+
+const emoButtons = [Joy, Anger, Sadness, Surprise, Disgust, Confusion]
 let oldPressd = AllEmo
 oldPressd.classList.add("color-emo-selected")
-for (const b of emoButtons){
-    b.onclick = () =>{
+for (const b of emoButtons) {
+    b.onclick = () => {
         oldPressd.classList.remove("color-emo-selected")
         oldPressd = b
         oldPressd.classList.add("color-emo-selected")
-        if (flexatarControllerPort){
-            flexatarControllerPort.postMessage({animation:{pattern:b.id}})
+        if (flexatarControllerPort) {
+            flexatarControllerPort.postMessage({ animation: { pattern: b.id } })
         }
         // connection.setAnimationPattern(b.id)
         // window.parent.postMessage({uiToRenderEngine:true,setAnimation:true,pattern:b.id},"*")
         // renderer.animator.currentAnimationPattern = b.id
     }
 }
-AllEmo.onclick = () =>{
+AllEmo.onclick = () => {
     oldPressd.classList.remove("color-emo-selected")
     oldPressd = AllEmo
     oldPressd.classList.add("color-emo-selected")
-    if (flexatarControllerPort){
-        flexatarControllerPort.postMessage({animation:{pattern:null}})
+    if (flexatarControllerPort) {
+        flexatarControllerPort.postMessage({ animation: { pattern: null } })
     }
     // window.parent.postMessage({uiToRenderEngine:true,setAnimation:true,pattern:null},"*")
     // renderer.animator.currentAnimationPattern = null
@@ -646,33 +718,22 @@ AllEmo.onclick = () =>{
 let oldBkg
 let isBkgBlockExpanded = false
 
-expandBkgButton.onclick = async ()=>{
-    if (isBkgBlockExpanded){
+backgroundText.onclick = expandBkgButton.onclick = async () => {
+    if (isBkgBlockExpanded) {
         // bkgExpander.classList.remove("full-height")
         expandBkgButton.classList.add("rot180")
         dropBackgroundContainer.classList.add("invisible")
         imageBackgroundContainer.querySelectorAll('img').forEach(img => img.remove());
         bkgExpander.classList.remove("full-height")
-    }else{
+    } else {
         // bkgExpander.classList.add("full-height")
         expandBkgButton.classList.remove("rot180")
         dropBackgroundContainer.classList.remove("invisible")
         dropBackgroundText.textContent = Texts.DROP_BACKGROUND
         bkgExpander.classList.add("full-height")
+        loadBackgroundList()
 
-        const list = (await connection.getBackgrounds()).reverse()
-        for (const [id,url] of list){
-            if (!url) continue
-            addBackgroundItem(id,url)
-        }
-        const currentBackground = await connection.getCurrentBackground()
-        const currentSelected = document.getElementById(currentBackground)
-        if (currentSelected){
-            document.getElementById(currentBackground)?.click()
-        }else{
-            noBackgroundButton.click()
-        }
-        
+
         // log("getBackgrounds",list)
 
         // const el = document.createElement("div")
@@ -685,146 +746,204 @@ expandBkgButton.onclick = async ()=>{
 
     isBkgBlockExpanded = !isBkgBlockExpanded
 }
+async function loadBackgroundList() {
+    const list = (await connection.getBackgrounds()).reverse()
+
+    let currentBackground = await connection.getCurrentBackground()
+    if (!currentBackground) {
+
+        await connection.setCurrentBackground(list[0][0])
+        currentBackground = await connection.getCurrentBackground()
+
+    }
+
+    for (const [id, url] of list) {
+        log("background list element id", id)
+        // if (!url) continue
+        addBackgroundItem(id, url, connection)
+    }
+
+    // const listUnauthorized = (await connectionUnauthorized.getBackgrounds()).reverse()
+    // for (const [id, url] of listUnauthorized) {
+    //     // if (!url) continue
+    //     addBackgroundItem(id, url,connectionUnauthorized)
+    // }
+
+
+
+    // if (currentBackground === "empty"){
+    //     currentBackground = await connectionUnauthorized.getCurrentBackground()
+    // }
+    log("currentBackground", currentBackground)
+    const currentSelected = document.getElementById(currentBackground.id)
+    log("currentSelected", currentSelected)
+
+    if (currentSelected) {
+        currentSelected.click()
+    } else {
+        noBackgroundButton.click()
+    }
+}
 noBackgroundButton.onclick = () => {
     noBackgroundButton.classList.add("selected-item")
-    if (oldBkg){
-            
+    if (oldBkg) {
+
         oldBkg.classList.remove("selected-item")
     }
     oldBkg = noBackgroundButton
-    if (flexatarControllerPort){
-        flexatarControllerPort.postMessage({background:true,no:true})
+    if (flexatarControllerPort) {
+        flexatarControllerPort.postMessage({ background: true, no: true })
     }
     connection.setCurrentBackground("no")
 }
 
-function addBackgroundItem(id,url,atFront=false){
+function addBackgroundItem(bkgInfo, url, con, atFront = false) {
+    log("addBackgroundItem ", bkgInfo)
     const img = document.createElement("img")
-    img.id = id
+    img.id = bkgInfo.id
     img.src = url
     img.draggable = false
     img.style.cursor = "pointer"
-    img.style.display = 'block'; 
-    img.style.width = '100%'; 
-    img.style.height = 'auto'; 
-    img.style.margin = '0px'; 
-    img.style.padding = '0px'; 
-    img.style.boxSizing = 'border-box'; 
-    img.style.lineHeight = '0px'; 
-    img.style.verticalAlign = 'top'; 
+    img.style.display = 'block';
+    img.style.width = '100%';
+    img.style.height = 'auto';
+    img.style.margin = '0px';
+    img.style.padding = '0px';
+    img.style.boxSizing = 'border-box';
+    img.style.lineHeight = '0px';
+    img.style.verticalAlign = 'top';
 
     img.style.objectFit = 'contain';
-    if (atFront){
-        insertAfter(img,noBackgroundButton)
-    }  else {
+    if (atFront) {
+        insertAfter(img, noBackgroundButton)
+    } else {
         imageBackgroundContainer.appendChild(img)
     }
-    img.onclick = () => {
+    img.onclick = async () => {
 
-        if (oldBkg){
-    
+        if (oldBkg) {
+
             oldBkg.classList.remove("selected-item")
         }
         oldBkg = img
         img.classList.add("selected-item")
-        if (flexatarControllerPort){
-            flexatarControllerPort.postMessage({background:url})
+        if (flexatarControllerPort) {
+            // const dataUrl = (await con.getBackgrounds({ id }))[0][1]
+
+            flexatarControllerPort.postMessage({ background: url })
         }
-        connection.setCurrentBackground(id)
+        log("setting current background", bkgInfo)
+        connection.setCurrentBackground(bkgInfo)
     }
     return img
 }
 // function fileToDataUrl(file) {
 //     return new Promise((resolve, reject) => {
 //       const reader = new FileReader();
-  
+
 //       reader.onloadend = () => resolve(reader.result);
 //       reader.onerror = reject;
-  
+
 //       reader.readAsDataURL(file);
 //     });
 //   }
 
-  
-createDropZone(dropBkgElement,async (e)=>{
-    
+
+createDropZone(dropBkgElement, async (e) => {
+
 
     let file = e.target.files[0];
-    if (!file){
+    if (!file) {
         return
     }
     const fileType = file.type;
 
-    if (!checkFileType(fileType,imageMimeTypes)){
-       
+    if (!checkFileType(fileType, imageMimeTypes)) {
+
         return
     }
     // new Blob([file], { type: fileType })
     const dataUrl = await getCroppedImageDataUrlFromBuffer(file, 480, 640)
     const id = await connection.storeNewBackground(dataUrl)
     // addBackgroundItem(id,dataUrl,true).click()
-    log("photo bkg obtained",file)
+    log("photo bkg obtained", file)
 })
-connection.onNewBackground = async (id)=>{
-    log("new background event",id)
-    const dataUrl = (await connection.getBackgrounds({id}))[0][1]
+connection.onNewBackground = async (bkgInfo) => {
+    log("new background event", bkgInfo)
+
+    const dataUrl = (await connection.getBackgrounds(bkgInfo))[0][1]
     // log("new background event 1",newBkg)
     // const dataUrl = (await connection.getBackgrounds({id}))[0][1]
     // log("new background event",id)
-    
-    addBackgroundItem(id,dataUrl,true).click()
+
+    addBackgroundItem(bkgInfo, dataUrl, connection, true).click()
 
 }
+// connectionUnauthorized.onNewBackground = async (id) => {
+//     log("new background event", id)
+//     const dataUrl = (await connectionUnauthorized.getBackgrounds({ id }))[0][1]
+//     // log("new background event 1",newBkg)
+//     // const dataUrl = (await connection.getBackgrounds({id}))[0][1]
+//     // log("new background event",id)
+
+//     addBackgroundItem(id, dataUrl,connectionUnauthorized, true).click()
+
+// }
 function insertAfter(newNode, referenceNode) {
     if (!referenceNode.nextSibling) {
         referenceNode.parentNode.appendChild(newNode)
         return
     }
     referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
-  }
+}
 async function getCroppedImageDataUrlFromBuffer(imageBuffer, targetWidth, targetHeight) {
     const bitmap = await createImageBitmap(imageBuffer);
-  
+
     const canvas = new OffscreenCanvas(targetWidth, targetHeight);
     const ctx = canvas.getContext('2d');
-  
+
     const imgAspect = bitmap.width / bitmap.height;
     const targetAspect = targetWidth / targetHeight;
-  
+
     let drawWidth, drawHeight, offsetX, offsetY;
-  
+
     if (imgAspect > targetAspect) {
-      drawHeight = targetHeight;
-      drawWidth = bitmap.width * (targetHeight / bitmap.height);
-      offsetX = -(drawWidth - targetWidth) / 2;
-      offsetY = 0;
+        drawHeight = targetHeight;
+        drawWidth = bitmap.width * (targetHeight / bitmap.height);
+        offsetX = -(drawWidth - targetWidth) / 2;
+        offsetY = 0;
     } else {
-      drawWidth = targetWidth;
-      drawHeight = bitmap.height * (targetWidth / bitmap.width);
-      offsetX = 0;
-      offsetY = -(drawHeight - targetHeight) / 2;
+        drawWidth = targetWidth;
+        drawHeight = bitmap.height * (targetWidth / bitmap.width);
+        offsetX = 0;
+        offsetY = -(drawHeight - targetHeight) / 2;
     }
-  
+
     ctx.drawImage(bitmap, offsetX, offsetY, drawWidth, drawHeight);
-  
+
     const blob = await canvas.convertToBlob();
-  
+
     // Convert Blob to data URL
     const dataUrl = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
     });
-  
+
     return dataUrl;
 }
 
-ftarLogButton.onclick = (e)=>{
+ftarLogButton.onclick = (e) => {
     // e.preventDefault()
     connection.showProgress()
     log("show creation log")
 }
 effectsButton.onclick = () => {
     connection.showEffects()
+}
+
+// retargetingButton.style.display = "none"
+retargetingButton.onclick = () => {
+    connection.showRetarg()
 }

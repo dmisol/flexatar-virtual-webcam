@@ -193,7 +193,7 @@ body::-moz-scrollbar {
     background-color: var(--main-color-2); /* Blue background */
     border-radius: 50%; /* Makes it round */
     position: fixed; /* Keeps the button floating */
-    bottom: 20px; /* Distance from the bottom of the viewport */
+    bottom: 30px; /* Distance from the bottom of the viewport */
     left: 50%; /* Distance from the right of the viewport */
     transform: translateX(-50%);
     display: flex;
@@ -205,7 +205,7 @@ body::-moz-scrollbar {
     z-index: 30;
   }
   .floating-button-ok{
-    bottom: 43px;
+    bottom: 53px;
   }
   .floating-button:hover {
     transform: scale(1.1)  translateX(-50%); /* Slightly enlarge on hover */
@@ -248,13 +248,14 @@ body::-moz-scrollbar {
     font-size: 0.9em;
     background-color: var(--main-color-2);
     cursor: pointer;
+
   }
   #ftarLogButton:hover{
     background-color: var(--hoover-color);
   }
 
 
-  #effectsButton{
+  #effectsButton, #retargetingButton{
     display: flex;
     justify-content: center;
     align-items: center;
@@ -265,7 +266,7 @@ body::-moz-scrollbar {
     cursor: pointer;
     padding-top: 3px;
   }
-  #effectsButton:hover{
+  #effectsButton:hover, #retargetingButton:hover{
     background-color: var(--hoover-color);
   }
 
@@ -492,4 +493,16 @@ body::-moz-scrollbar {
 }
 #dropBkgElement.hover {
   background-color: var(--hoover-color);
+}
+#emotionText {
+  font-size: 0.85em;
+  color: var(--white);
+}
+#backgroundText{
+  font-size: 0.85em;
+  color: var(--white);
+  background: var(--main-color-1);
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }

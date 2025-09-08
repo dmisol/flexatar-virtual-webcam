@@ -32,10 +32,10 @@ export function createSubscriptionElement(lineNumber, authTypeValue, userValue, 
     vCamButton.onclick = () => callbacks.onVCam(authTypeValue, userValue);
     buttonsContainer.appendChild(vCamButton);
 
-    // const vGenButton = document.createElement('button');
-    // vGenButton.textContent = 'v-gen';
-    // vGenButton.onclick = () => callbacks.onVGen(authTypeValue, userValue);
-    // buttonsContainer.appendChild(vGenButton);
+    const vGenButton = document.createElement('button');
+    vGenButton.textContent = 'v-gen';
+    vGenButton.onclick = () => callbacks.onVGen(authTypeValue, userValue);
+    buttonsContainer.appendChild(vGenButton);
 
     const deleteButton = document.createElement('button');
     deleteButton.textContent = 'delete';

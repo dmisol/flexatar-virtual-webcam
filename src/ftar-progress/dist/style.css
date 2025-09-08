@@ -154,3 +154,8 @@ h3{
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+#pasuedNotification{
+    display: block;
+    margin-top: 5px !important;
+}
