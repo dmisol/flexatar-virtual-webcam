@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "webpack",
+    "build": "webpack --stats-children",
     "build-copy": "webpack --mode production && cp  dist/bundle.js dist/index.html dist/style.css  ../../../flexatar-sdk/main-page/dist/vgen",
     "dev": "webpack serve --mode development"
   },

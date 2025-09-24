@@ -22,11 +22,13 @@ Last but not least, we are provideing effects like mixing different models and i
 
 
 
+
+
 ## Quick start 
 
 - Obtain **FLEXATAR_API_SECRET** from [Flexatar Web Page](https://flexatar-sdk.com).
 - Create ".env" file with content FLEXATAR_API_SECRET=`<your api key>`
-- run-server.sh or run-docker.sh
+
 
 ### 📁 flexatar-virtual-webcam
 - 📁 doc
@@ -37,6 +39,146 @@ Last but not least, we are provideing effects like mixing different models and i
 - 📄 run-docker.sh 
 - 📄 ...
 
+### AI Agent With Video Avatar — Minimal Demo
+- You want to turn your voice agent into a video agent.
+- Normally this is expensive and requires servers with GPUs.
+- With our solution, everything runs locally, offline, with no dependency on third-party infrastructure.
+- It’s inexpensive, and for testing and development it’s completely free.
+
+Minimal working example of integrating a Flexatar avatar into a web page.
+The demo showcases how to synchronize an animated video avatar with a live audio stream, making the avatar "speak" in real time.
+
+#### Instructions
+
+1. **Embed the code snippet** — insert the provided HTML/JS code into your web page.  
+2. **Provide a MediaStream with an audio track** — for example, from a microphone or AI voice.  
+3. **Use the synchronized stream for playback** — the SDK returns a stream aligned with the avatar’s lip-sync.  
+4. **Create your own Flexatar** — customize and generate avatars on the [Flexatar SDK website](https://flexatar-sdk.com).  
+
+```html
+<html>
+
+<body>
+
+    <canvas id="flexatarCanvas"></canvas>
+   
+    <script type="module">
+        import * as SDK from "https://flexatar-sdk.com/files/easy-renderer.js"
+        console.log(SDK)
+        const canvas = document.getElementById("flexatarCanvas");
+        const renderer = new SDK.FtarRenderer("https://flexatar-sdk.com/files", canvas);
+        renderer.readyPromise.then(async () => {
+            renderer.size={width:320,height:320}
+            //Url to flexatar
+            renderer.slot1 = "https://flexatar-sdk.com/files/default_ftar.p";
+            //Url to background image
+            renderer.background = "https://flexatar-sdk.com/files/backgrounds/bkg_chatgpt_1.png";
+           
+            // Attach a MediaStream with an audio track
+            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+             
+              // streamForPlayback: synchronized audio with avatar animation
+              const synchronizedStreamForPlayback = renderer.connectMediaStream(stream);
+            })
+
+          });
+    </script>
+</body>
+</html>
+```
+
+### Flexatar API — Step-by-Step Guide 
+
+> Replace placeholders like `{YOUR_API_SECRET}` and `{flexatar-id}` with actual values.  
+> Use curly braces `{}` instead of `< >` to avoid Markdown/HTML rendering issues.
+
+---
+[NodeJS example](quickstart/server.js)
+
+#### 1. Request a Presigned Upload Link
+
+**HTTP**: `POST`  
+**Endpoint**:
+```
+https://api.flexatar-sdk.com/b2b/createflexatar
+```
+
+**Headers**:
+- `Authorization: Bearer {YOUR_API_SECRET}`
+
+**Response**: JSON object (e.g. `flexatarCreationInfo`) containing at least:
+- `link.url` — the URL where you should upload the form
+- `link.fields` — the fields required for the `multipart/form-data` upload
+- `poll` — the URL to check the processing status
+
+---
+
+#### 2. Upload the Image
+
+1. Build a `multipart/form-data` request including all key-value pairs from `link.fields`.
+2. Add the image file itself to the form. The field name for the file depends on the presigned form — `file`.
+3. Send a `POST` request to:
+```
+{link.url}
+```
+(this is the value from `flexatarCreationInfo.link.url`)
+
+**Important**: For presigned uploads (e.g. S3 POST), all fields from `link.fields` must be included exactly as provided. Do not add or change any values.
+
+**Example (curl — template)**:
+```
+curl -X POST   -F "field1=value1"   -F "field2=value2"   -F "file=@/path/to/your-image.jpg"   "https://.../presigned-upload-url"
+```
+Replace `field1=value1`, `field2=value2` with actual pairs from `link.fields`, and `https://.../presigned-upload-url` with `link.url`.
+
+---
+
+#### 3. Poll for Processing Status
+
+- Send periodic `GET` requests to:
+```
+{poll}
+```
+(value from `flexatarCreationInfo.poll`).
+
+- The server returns JSON with a `status` field (and possibly more info). 
+
+
+
+---
+
+#### 4. Retrieve the Result — Preview and Download
+
+Once processing is complete, you can access the Flexatar in two ways:
+
+- **Preview (quick view)**  
+```
+https://api.flexatar-sdk.com/b2b/createflexatar/preview/{flexatar-id}
+```
+
+- **Download (final Flexatar)**  
+```
+https://api.flexatar-sdk.com/b2b/createflexatar/ftar/{flexatar-id}
+```
+A request to `/ftar/{flexatar-id}` returns JSON with a `link` field containing the actual download URL.
+
+**Example (curl — fetch download link JSON)**:
+```
+curl "https://api.flexatar-sdk.com/b2b/createflexatar/ftar/{flexatar-id}"
+```
+Response example:
+```json
+{
+  "link": "https://.../download-file-url"
+}
+```
+Download the file using the URL in `link` (via `curl -O` or in a browser).
+
+---
+
+
+
+## Prebuilt UI for Easy Integration into Video Conferencing
 Deploy a local demo web app showcasing integration with the Flexatar SDK.
 
 ### With Bash Script 

@@ -18,7 +18,7 @@ const EFFECT = path.join(__dirname, "../ftar-effect/dist");
 const RETARG = path.join(__dirname, "../ftar-retarg/dist");
 const PROGRESS = path.join(__dirname, "../ftar-progress/dist");
 const VCAM_PLUGIN = path.join(__dirname, "../../vcam-interface/dist");
-const FILES = path.join(ROOT, "files");
+const FILES = path.join(ROOT, "../../../files");
 
 var http = require('http');
 
@@ -53,13 +53,13 @@ app.use("/effect", serveIndex(EFFECT));
 app.use("/retarg",express.static(RETARG));
 app.use("/retarg", serveIndex(RETARG));
 
-// app.use((req, res, next) => {
-//     res.setHeader("Content-Security-Policy", "default-src 'self' blob: data:;");
-//     res.setHeader("Access-Control-Allow-Origin", "*");
-//     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-//     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-//     next();
-// });
+app.use((req, res, next) => {
+    res.setHeader("Content-Security-Policy", "frame-ancestors 'self' https://flexatar-sdk.com;");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    next();
+});
 
 app.route("/usertoken").post(handlers.getUserToken);
 app.route("/buysubscription").post(handlers.buySubscription);

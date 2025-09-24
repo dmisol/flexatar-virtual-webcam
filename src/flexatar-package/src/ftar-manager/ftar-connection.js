@@ -471,7 +471,8 @@ async function removeKeysNotInList(prefix, list) {
         await chrome.storage.local.remove(keysToDelete)
 }
 
-async function getListDualUser(listId, keyName, userId) {
+async function getListDualUser(listId, keyName, userId,needMyx=true) {
+    log("getListDualUser needMyx",needMyx)
     let someList = await QueueStorage.getList(listId, userId)
 
     someList = someList.map(x => {
@@ -479,7 +480,7 @@ async function getListDualUser(listId, keyName, userId) {
         ret[keyName] = x;
         return ret
     })
-    if (userId !== "myx@amial.com") {
+    if (userId !== "myx@amial.com" && needMyx) {
         someList = someList.concat((await QueueStorage.getList(listId, "myx@amial.com"))
             .map(x => {
                 const ret = { userId: "myx@amial.com" };
@@ -491,7 +492,7 @@ async function getListDualUser(listId, keyName, userId) {
 
 }
 
-async function getFtarListDualUser(token, msg, userId) {
+async function getFtarListDualUser(token, msg, userId,needMyx=true) {
     let ftarList = []
     if (userId === "myx@amial.com") {
         msg.opts.noCache = false
@@ -503,9 +504,11 @@ async function getFtarListDualUser(token, msg, userId) {
     } else {
         ftarList = await getFtarList(token, msg, userId, false)
         ftarList = ftarList.reverse()
-        msg.opts.noCache = false
-        const ftarListMyx = await getFtarList(myxGetToken, msg, "myx@amial.com", false)
-        ftarList = ftarList.concat(ftarListMyx.reverse())
+        if (needMyx) {
+            msg.opts.noCache = false
+            const ftarListMyx = await getFtarList(myxGetToken, msg, "myx@amial.com", false)
+            ftarList = ftarList.concat(ftarListMyx.reverse())
+        }
     }
     return ftarList
 }
@@ -858,18 +861,28 @@ class Manager {
             return []
         }
         , clearListsWhenRecreate = false, isExtension = false, needMyxAccount = true) {
+        log("new instance of manager")
         let patchPromise
+        this.userIdKey = () => { return "currentUserId" }
+        const self = this
         if (!isExtension) {
             log("patching chrome.storage")
-            patchPromise = patchChromeStorage()
+            patchPromise = patchChromeStorage(async ()=>{
+                log("reseting userId key")
+                const storageSetSetup = {}
+                storageSetSetup[self.userIdKey()] = null
+                await chrome.storage.local.set(storageSetSetup)
+            })
             this.patchPromise = patchPromise
+            
         }
         this.defaultBackgroundFn = defaultBackgroundFn
         this.managerName = managerName
-        this.userIdKey = () => { return "currentUserId" }
+       
         // this.userIdKey = () => { return this.managerName + "_currentUserId" }
         this.tokenFn = tokenFn
         this.needMyxAccount = needMyxAccount
+        log("needMyxAccount",needMyxAccount)
         this.token = new GetToken(async () => {
             // const token1 = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOm51bGwsImV4cCI6NTM0MTAxNDU2MiwiaXNzIjoiIiwianRpIjoiIiwibmJmIjoxNzQxMDE0NTYyLCJvd25lciI6InRlc3QuY2xpZW50IiwicHJlcGFpZCI6dHJ1ZSwic3ViIjoiIiwidGFnIjoidGVzdCIsInRhcmlmZiI6InVuaXZlcnNhbCIsInVzZXIiOiJjbGllbnRfMSJ9.ULZwmHsLSqxjykbMmZH61gt7Xejns-r5Ez0_eWZTucU"
             // console.log("token recv",token1)
@@ -887,7 +900,7 @@ class Manager {
 
         // })
 
-        const self = this
+      
         if (clearListsWhenRecreate) {
             (patchPromise || Promise.resolve()).then(async () => {
                 while (!self.managerName) {
@@ -1054,13 +1067,16 @@ class Manager {
         if (this.patchPromise) { await this.patchPromise };
         const currentUserIdKey = "currentUserId"
         // const currentUserIdKey = this.managerName + "_currentUserId"
-        const storageGetSetup = {}
-        storageGetSetup[currentUserIdKey] = null
+        // const storageGetSetup = {}
+        // storageGetSetup[currentUserIdKey] = null
 
         log("currentUserIdKey", currentUserIdKey)
-        const currentUserIdDict = await chrome.storage.local.get(storageGetSetup)
+        // const currentUserIdDict = await chrome.storage.local.get(storageGetSetup)
 
-        const currentUserId = currentUserIdDict[currentUserIdKey]
+        // const currentUserId = currentUserIdDict[currentUserIdKey]
+
+        const currentUserId = await QueueStorage.getCurrentUserId(null, this.userIdKey())
+
         if (!currentUserId) {
             this.token.token = null
         }
@@ -1085,6 +1101,8 @@ class Manager {
             }
         }
         const userId = userInf.user_id
+      
+
         const storageSetSetup = {}
         storageSetSetup[currentUserIdKey] = userId
 
@@ -1259,7 +1277,7 @@ class Manager {
             log("userId", userId)
             if (msg.ftarList) {
 
-                const ftarList = await getFtarListDualUser(self.token, msg, userId)
+                const ftarList = await getFtarListDualUser(self.token, msg, userId,self.needMyxAccount)
                 port.postMessage({ msgID: msg.msgID, payload: ftarList })
 
             } else if (msg.backgroundsList) {
@@ -1273,7 +1291,7 @@ class Manager {
                 if (opts.id) {
                     backgroundList = [{ id: opts.id, userId: opts.userId }]
                 } else {
-                    backgroundList = await getListDualUser(QueueStorage.Lists.FTAR_BACKGROUND_LIST_ID, "id", userId)
+                    backgroundList = await getListDualUser(QueueStorage.Lists.FTAR_BACKGROUND_LIST_ID, "id", userId,self.needMyxAccount)
                     /*
                     backgroundList = await QueueStorage.getList(QueueStorage.Lists.FTAR_BACKGROUND_LIST_ID, userId)
                     backgroundList = backgroundList.map(x => { return { id: x, userId } })
@@ -1283,12 +1301,13 @@ class Manager {
                         */
                 }
                 if (!backgroundList || backgroundList.length === 0) {
-
+                    log("requestiong default backgrounds")
                     const defaultBackgrounds = await self.defaultBackgroundFn()
+                    log("defaultBackgrounds",defaultBackgrounds)
                     for (const bkg of defaultBackgrounds) {
                         await QueueStorage.addBackgroundToStorage(bkg, userId)
                     }
-                    backgroundList = await getListDualUser(QueueStorage.Lists.FTAR_BACKGROUND_LIST_ID, "id", userId)
+                    backgroundList = await getListDualUser(QueueStorage.Lists.FTAR_BACKGROUND_LIST_ID, "id", userId,self.needMyxAccount)
                 }
 
                 const backgrounds = []
@@ -1304,12 +1323,10 @@ class Manager {
                 log("requesting preview", msg.preview)
                 let previewBuffer = await getPreviewCE({ id: msg.preview.id }, tokenDict[msg.preview.userId], msg.preview.userId)
                 if (!previewBuffer) {
-                    log("tri")
-                    // previewBuffer = await getPreviewCE({ id: msg.preview }, self.token, "myx@amial.com")
-                    // if (!previewBuffer) {
+
                     port.postMessage({ msgID: msg.msgID, payload: null })
                     return
-                    // }
+
                 }
 
                 console.log("previewBuffer", previewBuffer)
@@ -1403,7 +1420,7 @@ class Manager {
 
                 let currentFlexatar = await getCurrentFlexatarIdSlot2(userId)
                 if (!currentFlexatar) {
-                    const ftarList = await getFtarListDualUser(self.token, msg, userId)
+                    const ftarList = await getFtarListDualUser(self.token, msg, userId,self.needMyxAccount)
                     await setCurrentFlexatarIdSlot2(ftarList[0], userId)
                     /*
                     const ftarList = await getFtarList(tokenDict[userId], msg, userId, self.needMyxAccount)
@@ -1434,7 +1451,7 @@ class Manager {
                         await setCurrentFlexatarId(ftarList[0], userId)
                     }*/
                     //    log("current ftar req list",userId)
-                    const ftarList = await getFtarListDualUser(self.token, msg, userId)
+                    const ftarList = await getFtarListDualUser(self.token, msg, userId,self.needMyxAccount)
                     //    log("ftarList",ftarList)
                     await setCurrentFlexatarId(ftarList[0], userId)
                 }
@@ -1540,7 +1557,7 @@ class Manager {
 
 
             } else if (msg.getEffectPresets) {
-                const presetList = await getListDualUser(QueueStorage.Lists.FTAR_PRESET_LIST_ID, "presetInfo", userId)
+                const presetList = await getListDualUser(QueueStorage.Lists.FTAR_PRESET_LIST_ID, "presetInfo", userId,self.needMyxAccount)
                 port.postMessage({ msgID: msg.msgID, payload: presetList })
                 // port.postMessage({ msgID: msg.msgID, payload: await QueueStorage.getList(QueueStorage.Lists.FTAR_PRESET_LIST_ID, userId) })
             } else if (msg.saveEffectPreset) {

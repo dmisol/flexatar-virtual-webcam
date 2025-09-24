@@ -1,0 +1,28 @@
+<html>
+
+<body>
+
+    <canvas id="flexatarCanvas"></canvas>
+   
+    <script type="module">
+        import * as SDK from "https://flexatar-sdk.com/files/easy-renderer.js"
+        console.log(SDK)
+        const canvas = document.getElementById("flexatarCanvas");
+        const renderer = new SDK.FtarRenderer("https://flexatar-sdk.com/files", canvas);
+        renderer.readyPromise.then(() => {
+            renderer.size={width:320,height:320}
+            //Attach flexatar and background
+            renderer.slot1 = "https://flexatar-sdk.com/files/default_ftar.p";
+            renderer.background = "https://flexatar-sdk.com/files/backgrounds/bkg_chatgpt_1.png";
+           
+            //Use any stream with audio track to make flexatar speak
+            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+             
+              // streamForPlayback - has delayed audio track and is in sync with flexatar animation
+              const synchronizedStreamForPlayback = renderer.connectMediaStream(stream);
+            })
+
+          });
+    </script>
+</body>
+</html>

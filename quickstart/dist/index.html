@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<style>
+    body {
+        line-height: 1.6;
+        display: block;
+    }
+</style>
+
+<body>
+    <h2>Create Flexatar</h2>
+    <label for="fileInput">Upload image:</label>
+    <input type="file" id="fileInput" accept="image/*" />
+    <br />
+
+    <label for="creationStatusLink">Creation Status Link:</label>
+    <input type="text" id="creationStatusLink" />
+
+    <button id="checkStatusButton">Check</button>
+    <br />
+    <label for="flexatarIdHolder">Flexatar ID:</label>
+    <textarea id="flexatarIdHolder" rows="1" cols="50"></textarea>
+    <br />
+    <button id="downloadFlexatarButton">Download Flexatar</button>
+    <button id="downloadPreviewImageButton">Download Preview</button>
+
+    <pre id="status"></pre>
+    <hr>
+
+    <h2>Use Flexatar</h2>
+    <label for="flexatarInput">Select Flexatar File:</label>
+    <input type="file" id="flexatarInput" />
+    <br />
+    <label for="audioFileInput">Select Audio File:</label>
+    <input type="file" id="audioFileInput" accept="audio/*" />
+
+    <br />
+    <span id="audioControlsHolder">
+        <button id="playButton">PLAY</button>
+        <button id="stopButton">STOP</button>
+    </span>
+
+    <br />
+
+    <label for="animationSelector">Select Animation:</label>
+    <select id="animationSelector"> </select>
+    <br />
+    <canvas id="flexatarCanvasOutput"></canvas>
+
+
+    <script type="module">
+
+
+        import * as SDK from '/files/easy-renderer.js';
+       
+
+
+
+
+
+        async function createFlexatar(file, callbacks) {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const res = await fetch("/upload", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const result = await res.json();
+                if (res.ok) {
+                    callbacks.onResult(result)
+
+                } else {
+
+                    if (res.status === 403) {
+                        callbacks.onError("out of limit")
+                    } else {
+                        callbacks.onError("unknown error")
+                    }
+                }
+
+
+            } catch (err) {
+                callbacks.onError(err.message)
+
+            }
+        }
+
+
+        const fileInput = document.getElementById("fileInput");
+        fileInput.onchange = async function () {
+            if (!this.files.length) return;
+            const file = this.files[0];
+
+
+            const statusElement = document.getElementById("status");
+
+            statusElement.textContent = "📷 Uploading...";
+
+
+            await createFlexatar(file, {
+                onResult: (result) => {
+
+
+                    document.getElementById("flexatarIdHolder").value = result.id;
+                    document.getElementById("creationStatusLink").value = result.poll;
+                    document.getElementById("status").textContent =
+                        "✅ Upload complete.";
+                },
+                onError: (errMessage) => {
+                    document.getElementById("status").textContent = "❌ " + errMessage;
+                }
+            });
+        };
+
+
+
+
+
+        document.getElementById("downloadFlexatarButton").addEventListener("click", async function () {
+
+            document.getElementById("status").textContent = "📥 Download starting...";
+
+
+            const flexatarId = document.getElementById("flexatarIdHolder").value;
+
+            if (!flexatarId) {
+                alert("Please enter a valid Flexatar ID.");
+                return;
+            }
+            const url = await download("/download/ftar/" + flexatarId, flexatarId);
+
+
+
+
+            if (url) {
+                document.getElementById("status").textContent = "✅ Download successful!";
+
+                renderer.readyPromise.then(() => {
+                    renderer.slot1 = url;
+                })
+            } else {
+                document.getElementById("status").textContent = "⚠️ Failed to download Flexatar data.";
+            }
+
+        });
+
+
+        document.getElementById("downloadPreviewImageButton").addEventListener("click", function () {
+            const flexatarId = document.getElementById("flexatarIdHolder").value;
+
+            if (!flexatarId) {
+                alert("Please enter a valid Flexatar ID.");
+                return;
+            }
+            download("/download/preview/" + flexatarId, "preview-" + flexatarId);
+
+        });
+
+
+        async function checkStatus(statusUrl, statusCallbacks) {
+            const response = await fetch(statusUrl);
+            if (response.ok) {
+                const data = await response.json();
+                console.log(data)
+                if (data.success) {
+                    statusCallbacks.onSuccess();
+                } else {
+                    statusCallbacks.onFail();
+                }
+            } else {
+                if (response.status === 404) {
+                    statusCallbacks.onInProgress();
+                } else {
+                    statusCallbacks.onError(response.statusText);
+                }
+            }
+        }
+
+
+        document.getElementById("checkStatusButton").addEventListener("click", function () {
+
+
+            const statusElement = document.getElementById("status");
+            statusElement.textContent = "🔄 Checking status...";
+
+            const pollUrl = document.getElementById("creationStatusLink").value;
+
+            if (!pollUrl) {
+                alert("Please enter a valid Creation Status Link.");
+                return;
+            }
+
+            checkStatus(pollUrl, {
+                onSuccess: () => {
+                    document.getElementById("status").textContent = "✅ Flexatar created.";
+                },
+                onFail: () => {
+                    document.getElementById("status").textContent = "❌ Flexatar creation failed, photo must be nearly frontal";
+                },
+                onInProgress: () => {
+                    document.getElementById("status").textContent = "🔄 In progress";
+                },
+                onError: (errorMessage) => {
+                    document.getElementById("status").textContent = "❌ Error fetching status: " + errorMessage;
+                }
+            });
+        });
+
+        const renderer = new SDK.FtarRenderer("/files", flexatarCanvasOutput);
+        renderer.readyPromise.then(async () => {
+            const response = await fetch("/files/backgrounds/1.jpg");
+            if (!response.ok) {
+                return;
+            }
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            renderer.background = objectUrl
+
+            const animationsList = ["All"].concat(await renderer.getAnimationList())
+            console.log("animationsList", animationsList)
+
+
+            const selector = document.getElementById("animationSelector");
+            animationsList.forEach(animation => {
+                const option = document.createElement("option");
+                option.value = animation;
+                option.textContent = animation;
+                selector.appendChild(option);
+            });
+
+            // Handle change event for the animation selector
+            selector.addEventListener("change", function () {
+                const selectedAnimation = this.value;
+                renderer.animation = selectedAnimation; // Route selected value to renderer.animation
+            });
+
+        })
+
+
+        async function download(url, id) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    return null;
+                }
+                const blob = await response.blob();
+                const objectUrl = URL.createObjectURL(blob);
+                const arrayBuffer = await blob.arrayBuffer();
+
+                const a = document.createElement("a");
+                a.href = objectUrl;
+                a.download = `flexatar-${id}.bin`; // or a custom filename
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                // URL.revokeObjectURL(objectUrl);
+
+                return objectUrl;
+            } catch (error) {
+                console.error("Download failed:", error);
+                return null;
+            }
+        }
+
+        const statusContainer = document.getElementById("status");
+
+
+        const flexatarInput = document.getElementById("flexatarInput");
+        flexatarInput.onchange = function () {
+            if (!this.files.length) return;
+            const file = this.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                const arrayBuffer = e.target.result;
+                console.log(arrayBuffer);
+                renderer.slot1 = arrayBuffer;
+            };
+
+            reader.readAsArrayBuffer(file);
+        };
+
+
+
+        const audioFileInput = document.getElementById("audioFileInput");
+
+
+        // Store the objectUrl from the audio file input
+        let storedAudioObjectUrl = null;
+
+        let currentAudio = null;
+        let currentMediaStream
+        // When the PLAY button is pressed, obtain mediaStream from the stored objectUrl
+        document.getElementById("playButton").addEventListener("click", function (event) {
+
+            if (!storedAudioObjectUrl) {
+                alert("Please select an audio file first.");
+                return;
+            }
+            stopCurrentTrack()
+            // Obtain media stream from the stored objectUrl
+            getAudioStreamFromUrl(storedAudioObjectUrl).then(mediaStream => {
+                renderer.readyPromise.then(() => {
+                    const mediaStreamForPlayback = renderer.connectMediaStream(mediaStream);
+                    currentMediaStream = mediaStream
+                    currentAudio = document.createElement('audio');
+                    currentAudio.srcObject = mediaStreamForPlayback;
+                    currentAudio.play();
+                });
+            }).catch(error => {
+                console.error("Failed to get media stream from objectUrl:", error);
+            });
+
+
+        });
+        function stopCurrentTrack() {
+            if (!currentMediaStream) return false
+            currentMediaStream.getAudioTracks().forEach(track => {
+                track.stop()
+                const endedEvent = new Event("ended");
+                track.dispatchEvent(endedEvent);
+            })
+            currentMediaStream = null
+            return true
+        }
+
+        document.getElementById("stopButton").addEventListener("click", function (event) {
+            if (!stopCurrentTrack()) return
+            if (!currentAudio) return
+            currentAudio.pause();
+            currentAudio.srcObject = null;
+        })
+
+        // Store the objectUrl when an audio file is selected
+        audioFileInput.onchange = function () {
+            if (!this.files.length) return;
+
+            if (storedAudioObjectUrl) URL.revokeObjectURL(storedAudioObjectUrl);
+
+            const file = this.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                const arrayBuffer = e.target.result;
+                console.log(arrayBuffer)
+                storedAudioObjectUrl = URL.createObjectURL(new Blob([arrayBuffer], { type: file.type }));
+                document.getElementById("playButton").click()
+            };
+
+            reader.readAsArrayBuffer(file);
+        };
+
+        async function getAudioStreamFromUrl(url, { silent = true } = {}) {
+            const audio = new Audio();
+            audio.crossOrigin = "anonymous";
+            audio.src = url;
+            audio.preload = "auto";
+
+            // Wait until metadata is loaded
+            await new Promise((resolve, reject) => {
+                const onLoaded = () => {
+                    audio.removeEventListener("loadedmetadata", onLoaded);
+                    resolve();
+                };
+                audio.addEventListener("loadedmetadata", onLoaded);
+                setTimeout(() => reject(new Error(`Could not load audio from ${url}`)), 10000);
+            });
+
+            const ctx = new AudioContext();
+            const source = ctx.createMediaElementSource(audio);
+            const destination = ctx.createMediaStreamDestination();
+
+            // Connect only to destination if silent, or also to speakers if not
+            source.connect(destination);
+            if (!silent) {
+                source.connect(ctx.destination);
+            }
+
+            await audio.play();
+
+            const stream = destination.stream;
+
+            // Stop all tracks when audio ends or is paused
+            const stopTracks = () => {
+                stream.getTracks().forEach(track => {
+                    track.stop();
+                    const endedEvent = new Event("ended");
+                    track.dispatchEvent(endedEvent);
+                });
+            };
+            audio.addEventListener("ended", stopTracks);
+            audio.addEventListener("pause", stopTracks);
+
+            return stream;
+        }
+    </script>
+</body>
+
+</html>

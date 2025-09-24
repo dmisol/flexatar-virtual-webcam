@@ -1,5 +1,5 @@
 
-export async function patchChromeStorage(){
+export async function patchChromeStorage(onComplete){
   function isRunningInChromeExtension() {
     return typeof chrome !== "undefined" &&
            typeof chrome.runtime !== "undefined" &&
@@ -73,7 +73,8 @@ export async function patchChromeStorage(){
           });
       
           await Promise.all(promises);
-          if (callback)callback(result)
+            if (callback)callback(result)
+          
           return result;
         };
       
@@ -84,7 +85,9 @@ export async function patchChromeStorage(){
           await Promise.all(promises);
           console.log("end del keys")
         };
-  
+   if (onComplete) await onComplete()
+       
+      
       // })()
     
   }

@@ -1,11 +1,51 @@
 
 import {VCAM} from "../../flexatar-package/src/index.js"
 // import * as CamCon from "./vcam-connection.js"
-
+function log() {
+    console.log("[VCAM_CREATOR]", ...arguments)
+}
 
 let vCam
 
 let videoElement
+
+async function getCroppedImageDataUrlFromBuffer(imageBuffer, targetWidth, targetHeight) {
+    const bitmap = await createImageBitmap(imageBuffer);
+
+    const canvas = new OffscreenCanvas(targetWidth, targetHeight);
+    const ctx = canvas.getContext('2d');
+
+    const imgAspect = bitmap.width / bitmap.height;
+    const targetAspect = targetWidth / targetHeight;
+
+    let drawWidth, drawHeight, offsetX, offsetY;
+
+    if (imgAspect > targetAspect) {
+        drawHeight = targetHeight;
+        drawWidth = bitmap.width * (targetHeight / bitmap.height);
+        offsetX = -(drawWidth - targetWidth) / 2;
+        offsetY = 0;
+    } else {
+        drawWidth = targetWidth;
+        drawHeight = bitmap.height * (targetWidth / bitmap.width);
+        offsetX = 0;
+        offsetY = -(drawHeight - targetHeight) / 2;
+    }
+
+    ctx.drawImage(bitmap, offsetX, offsetY, drawWidth, drawHeight);
+
+    const blob = await canvas.convertToBlob();
+
+    // Convert Blob to data URL
+    const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+
+    return dataUrl;
+}
 
 export function createVCam(request,videoelement,holder,addLog){
     addLog("Waiting v-cam response...")
@@ -45,9 +85,26 @@ export function createVCam(request,videoelement,holder,addLog){
             progress:"/progress",
             files:"/files",
             effects: "/effect",
+             retarg: "/retarg",
         },
-        // lensClassName:"flexatar-lens",
-        // progressClassName:"flexatar-progress",
+         roundOverlay: true,
+         needGallery:false,
+
+        defaultBackgroundsFn: async () => {
+            log("defaultBackgroundsFn called")
+            const backgroundNames = ["1.jpg", "2.jpg", "3.jpg"]
+
+            const backgrounds = await Promise.all(
+                backgroundNames.map(async name => {
+                    const res = await fetch(`/files/backgrounds/${name}`);
+                    const blob = await res.blob();
+                    const file = new File([blob], name, { type: blob.type });
+                    return await getCroppedImageDataUrlFromBuffer(file, 480, 640);
+                })
+            );
+            return backgrounds;
+        }
+
     })
     vCam.onReady = ()=>{
         addLog("v-cam ready!")

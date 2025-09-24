@@ -3,8 +3,27 @@ FROM node:20.10.0
 WORKDIR /app
 
 
+COPY ./files/ files/
 COPY ./src/util/ src/util/
 COPY ./src/flexatar-package/src/ src/flexatar-package/src/
+COPY ./src/flexatar-package/package.json src/flexatar-package/package.json
+RUN cd ./src/flexatar-package && npm install 
+
+# Demo Web App (integration sample)
+COPY ./src/server/package.json src/server/package.json
+COPY ./src/server/handlers.js src/server/handlers.js
+COPY ./src/server/server.js src/server/server.js
+COPY ./src/server/webpack.config.js src/server/webpack.config.js
+COPY ./src/server/src/ src/server/src/
+COPY ./src/server/dist/ src/server/dist/
+RUN cd src/server && npm install && npm run build 
+
+# v-gen iframe 
+COPY ./src/v-gen/package.json src/v-gen/package.json
+COPY ./src/v-gen/webpack.config.js src/v-gen/webpack.config.js
+COPY ./src/v-gen/src/ src/v-gen/src/
+COPY ./src/v-gen/dist/ src/v-gen/dist/
+RUN cd src/v-gen && npm install && npm run build 
 
 # lens
 COPY ./src/ftar-lens/package.json src/ftar-lens/package.json
@@ -33,6 +52,15 @@ COPY ./src/ftar-effect/dist/style.css src/ftar-effect/dist/style.css
 COPY ./src/ftar-effect/src/ src/ftar-effect/src/
 RUN cd src/ftar-effect && npm install && npm run build
 
+#retarg
+
+COPY ./src/ftar-retarg/package.json src/ftar-retarg/package.json
+COPY ./src/ftar-retarg/webpack.config.js src/ftar-retarg/webpack.config.js
+COPY ./src/ftar-retarg/dist/index.html src/ftar-retarg/dist/index.html
+COPY ./src/ftar-retarg/dist/style.css src/ftar-retarg/dist/style.css
+COPY ./src/ftar-retarg/src/ src/ftar-retarg/src/
+RUN cd src/ftar-retarg && npm install && npm run build
+
 #ui min
 COPY ./src/vcam-ui-min/package.json src/vcam-ui-min/package.json
 COPY ./src/vcam-ui-min/webpack.config.js src/vcam-ui-min/webpack.config.js
@@ -42,18 +70,8 @@ COPY ./src/vcam-ui-min/src/ src/vcam-ui-min/src/
 RUN cd src/vcam-ui-min && npm install && npm run build
 
 
-# v-gen iframe controller
-COPY ./src/v-gen-lib/package.json src/v-gen-lib/package.json
-COPY ./src/v-gen-lib/webpack.config.js src/v-gen-lib/webpack.config.js
-COPY ./src/v-gen-lib/src/ src/v-gen-lib/src/
-RUN cd src/v-gen-lib && npm install && npm run build
 
-# v-gen iframe 
-COPY ./src/v-gen-iframe/package.json src/v-gen-iframe/package.json
-COPY ./src/v-gen-iframe/webpack.config.js src/v-gen-iframe/webpack.config.js
-COPY ./src/v-gen-iframe/src/ src/v-gen-iframe/src/
-COPY ./src/v-gen-iframe/dist/ src/v-gen-iframe/dist/
-RUN cd src/v-gen-iframe && npm install && npm run build 
+
 
 # vcam-interface 
 COPY ./vcam-interface/package.json vcam-interface/package.json
@@ -64,14 +82,7 @@ COPY ./vcam-interface/index.html vcam-interface/index.html
 RUN cd vcam-interface && npm install && npm run build 
 
 
-# Demo Web App (integration sample)
-COPY ./src/server/package.json src/server/package.json
-COPY ./src/server/handlers.js src/server/handlers.js
-COPY ./src/server/server.js src/server/server.js
-COPY ./src/server/webpack.config.js src/server/webpack.config.js
-COPY ./src/server/src/ src/server/src/
-COPY ./src/server/dist/ src/server/dist/
-RUN cd src/server && npm install && npm run build 
+
 
 
 

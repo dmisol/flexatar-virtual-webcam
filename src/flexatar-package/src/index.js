@@ -9,6 +9,44 @@ function log() {
 }
 
 
+export async function getCroppedImageDataUrlFromBuffer(imageBuffer, targetWidth, targetHeight) {
+    const bitmap = await createImageBitmap(imageBuffer);
+
+    const canvas = new OffscreenCanvas(targetWidth, targetHeight);
+    const ctx = canvas.getContext('2d');
+
+    const imgAspect = bitmap.width / bitmap.height;
+    const targetAspect = targetWidth / targetHeight;
+
+    let drawWidth, drawHeight, offsetX, offsetY;
+
+    if (imgAspect > targetAspect) {
+        drawHeight = targetHeight;
+        drawWidth = bitmap.width * (targetHeight / bitmap.height);
+        offsetX = -(drawWidth - targetWidth) / 2;
+        offsetY = 0;
+    } else {
+        drawWidth = targetWidth;
+        drawHeight = bitmap.height * (targetWidth / bitmap.width);
+        offsetX = 0;
+        offsetY = -(drawHeight - targetHeight) / 2;
+    }
+
+    ctx.drawImage(bitmap, offsetX, offsetY, drawWidth, drawHeight);
+
+    const blob = await canvas.convertToBlob();
+
+    // Convert Blob to data URL
+    const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+
+    return dataUrl;
+}
+
 async function resample(float32Array, targetSampleRate, inputSampleRate, numChannels = 1) {
     const frameCount = float32Array.length / numChannels;
     const offlineContext = new OfflineAudioContext({
@@ -87,12 +125,13 @@ class MediaRecorderBasedTrackProcessor {
 class ManagerWorkerWarper {
     constructor(tokenFunc, managerName,
         defaultBackgroundsFn = async () => {
+            log("defaultBackgroundsFn not set returning empty")
             return []
-        }) {
+        },needGallery) {
         const managerWorker = new ManagerWorker()
 
 
-        managerWorker.postMessage({ initManager: true })
+        managerWorker.postMessage({ initManager: true,needGallery })
 
         managerWorker.postMessage({ managerName })
         const self = this;
@@ -410,35 +449,14 @@ class VCAM {
                 }
             }
         }
-        let needGallery = false
-        const isAuthorized = false
-        if (!isAuthorized) {
-            needGallery = true
-        }
+        let needGallery = opts ? opts.needGallery : false
+        // const isAuthorized = false
+        // if (!isAuthorized) {
+        //     needGallery = true
+        // }
 
-        // const managerWorkerUnauthorized = new ManagerWorkerWarper(async () => {
-        //     const response = await fetch(`https://api.flexatar-sdk.com/myxtoken`)
-        //     // log("requesting token")
-        //     if (!response.ok) {
-        //         return
-        //     }
-        //     const tokenJson = await response.json()
-
-        //     if (!tokenJson.token) {
-        //         return
-        //     }
-        //     // log("myx token obtained")
-        //     return tokenJson.token
-        // },needGallery ? "unauthorized":"empty")
-        // },"unauthorized")
-
-
-
-
-        // const managerWorker = new ManagerWorkerWarper(async ()=>{
-        //     return {token:null}
-        // },"authorized")
-        const managerWorker = new ManagerWorkerWarper(tokenFn, "authorized", opts.defaultBackgroundsFn)
+        log("VCAM opts",opts)
+        const managerWorker = new ManagerWorkerWarper(tokenFn, "authorized", opts.defaultBackgroundsFn,needGallery)
 
         this.managerWorker = managerWorker
         const flexLens = new FlexatarLens(opts.url.lens, opts.lensClassName)

@@ -3,12 +3,7 @@
 import * as FtarView1 from "./engine.mod.js"
 import "../ftar-manager/ftar-connection.js"
 import "./ftar_lipsync_mod.js"
-import { Landmarker } from "./landmarker.js"
-// import "./intercept_session.js"
-// import {getFlexatarWraped,getPreviewWraped} from "./caching.js"
-// const FtarView = self.FtarView
 
-let landmarker
 let setVoiceProcessingParameters
 function log() {
     console.log("[RENDER WORKER]", ...arguments)
@@ -59,28 +54,7 @@ class AudioPacker {
 
     }
 
-    // addBuffer(buffer,onBufferReady,onFail){
-    //   if (buffer){
-    //     const arr = new Float32Array(buffer)
-    //     this.collector.push(arr);
-    //     const totalLength = (this.collector.length - 1) * arr.length +  this.collector[0].length
-    //     // console.log(arr.length,totalLength,this.windowSize)
 
-    //     if (totalLength >this.windowSize) {
-    //         const audioBuffer = concatenateFloat32Arrays(this.collector);
-    //         // const message = {audioBuffer:,sampleRate:sampleRate}
-    //         onBufferReady(audioBuffer.subarray(0,this.windowSize));
-    //         this.collector = [];
-    //         if (audioBuffer.length > this.windowSize){
-    //             const tail = audioBuffer.subarray(this.windowSize,audioBuffer.length);
-    //             this.collector.push(tail);
-    //         }
-
-    //     }
-    //   }else{
-    //     onFail()
-    //   }
-    // }
     addBuffer(buffer, onBufferReady, onFail) {
         if (buffer) {
             const arr = new Float32Array(buffer)
@@ -311,27 +285,8 @@ async function initRender(url1, url2, size) {
 
 
 
-    console.log("offscreen", FtarView)
-    const connection = new Ftar.ManagerConnection()
 
-    ftarManagerConnection = connection
-
-    postMessage({ renderToManagerPort: connection.outPort }, [connection.outPort])
-
-    await connection.ready;
-
-    log("manager connection ready")
-
-    const token = new FtarView.GetToken(async () => {
-
-
-        log("requesting token")
-        const token = await connection.getToken()
-        log("token", token)
-        return token
-    });
-
-    flexatarSDK = new FtarView.SDK(token,
+    flexatarSDK = new FtarView.SDK(null,
         url1, url2
     )
     offscreen = new OffscreenCanvas(size.width, size.height);
@@ -353,12 +308,7 @@ async function initRender(url1, url2, size) {
 
         let fistFrameNotSent = true
         renderer.start = async () => {
-            log("start called")
-            if (renderer.slot1.id === "id1"){
-                log("start canceled",renderer.slot1)
 
-                return
-            }
 
             while (fistFrameNotSent) {
                 for (const port of mediaPorts) {
@@ -384,68 +334,20 @@ async function initRender(url1, url2, size) {
     }
 
 
-    const cameraLabel = await connection.getRetargetingStatus()
-    if (cameraLabel) {
-        log("video request form worker")
-        self.postMessage({ videoStreamFromCameraRequest: cameraLabel })
-
-    }
-
-    currentCalibrationHeadMotionState = await connection.getRetargetingCalibration()
+   
 
 
 
 
-    const currentFtar = await connection.getCurrentFtar()
 
-
-    const viewportSize = await connection.getViewportSize()
-
-    renderer.canvas.width = viewportSize.width
-    renderer.canvas.height = viewportSize.height
+    renderer.canvas.width = 320
+    renderer.canvas.height = 320
     if (mediaPorts) mediaPorts.forEach(p => {
         p.postMessage({ canvasRatio: renderer.canvas.width / renderer.canvas.height })
     })
-    // renderer.canvas.width = 640
-    // renderer.canvas.height = 480
-    // if (!ftarId) ftarId = "default";
-    if (currentFtar) {
-        // const ftar = await connection.getFlexatar("default")
-        const ftar = await connection.getFlexatar(currentFtar)
-        log("ftar", ftar)
-        renderer.slot1 = { data: new Uint8Array(ftar), ready: Promise.resolve(true), id: currentFtar.id, name: "noname" }
 
-        let background = await connection.getCurrentBackground({ dataUrl: true })
-        if (!background) {
-            const list = (await connection.getBackgrounds()).reverse()
-            // log("background list",list)
-            await connection.setCurrentBackground(list[0][0])
-            background = await connection.getCurrentBackground({ dataUrl: true })
+   
 
-        }
-
-        // log("current background", background)
-        if (background) {
-            flexatarSDK.newOverlay(background).then(overlay => {
-                renderer.addOverlay(overlay, { x: 0, y: 0, width: 100, height: 100, mode: "back" });
-
-            })
-            generateTransparentCircleImage(background).then(roundOverlay => {
-                flexatarSDK.newOverlay(roundOverlay).then(overlay => {
-                    renderer.addOverlay(overlay, { x: 0, y: 0, width: 100, height: 100, mode: "front" });
-                })
-            })
-        }
-    }
-
-    // const ftarObject = await getFlexatarWraped(FtarView,ftarList[0],token)
-
-    // const ftarLink = await FtarView.flexatarEntry(token,ftarList[0].id,{ftar:true})
-    // const result = await FtarView.getFlexatar(ftarLink);
-    // console.log("test ftar",result.data)
-    // renderer.slot1 = ftarObject
-
-    // renderer.start()
     renderer.onDraw = () => {
         let drawCounts = 0
         for (const port of mediaPorts) {
@@ -496,99 +398,12 @@ let framesToProcess = []
 let isFrameProcessingActive = false
 
 let noFrameCounter = 0
-function pumpCameraFrames() {
-    const f = framesToProcess.pop()
-    while (framesToProcess.length > 0) {
-        framesToProcess.pop().close()
-        log("dropping frame")
-    }
-    if (noFrameCounter > 20) {
-        log("stop processing frames")
-        noFrameCounter = 0
-        isFrameProcessingActive = false
-        if (renderer) renderer.isAnimated = true
-    }
-    if (f) {
 
-        if (landmarker) {
-
-
-            landmarker.obtainHeadMotionState(f, currentCalibrationHeadMotionState, performance.now()).then(result => {
-                if (!result || !renderer) {
-
-                    if (renderer) renderer.isAnimated = true
-                    f.close()
-                    return
-                }
-                const [headMotionStateClean, headMotionState, uLipOp] = result
-                currentRetargetingHeadMotionState = result
-
-                if (renderer) {
-                    // renderer.speechState = [0, 0, 0, uLipOp, 0, 1]
-                    renderer.headMotion(...headMotionState)
-                    renderer.isAnimated = false
-                }
-
-                if (portToSendFrames) {
-                    //  log("sending camera frames")
-                    portToSendFrames.postMessage({ cameraFrame: f }, [f])
-
-                } else {
-                    f.close()
-                }
-
-
-            })
-        } else {
-            f.close()
-        }
-
-
-    } else {
-        noFrameCounter++
-    }
-    if (isFrameProcessingActive)
-        setTimeout(pumpCameraFrames, 50)
-
-}
-// pumpCameraFrames()
 
 onmessage = (event) => {
 
     const msg = event.data
-    if (msg.messagePortCameraFrames) {
-        msg.messagePortCameraFrames.onmessage = eventCamPort => {
-            const msg1 = eventCamPort.data
-            if (!msg1) return
-            if (msg1.setHeadMotionStateByFrame) {
-                framesToProcess.push(msg1.setHeadMotionStateByFrame)
-                if (!isFrameProcessingActive) {
-                    isFrameProcessingActive = true
-                    pumpCameraFrames()
-                }
-
-            } else if (msg1.closing) {
-                msg.messagePortCameraFrames.close()
-            }
-
-
-        }
-
-    } else if (msg.setHeadMotionStateByPattern) {
-        renderer.isAnimated = true
-    } else if (msg.setHeadMotionState) {
-        // log("setHeadMotionState",msg1.setHeadMotionState)
-        renderer.headMotion(...msg.setHeadMotionState)
-        renderer.isAnimated = false
-        portToSendFrames = null
-        if (portToSendFrames) {
-            //  log("sending camera frames")
-            if (msg.frame) portToSendFrames.postMessage({ cameraFrame: msg.frame }, [msg.frame])
-
-        } else {
-            if (msg.frame) msg.frame.close()
-        }
-    } else if (msg.controllerPort) {
+    if (msg.controllerPort) {
 
 
         const channel = new MessageChannel()
@@ -603,7 +418,6 @@ onmessage = (event) => {
                 log("msg.slot1", data)
                 rendererPromise.then(() => {
                     if (renderer.error) {
-                        log("renderer error",renderer.error)
                         renderer.start()
                         return
                     }
@@ -694,11 +508,12 @@ onmessage = (event) => {
                 // console.log("overlay accepted")
             } else if (msg.animationNames) {
                 rendererPromise.then(() => {
-                    log("msg.animationNames worker received request", renderer.animator.patternList)
-                    channel.port1.postMessage({ animationNames: renderer.animator.patternList })
+                    // log("msg.animationNames worker received request", renderer.animator.patternList,msg.msgId)
+                    channel.port1.postMessage({ animationNames: renderer.animator.patternList,msgId:msg.msgId })
                 })
             } else if (msg.animation) {
                 if (renderer.error) return
+                log("animation is set",msg.animation)
                 renderer.animator.currentAnimationPattern = msg.animation.pattern
             } else if (msg.closing) {
                 ports = ports.filter(fn => fn !== channel.port1);
@@ -714,7 +529,7 @@ onmessage = (event) => {
         msg.mediaPort.renderingState = true
         mediaPorts.push(msg.mediaPort)
         rendererPromise.then(() => {
-            renderer.start()
+            // renderer.start()
             // if (mediaPorts) mediaPorts.forEach(p => {
             log("sending to mediaport canvas ratio")
             msg.mediaPort.postMessage({ canvasRatio: renderer.canvas.width / renderer.canvas.height })
@@ -738,32 +553,6 @@ onmessage = (event) => {
                 }, () => {
                     console.log("fail")
                 })
-            } else if (msg1.videoStreamFromCameraStopRequest) {
-                rendererPromise.then(() => {
-                    ftarManagerConnection.setRetargetingStatus({ value: false })
-                })
-                self.postMessage(msg1)
-                portToSendFrames = null
-            } else if (msg1.calibrateRetargeting) {
-
-                currentCalibrationHeadMotionState = currentRetargetingHeadMotionState
-                ftarManagerConnection.setRetargetingCalibration(currentCalibrationHeadMotionState)
-
-
-            } else if (msg1.unBindFrameReceiverFromLandmarker) {
-                portToSendFrames = null
-            } else if (msg1.bindFrameReceiverFromLandmarker) {
-                portToSendFrames = msg.mediaPort
-            } else if (msg1.videoStreamFromCameraRequest) {
-                rendererPromise.then(() => {
-                    ftarManagerConnection.setRetargetingStatus({ value: msg1.videoStreamFromCameraRequest })
-                })
-
-
-                log("video request form worker")
-                self.postMessage(msg1)
-                portToSendFrames = msg.mediaPort
-                log("port to send camera frames installed")
             } else if (msg1.setHeadMotionState) {
                 // log("setHeadMotionState",msg1.setHeadMotionState)
                 renderer.headMotion(...msg1.setHeadMotionState)
@@ -824,10 +613,6 @@ onmessage = (event) => {
             })
         }
 
-
-    } else if (msg.enableRetargeting) {
-        log("enableRetargeting received")
-        landmarker = new Landmarker(msg.enableRetargeting)
 
     } else if (msg.initBuffers) {
         initRender(

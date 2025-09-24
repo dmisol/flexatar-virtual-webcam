@@ -42,7 +42,7 @@ onmessage = async (event) => {
                 postMessage({ defaultBackgroundsRequest: true })
             })
 
-        })
+        }, false,false,msg.needGallery)
         manager.onMediaPort = port => {
             postMessage({ onMediaPort: port }, [port])
         }

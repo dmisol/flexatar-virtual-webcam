@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": " webpack",
+    "build": " webpack --stats-children",
     "buildAndStart": "cd ../v-gen-lib && npm run build && cd ../v-cam-lib && npm run build && cd ../server && webpack && node server.js",
     "start": "node server.js"
   },
@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@mediapipe/tasks-vision": "^0.10.22-rc.20250304",
     "express": "^4.21.2",
     "serve-index": "^1.9.1",
     "webpack": "^5.97.1",

@@ -137,12 +137,7 @@ async function loadFtarListPreviews(noCache, selectedFtar) {
         return
     }
 
-    // if (!selectedFtar) {
-    //     selectedFtar = list[0]?.id
-    // }
-    // if (!selectedFtar) {
-    //     selectedFtar = listUnauthorized[0]?.id
-    // }
+
 
     log("selectedFtar", selectedFtar)
     for (const listElement of list) {
@@ -152,12 +147,7 @@ async function loadFtarListPreviews(noCache, selectedFtar) {
         const { holder } = await addPreview(listElement, imgSrc, null, selectedFtar.id, connection)
     }
 
-    // for (const { id, is_myx } of listUnauthorized) {
-    //     const imgArrayBuffer = await connectionUnauthorized.getPreview(id)
-    //     const blob = new Blob([imgArrayBuffer], { type: "image/jpg" }); // Change type if needed
-    //     const imgSrc = URL.createObjectURL(blob);
-    //     const { holder } = await addPreview({ id, isUnauthorized: true }, imgSrc, null, selectedFtar, connectionUnauthorized)
-    // }
+
 }
 
 reloadFtarListButton.onclick = async () => {
@@ -165,35 +155,14 @@ reloadFtarListButton.onclick = async () => {
     reloadFtarListButton.disabled = true
     reloadIcon.classList.add("roating")
 
-    // updateUserInfo({noCache:true})
 
-    // const selectedFtarId = selecteFtar.element.id
     while (previewListHolder.children.length > 0) {
         previewListHolder.children[0]?.remove()
     }
-    // let selectedFtar = (await connection.getSelectedFtar()).selectedFtar
-    // if (!selectedFtar) {
-    //     selectedFtar =( await connectionUnauthorized.getSelectedFtar()).selectedFtar
-    // }
 
-    // selecteFtar = { ftarId: selectedFtar }
     let currentFtar = await connection.getCurrentFtar()
     await loadFtarListPreviews(true, currentFtar)
 
-    // const reloadPromise = reload()
-    // const currentFtar = await connection.getCurrentFtar()
-    // if (currentFtar) {
-    //     log("request listUnauthorized")
-
-    //     log("listUnauthorized", listUnauthorized)
-
-    //     selecteFtar = { ftarId: currentFtar.id }
-
-    //    
-
-    // } else {
-    //     emptyBlock.textContent = Texts.EMPTY
-    // }
     reloadIcon.classList.remove("roating")
     reloadFtarListButton.disabled = false
 }
@@ -572,7 +541,8 @@ async function addPreview(ftarLink, previewImage, first, selectedFtarId, connect
         // globalSelectedFtar = selectedFtarId
         globalSelectedFtarElement = holder
         // selecteFtar.element = holder
-        holder.click()
+        if (selectedFtarId)
+            holder.click()
     }
     return { holder, previewImg }
 

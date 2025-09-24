@@ -93,6 +93,10 @@ setupConnection.onclick = async ()=>{
     
 
     vcamPluginIframe.src = vcamPluginUrl.value
+    vcamPluginIframe.allow = "camera"
+    vcamPluginIframe.allowfullscreen = true
+    vcamPluginIframe.allowFullscreen = true
+
     vCamOutput.style.display = "flex"
    
 }
