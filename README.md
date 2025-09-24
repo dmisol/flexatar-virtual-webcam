@@ -92,8 +92,19 @@ The demo showcases how to synchronize an animated video avatar with a live audio
 > Replace placeholders like `{YOUR_API_SECRET}` and `{flexatar-id}` with actual values.  
 > Use curly braces `{}` instead of `< >` to avoid Markdown/HTML rendering issues.
 
----
+
 [NodeJS example](quickstart/server.js)
+
+Run:
+```
+node server.js
+```
+In browser:
+```
+http://localhost:8082
+```
+---
+
 
 #### 1. Request a Presigned Upload Link
 
