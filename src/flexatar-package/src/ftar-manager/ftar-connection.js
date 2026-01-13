@@ -1,13 +1,18 @@
-import makeFtar from './mk_ftar.js';
+import { makeFtar, getFtarUploadLink, uploadImageForFtar, pollFtar } from './mk_ftar.js';
 import { AsyncQueue } from "../../../util/async-queue.js"
 // import {startFaceParserUi} from "./overlay-with-iframe.js"
 import * as QueueStorage from "./ftar-queue-storage.js"
 import { patchChromeStorage } from "./patch-chrome-storage.js"
+
 // import {makeFtarFromQueue} from "./make-ftar.js"
 
-function log() {
-    console.log("[FTAR_CONNECTION]", ...arguments)
+function log(...args) {
+
+    const now = new Date().toLocaleTimeString();
+    console.log(`[${now}] [FTAR_CONNECTION]`, ...args);
 }
+
+
 
 const cacheName = "ftarcache";
 
@@ -270,8 +275,13 @@ async function fetchPreview(listElement, userId) {
 
 async function fetchWithToken(url, params, tokenObject, counter) {
 
-    params.headers['Authorization'] = 'Bearer ' + await tokenObject.getToken();
-    const response = await fetch(url, params);
+    const tok = await tokenObject.getToken();
+    if (tok === "no_token") {
+        return tok
+    }
+    params.headers['Authorization'] = 'Bearer ' + tok;
+
+    const response = await self.fetch(url, params);
     if (response.status != 403) return response;
     if (!counter) {
         counter = 2
@@ -410,6 +420,9 @@ async function userInfo(token) {
         },
         token
     )
+    if (response === "no_token") {
+        return { error: ERR_UNAUTHORIZED }
+    }
     // if (!response.ok) {
     if (!response.ok) {
         if (response.status === 401)
@@ -471,8 +484,8 @@ async function removeKeysNotInList(prefix, list) {
         await chrome.storage.local.remove(keysToDelete)
 }
 
-async function getListDualUser(listId, keyName, userId,needMyx=true) {
-    log("getListDualUser needMyx",needMyx)
+async function getListDualUser(listId, keyName, userId, needMyx = true) {
+    log("getListDualUser needMyx", needMyx)
     let someList = await QueueStorage.getList(listId, userId)
 
     someList = someList.map(x => {
@@ -492,7 +505,7 @@ async function getListDualUser(listId, keyName, userId,needMyx=true) {
 
 }
 
-async function getFtarListDualUser(token, msg, userId,needMyx=true) {
+async function getFtarListDualUser(token, msg, userId, needMyx = true) {
     let ftarList = []
     if (userId === "myx@amial.com") {
         msg.opts.noCache = false
@@ -544,7 +557,7 @@ export async function addToList(userId, ftarId) {
 
 async function getUnauthorizedToken() {
     try {
-        const response = await fetch(`https://api.flexatar-sdk.com/myxtoken`)
+        const response = await fetch(`https://api.flexatar-sdk.com/myxtoken/androidapp`)
         if (!response.ok) {
             return
         }
@@ -558,9 +571,37 @@ async function getUnauthorizedToken() {
         return
     }
 }
+
+async function getAiPrompts(cacheFns) {
+    const defaultPrompts = [
+        { "caption": "💡 Warm Tone", "prompt": "Soft golden light wraps around the face, brightening skin and adding a natural warmth. Subtle highlights on the forehead and cheeks create depth. The eyes gain a gentle amber reflection. The overall mood feels sunlit and inviting." },
+        { "caption": "🌆 Cool Tone", "prompt": "A calm blue-gray tone softens the scene, giving the portrait a quiet cinematic feel. The skin tone shifts slightly toward cooler neutrals. Shadows contour the face with precise, modern clarity. Eyes reflect faint steel-blue hues." },
+        { "caption": "🌈 Color Boost", "prompt": "Colors appear more vivid and balanced, with deeper contrasts and sharper definition. Light glances across skin textures, giving life to every detail. Subtle chromatic tones enhance vitality. The effect feels crisp, clean, and refined." },
+
+    ]
+    try {
+        let promptsJson
+        if (cacheFns) {
+            promptsJson = await cacheFns.load()
+        }
+        if (promptsJson) return promptsJson
+
+        const response = await fetch(`https://api.flexatar-sdk.com/aiprompt`)
+        if (!response.ok) {
+            return defaultPrompts
+        }
+        promptsJson = await response.json()
+        cacheFns.save(promptsJson)
+        return promptsJson
+
+    } catch (exception) {
+        return defaultPrompts
+    }
+}
 const myxGetToken = new GetToken(async () => { return await getUnauthorizedToken() })
 
 const ftarListLoaderQueue = new AsyncQueue()
+const ftarImporBackgroundsQueue = new AsyncQueue()
 async function getFtarList(token, msg, userId, needMyxAccount = false) {
     // log("getFtarList needMyxAccount", needMyxAccount)
     return await ftarListLoaderQueue.enqueue(async () => {
@@ -679,7 +720,7 @@ export async function makeFtarFromQueue(token, imgId, userIdKey) {
 
 
         const file = dataURLtoFile(imageDataUrl)
-        const result = await QueueStorage.moveListEntry(
+        await QueueStorage.moveListEntry(
             QueueStorage.Lists.FTAR_MAKE_QUEUE_LIST_ID,
             QueueStorage.Lists.FTAR_SENDING_REQUEST_QUEUE_LIST_ID,
             imgId,
@@ -714,7 +755,7 @@ export async function makeFtarFromQueue(token, imgId, userIdKey) {
             const ftarListProcessing = await QueueStorage.getList(QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID, currentUserId)
             // log("lists after error ",ftarListSending,ftarListProcessing,)
             await QueueStorage.moveListEntry(
-                ftarListProcessing.length>0 ? QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID:QueueStorage.Lists.FTAR_SENDING_REQUEST_QUEUE_LIST_ID,
+                ftarListProcessing.length > 0 ? QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID : QueueStorage.Lists.FTAR_SENDING_REQUEST_QUEUE_LIST_ID,
                 QueueStorage.Lists.FTAR_ERROR_LIST_ID,
                 imgId,
                 currentUserId
@@ -756,10 +797,186 @@ export async function makeFtarFromQueue(token, imgId, userIdKey) {
 
 
 }
+async function checkIfFlexatarReady(token, userId) {
+    log("checkIfFlexatarReady")
+    const ftarListProcessing = await QueueStorage.getList(QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID, userId)
+    const processingId = ftarListProcessing[0]
+    const url = ftar_api_url + "/poll"
+
+    const pollResult = await pollFtar(url, token, fetchWithToken, processingId.ftarId)
+    log("pollResult", pollResult)
+    // log("In progress checking ftar", ftarListProcessing,processingId)
+    return pollResult
+
+}
+
+
+async function isFlexatarInProgress(userId) {
+    // const ftarListSending = await QueueStorage.getList(QueueStorage.Lists.FTAR_SENDING_REQUEST_QUEUE_LIST_ID, userId)
+    const ftarListProcessing = await QueueStorage.getList(QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID, userId)
+
+    const isQueueInProgress = await QueueStorage.getByKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS, "", userId, true)
+    log("isQueueInProgress", isQueueInProgress, ftarListProcessing)
+    if ((
+        // ftarListSending.length !== 0 || 
+        ftarListProcessing.length !== 0) || !isQueueInProgress) {
+        return ftarListProcessing[0]
+    }
+    return false
+}
+
+function arrayBufferToBase64(arrayBuffer) {
+    let binary = "";
+    const bytes = new Uint8Array(arrayBuffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+}
+
+function arrayBufferToDataURL1(arrayBuffer, mimeType = "image/jpeg") {
+    const base64 = arrayBufferToBase64(arrayBuffer);
+    return `data:${mimeType};base64,${base64}`;
+}
+
+async function pollFlexatarCreationQueues(token, userIdKey, needMyxAccount) {
+    const userId = await QueueStorage.getCurrentUserId(null, userIdKey)
+    const ftarListProcessing = await QueueStorage.getList(QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID, userId)
+    log("ftarListProcessing", ftarListProcessing)
+    if (ftarListProcessing.length === 0) {
+        return { status: "empty" }
+    }
+    const firstElementInProcessingQueue = ftarListProcessing[0]
+    if (firstElementInProcessingQueue) {
+        if (!firstElementInProcessingQueue.firtsPollingAttemptAt) {
+            log("first poll for given ftar")
+            firstElementInProcessingQueue.firtsPollingAttemptAt = Date.now();
+            await QueueStorage.updateListEntry(QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID, firstElementInProcessingQueue, { firtsPollingAttemptAt: firstElementInProcessingQueue.firtsPollingAttemptAt }, userId)
+        }
+        // else {
+        //     log("not first polling attempt")
+        //     await QueueStorage.updateListEntry(QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID, firstElementInProcessingQueue, { pollingAttempt: firstElementInProcessingQueue.pollingAttempt + 1 }, userId)
+        // }
+        // log("firstElementInProcessingQueue.pollingAttempt",firstElementInProcessingQueue.firtsPollingAttemptAt)
+        const flexatarStatus = await checkIfFlexatarReady(token, userId)
+        const timeSinceFirstPollingAttempt = Date.now() - firstElementInProcessingQueue.firtsPollingAttemptAt
+        log("timeSinceFirstPollingAttempt", timeSinceFirstPollingAttempt)
+        if (flexatarStatus.success) {
+            log("ftar success with img id", firstElementInProcessingQueue.id)
+            await QueueStorage.moveListEntry(
+                QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID,
+                QueueStorage.Lists.FTAR_SUCCESS_LIST_ID,
+                firstElementInProcessingQueue,
+                userId
+            )
+            await QueueStorage.shortenList(QueueStorage.Lists.FTAR_SUCCESS_LIST_ID, 5, userId)
+
+            await getFtarListDualUser(token, { opts: {} }, userId, needMyxAccount)
+
+            let previewBuffer = await getPreviewCE({ id: firstElementInProcessingQueue.ftarId }, token, userId)
+            const dataUrl = arrayBufferToDataURL1(previewBuffer)
+            const result = await QueueStorage.saveWithKey(QueueStorage.Prefixes.FTAR_SRC_IMG, firstElementInProcessingQueue.id, dataUrl, userId)
 
 
 
-async function startMakeFtarFromQueue(token, onNewFlexatar, userIdKey) {
+            return { status: "ready", id: flexatarStatus.id }
+
+        } else if (flexatarStatus.success === false || flexatarStatus.error || timeSinceFirstPollingAttempt > 200000) {
+            await QueueStorage.moveListEntry(
+                QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID,
+                QueueStorage.Lists.FTAR_ERROR_LIST_ID,
+                firstElementInProcessingQueue,
+                userId
+            )
+            await QueueStorage.shortenList(QueueStorage.Lists.FTAR_ERROR_LIST_ID, 5, userId)
+
+            return { status: "error" }
+        }
+        // {id: 'aa6d07de-5013-4fe5-8ee8-860392077883', success: true}
+        log("flexatarStatus", flexatarStatus)
+        return { status: "in_progress" }
+    }
+}
+
+
+async function startMakeFtarFromQueue(token, onError, userIdKey) {
+    // async function requestMakeFlexatar(token, onNewFlexatar, userIdKey){
+    // if (!pollingInterval) {
+    //     pollingInterval = setInterval(() => {
+    //         log
+
+    //     }, 5000)
+    // }
+    const userId = await QueueStorage.getCurrentUserId(null, userIdKey)
+
+    const isQueueActive = await QueueStorage.getByKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS, "", userId, true)
+    if (!isQueueActive) {
+        log("flexatar creation is on pause")
+        return
+    }
+
+    const inJobImageID = await isFlexatarInProgress(userId)
+    log("isFlexatarInProgress", inJobImageID)
+    if (inJobImageID) {
+        log("flexatar in progress")
+
+        return
+    }
+    const ftarListToMake = await QueueStorage.getList(QueueStorage.Lists.FTAR_MAKE_QUEUE_LIST_ID, userId)
+
+    const imgIdForFtarCreation = ftarListToMake[0]
+    if (imgIdForFtarCreation) {
+        log("Start creation of flexatar for image id", imgIdForFtarCreation)
+        const userId = await QueueStorage.getCurrentUserId(null, userIdKey)
+        await QueueStorage.moveListEntry(
+            QueueStorage.Lists.FTAR_MAKE_QUEUE_LIST_ID,
+            QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID,
+            imgIdForFtarCreation,
+            userId
+        )
+        const url = ftar_api_url + "/make"
+        const uploadLink = await getFtarUploadLink(url, token, fetchWithToken, imgIdForFtarCreation.aiPrompt)
+        if (uploadLink.error) {
+            log("upload link error")
+            await QueueStorage.moveListEntry(
+                QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID,
+                QueueStorage.Lists.FTAR_ERROR_LIST_ID,
+                imgIdForFtarCreation,
+                userId
+            )
+            await QueueStorage.shortenList(QueueStorage.Lists.FTAR_ERROR_LIST_ID, 5, userId)
+            if (onError) onError()
+            return
+        }
+        log("obtained ftar link with id", uploadLink.id)
+        // imgId.ftarId = uploadLink.id
+        await QueueStorage.updateListEntry(QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID, imgIdForFtarCreation.id, { ftarId: uploadLink.id }, userId)
+        const imageDataUrl = await QueueStorage.getByKey(QueueStorage.Prefixes.FTAR_SRC_IMG, imgIdForFtarCreation.id, userId)
+
+        if (imageDataUrl) {
+            const file = dataURLtoFile(imageDataUrl)
+            if (!await uploadImageForFtar(uploadLink.link, file)) {
+                await putCurrentProcessingToErrror()
+            }
+        }
+
+    }
+
+}
+
+async function putCurrentProcessingToErrror() {
+    await QueueStorage.moveListEntry(
+        QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID,
+        QueueStorage.Lists.FTAR_ERROR_LIST_ID,
+        imgId,
+        currentUserId
+    )
+    await QueueStorage.shortenList(QueueStorage.Lists.FTAR_ERROR_LIST_ID, 5, currentUserId)
+}
+
+
+async function startMakeFtarFromQueueOld(token, onNewFlexatar, userIdKey) {
     log("startMakeFtarFromQueue ")
     const userId = await QueueStorage.getCurrentUserId(null, userIdKey)
     // log("startMakeFtarFromQueue userId", userId)
@@ -773,7 +990,7 @@ async function startMakeFtarFromQueue(token, onNewFlexatar, userIdKey) {
     const ftarListSending = await QueueStorage.getList(QueueStorage.Lists.FTAR_SENDING_REQUEST_QUEUE_LIST_ID, userId)
     const ftarListProcessing = await QueueStorage.getList(QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID, userId)
 
-    const isQueueInProgress = await QueueStorage.getByKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS, "", userId,true)
+    const isQueueInProgress = await QueueStorage.getByKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS, "", userId, true)
     log("isQueueInProgress", isQueueInProgress, ftarListSending, ftarListProcessing)
     if ((ftarListSending.length !== 0 || ftarListProcessing.length !== 0) || !isQueueInProgress) {
         return {}
@@ -801,6 +1018,8 @@ async function startMakeFtarFromQueue(token, onNewFlexatar, userIdKey) {
     // QueueStorage.saveWithKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS, "", false, userId)
     return {}
 }
+
+
 
 async function makeProgressLists(managerName) {
     const lists = {
@@ -840,7 +1059,7 @@ async function makeProgressLists(managerName) {
     // const userId = await QueueStorage.getCurrentUserId(null,userIdKey)
     log("getting ftar count to progress userId", currentUserId)
     progressLists.flexatarCount = await getFtarCount(currentUserId)
-    progressLists.isQueueInProgress = await QueueStorage.getByKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS, "", currentUserId,true)
+    progressLists.isQueueInProgress = await QueueStorage.getByKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS, "", currentUserId, true)
 
     return progressLists
 }
@@ -848,6 +1067,41 @@ async function makeProgressLists(managerName) {
 
 const userInfoLoader = new AsyncQueue()
 let counter = 0;
+
+
+
+function visibilityTracker(callback) {
+    log("visibilityTracker", typeof document !== "undefined")
+    if (typeof document !== "undefined") {
+        function handleVisibilityChange() {
+            if (document.hidden) {
+                callback({ visible: false })
+                // log("Tab is inactive");
+                // You can also run your own code here, e.g. pause a video, stop polling, etc.
+            } else {
+                callback({ visible: true })
+                // log("Tab is active");
+                // Resume your logic when tab becomes visible again
+            }
+        }
+
+        // Listen for visibility change event
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        if (!document.hidden) {
+            callback({ visible: true })
+        }
+    } else {
+        self.addEventListener("message", (event) => {
+            console.log("Worker received:", event.data);
+            if (event.data.documentState) {
+                callback(event.data.documentState)
+            }
+        });
+        self.postMessage({ visibilityRequest: true })
+    }
+}
+
+
 
 class Manager {
     static clearCurrentUserId() {
@@ -867,22 +1121,22 @@ class Manager {
         const self = this
         if (!isExtension) {
             log("patching chrome.storage")
-            patchPromise = patchChromeStorage(async ()=>{
+            patchPromise = patchChromeStorage(async () => {
                 log("reseting userId key")
                 const storageSetSetup = {}
                 storageSetSetup[self.userIdKey()] = null
                 await chrome.storage.local.set(storageSetSetup)
             })
             this.patchPromise = patchPromise
-            
+
         }
         this.defaultBackgroundFn = defaultBackgroundFn
         this.managerName = managerName
-       
+
         // this.userIdKey = () => { return this.managerName + "_currentUserId" }
         this.tokenFn = tokenFn
         this.needMyxAccount = needMyxAccount
-        log("needMyxAccount",needMyxAccount)
+        log("needMyxAccount", needMyxAccount)
         this.token = new GetToken(async () => {
             // const token1 = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOm51bGwsImV4cCI6NTM0MTAxNDU2MiwiaXNzIjoiIiwianRpIjoiIiwibmJmIjoxNzQxMDE0NTYyLCJvd25lciI6InRlc3QuY2xpZW50IiwicHJlcGFpZCI6dHJ1ZSwic3ViIjoiIiwidGFnIjoidGVzdCIsInRhcmlmZiI6InVuaXZlcnNhbCIsInVzZXIiOiJjbGllbnRfMSJ9.ULZwmHsLSqxjykbMmZH61gt7Xejns-r5Ez0_eWZTucU"
             // console.log("token recv",token1)
@@ -900,7 +1154,7 @@ class Manager {
 
         // })
 
-      
+
         if (clearListsWhenRecreate) {
             (patchPromise || Promise.resolve()).then(async () => {
                 while (!self.managerName) {
@@ -918,9 +1172,79 @@ class Manager {
 
         }
 
+        visibilityTracker(({ visible }) => {
+            if (visible) {
+                self.setupPolling()
+            } else {
+                self.cancelPolling()
+            }
+
+        })
 
     }
+    cancelPolling() {
+        log("polling stopped")
+        const self = this
+        if (self.pollingInterval) {
+            clearInterval(self.pollingInterval)
+            self.pollingInterval = null
+        }
+    }
 
+    setupPolling() {
+        const self = this
+        self.cancelPolling()
+        log("polling created flexatar started")
+        self.pollingInterval = setInterval(async () => {
+            log("trying to poll flexatar in queue")
+            const userInfo = await userInfoLoader.enqueue(async () => {
+                return await self.getUserInfo()
+            })
+
+            log("user info while polling", userInfo)
+            const pollResult = await pollFlexatarCreationQueues(userInfo.user_id === 'myx@amial.com' ? myxGetToken : self.token, self.userIdKey(), self.needMyxAccount)
+            const userId = await QueueStorage.getCurrentUserId(null, self.userIdKey())
+            if (pollResult.status === "ready") {
+
+                await addToList(userId, pollResult.id)
+                await decFtarCount(userId)
+                // ftarLink.userId = userId
+                self.ports.forEach(port => {
+                    port.postMessage({ newFlexatar: { id: pollResult.id, userId } })
+                })
+            }
+
+            if (pollResult.status === "ready" || pollResult.status === "error") {
+                const progressLists = await makeProgressLists(self.managerName)
+                log("sending updated progress list")
+                self.progressPorts.forEach(port => {
+                    port.postMessage({ progressLists })
+                })
+            }
+            const ftarListProcessing = await QueueStorage.getList(QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID, userId)
+            if (ftarListProcessing.length === 0) {
+                log("found empty processing list")
+                const ftarListToMake = await QueueStorage.getList(QueueStorage.Lists.FTAR_MAKE_QUEUE_LIST_ID, userId)
+                if (ftarListToMake.length > 0) {
+                    log("found flexatar creation task in queue")
+
+                    self.ftarQueueDelegate(self.token, () => {
+                        self.progressPorts.forEach(async port => {
+                            port.postMessage({ progressLists: await makeProgressLists(self.managerName) })
+                        })
+                    }, self.userIdKey())
+                }
+            }
+        }, 15000)
+    }
+
+
+    showAnimate() {
+        this.animPorts.forEach(port => {
+            port.postMessage({ managerPort: true })
+        })
+
+    }
 
     showEffects() {
         this.effectPorts.forEach(port => {
@@ -974,6 +1298,9 @@ class Manager {
         this.retargPorts.forEach(port => {
             port.postMessage({ managerPort: true })
         })
+        // this.animPorts.forEach(port => {
+        //     port.postMessage({ managerPort: true })
+        // })
     }
     retargPorts = []
     addRetargPort(port) {
@@ -993,7 +1320,67 @@ class Manager {
 
         }
     }
+    animPorts = []
+    showAnim() {
+        this.animPorts.forEach(port => {
+            port.postMessage({ managerPort: true })
+        })
+    }
 
+    addAnimPort(port) {
+        const self = this
+        this.animPorts.push(port)
+
+
+        port.onmessage = async e => {
+            const msg = e.data
+            if (!msg) return
+            log("animation port message", msg)
+            if (msg.managerConnectionPort) {
+                log("port from retarg")
+                self.addPort(msg.managerConnectionPort)
+            } else if (msg.mediaPort) {
+                self.onMediaPort(msg.mediaPort)
+            } else if (msg.animationPatternRequest) {
+                log("animationPatternRequest", self.ports.length)
+                self.ports.forEach(p => {
+                    p.postMessage(msg)
+                });
+            }
+
+        }
+    }
+    notificationPorts = []
+    addNotificationPort(port) {
+
+        this.notificationPorts.push(port)
+        port.onmessage = async e => {
+            const msg = e.data
+            if (!msg) return
+
+            log("notifiaction port message", msg)
+            if (msg.doNotShowOptionChanged) {
+                // const userId = await QueueStorage.getCurrentUserId(null, this.userIdKey())
+                const userId = "any_user@world.com"
+                await QueueStorage.saveWithKey(QueueStorage.Prefixes.DO_NOT_SHOW_NOTIFICATION_ID, msg.doNotShowOptionChanged.notificationId, { value: !(msg.doNotShowOptionChanged.value) }, userId)
+            }
+        }
+    }
+
+    async showNotification(notificationId, notificationText) {
+        const userId = "any_user@world.com"
+        // const userId = await QueueStorage.getCurrentUserId(null, this.userIdKey())
+        // await QueueStorage.saveWithKey(QueueStorage.Prefixes.DO_NOT_SHOW_NOTIFICATION_ID, notificationId, false, userId)
+        let needToBeShown = await QueueStorage.getByKey(QueueStorage.Prefixes.DO_NOT_SHOW_NOTIFICATION_ID, notificationId, userId, { value: true })
+        needToBeShown = needToBeShown || { value: true }
+        log("notification needToBeShown", needToBeShown)
+        if (needToBeShown.value) {
+            this.notificationPorts.forEach(port => {
+                port.postMessage({ managerPort: true, notificationText, notificationId })
+            })
+        }
+
+    }
     showProgress() {
         this.progressPorts.forEach(port => {
             port.postMessage({ managerPort: true })
@@ -1037,14 +1424,14 @@ class Manager {
 
                 await QueueStorage.saveWithKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS, "", true, user_id)
 
-                self.ftarQueueDelegate(self.token, async ftarLink => {
-                    if (!(ftarLink.err || ftarLink.error)) {
-                        await decFtarCount(user_id)
+                self.ftarQueueDelegate(self.token, async () => {
+                    // if (!(ftarLink.err || ftarLink.error)) {
+                    //     await decFtarCount(user_id)
 
-                        self.ports.forEach(port => {
-                            port.postMessage({ newFlexatar: ftarLink })
-                        })
-                    }
+                    //     self.ports.forEach(port => {
+                    //         port.postMessage({ newFlexatar: ftarLink })
+                    //     })
+                    // }
 
 
 
@@ -1095,13 +1482,14 @@ class Manager {
         log("obtained userInf", userInf)
 
         if (userInf.error) {
-            userInf = await userInfo(myxGetToken)
-            if (userInf.error) {
-                return userInf
-            }
+            userInf = { "FtarCount": "100", "user_id": "myx@amial.com" }
+            // userInf = await userInfo(myxGetToken)
+            // if (userInf.error) {
+            //     return userInf
+            // }
         }
         const userId = userInf.user_id
-      
+
 
         const storageSetSetup = {}
         storageSetSetup[currentUserIdKey] = userId
@@ -1181,7 +1569,7 @@ class Manager {
                 const imagesList = msg.imagesList
                 log("imagesList", imagesList)
 
-                const imgIdList = imagesList.map(x => { return { id: x.id } })
+                const imgIdList = imagesList.map(x => { return { aiPrompt: msg.aiPrompt, id: x.id } })
 
 
                 const userId = await QueueStorage.getCurrentUserId(null, self.userIdKey())
@@ -1214,17 +1602,19 @@ class Manager {
                 // if (!currentProcessingState) {
                 //     await QueueStorage.saveWithKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS, "", true, userId)
                 log("from ftar lens starting ftar creation")
-                self.ftarQueueDelegate(tokenToUse, async ftarLink => {
-                    if ((!ftarLink.err || ftarLink.error)) {
 
-                        // await decFtarCount(userId)
-                        await decFtarCount(await QueueStorage.getCurrentUserId(null, self.userIdKey()))
 
-                        ftarLink.userId = userId
-                        self.ports.forEach(port => {
-                            port.postMessage({ newFlexatar: ftarLink })
-                        })
-                    }
+                self.ftarQueueDelegate(tokenToUse, async () => {
+                    // if ((!ftarLink.err || ftarLink.error)) {
+
+                    //     // await decFtarCount(userId)
+                    //     await decFtarCount(await QueueStorage.getCurrentUserId(null, self.userIdKey()))
+
+                    //     ftarLink.userId = userId
+                    //     self.ports.forEach(port => {
+                    //         port.postMessage({ newFlexatar: ftarLink })
+                    //     })
+                    // }
                     self.progressPorts.forEach(async port => {
                         port.postMessage({ progressLists: await makeProgressLists(self.managerName) })
                     })
@@ -1238,6 +1628,25 @@ class Manager {
                 self.lensPorts = self.lensPorts.filter(fn => fn !== port);
                 console.log("lens port count", self.lensPorts.length)
 
+            } else if (msg.aiPromptsRequest) {
+                log("ai prompts responsing")
+
+                port.postMessage({
+                    promptList: await getAiPrompts({
+                        load: async () => {
+                            const saved = await QueueStorage.getByKey("AI_PROMPTS", "", "no_user")
+                            log("loading stored prompts")
+                            return saved
+
+                        },
+                        save: async (jsonToSave) => {
+                            log("saving loaded prompts")
+                            await QueueStorage.saveWithKey("AI_PROMPTS", "", jsonToSave, "no_user")
+
+                        }
+                    })
+                })
+
             }
 
         }
@@ -1245,7 +1654,10 @@ class Manager {
     onNeedAuthorize = () => { log("need authorize") }
 
     addPort(port) {
+
+
         const self = this
+
 
         for (const port of this.portsMustBeDeleted) {
             self.ports = self.ports.filter(fn => fn !== port);
@@ -1255,17 +1667,35 @@ class Manager {
 
         this.ports.push(port)
 
+
+        // if (self.ftarQueueDelegate) {
+        //     log("trying to check new flexatar");
+        //     (async () => {
+        //         const uInfo = await userInfoLoader.enqueue(async () => {
+
+        //             return await self.getUserInfo()
+
+        //         })
+        //         log("trying to check new flexatar obtained user info",uInfo)
+        //         self.ftarQueueDelegate(self.token, (id) => {
+        //             log("new flexatar", id)
+        //         }, self.userIdKey())
+        //     })()
+
+        // }
+
         port.onmessage = async e => {
             const msg = e.data;
             if (!msg) return
-            console.log("msg on manager port:", msg)
+            log("msg on manager port:", msg)
             const uInfo = await userInfoLoader.enqueue(async () => {
                 counter++
-                console.log("userInfo counter", counter)
+                log("userInfo counter", counter)
                 return await self.getUserInfo()
 
             })
             if (uInfo.error) {
+                log("uInfo.error", uInfo.error)
                 port.postMessage({ msgID: msg.msgID, payload: uInfo })
                 return
             }
@@ -1274,51 +1704,56 @@ class Manager {
             const tokenDict = {}
             tokenDict[userId] = self.token
             tokenDict["myx@amial.com"] = myxGetToken
+
             log("userId", userId)
             if (msg.ftarList) {
 
-                const ftarList = await getFtarListDualUser(self.token, msg, userId,self.needMyxAccount)
+                const ftarList = await getFtarListDualUser(self.token, msg, userId, self.needMyxAccount)
                 port.postMessage({ msgID: msg.msgID, payload: ftarList })
 
             } else if (msg.backgroundsList) {
-                if (self.managerName === "empty") {
-                    port.postMessage({ msgID: msg.msgID, payload: [] })
-                    return
-                }
-                const opts = msg.opts ?? {}
+                ftarImporBackgroundsQueue.enqueue(async () => {
 
-                let backgroundList
-                if (opts.id) {
-                    backgroundList = [{ id: opts.id, userId: opts.userId }]
-                } else {
-                    backgroundList = await getListDualUser(QueueStorage.Lists.FTAR_BACKGROUND_LIST_ID, "id", userId,self.needMyxAccount)
-                    /*
-                    backgroundList = await QueueStorage.getList(QueueStorage.Lists.FTAR_BACKGROUND_LIST_ID, userId)
-                    backgroundList = backgroundList.map(x => { return { id: x, userId } })
-                    if (userId !== "myx@amial.com") {
-                        backgroundList = backgroundList.concat((await QueueStorage.getList(QueueStorage.Lists.FTAR_BACKGROUND_LIST_ID, "myx@amial.com")).map(x => { return { id: x, userId: "myx@amial.com" } }))
+
+                    if (self.managerName === "empty") {
+                        port.postMessage({ msgID: msg.msgID, payload: [] })
+                        return
                     }
-                        */
-                }
-                if (!backgroundList || backgroundList.length === 0) {
-                    log("requestiong default backgrounds")
-                    const defaultBackgrounds = await self.defaultBackgroundFn()
-                    log("defaultBackgrounds",defaultBackgrounds)
-                    for (const bkg of defaultBackgrounds) {
-                        await QueueStorage.addBackgroundToStorage(bkg, userId)
+                    const opts = msg.opts ?? {}
+
+                    let backgroundList
+                    if (opts.id) {
+                        backgroundList = [{ id: opts.id, userId: opts.userId }]
+                    } else {
+                        backgroundList = await getListDualUser(QueueStorage.Lists.FTAR_BACKGROUND_LIST_ID, "id", userId, self.needMyxAccount)
+                        /*
+                        backgroundList = await QueueStorage.getList(QueueStorage.Lists.FTAR_BACKGROUND_LIST_ID, userId)
+                        backgroundList = backgroundList.map(x => { return { id: x, userId } })
+                        if (userId !== "myx@amial.com") {
+                            backgroundList = backgroundList.concat((await QueueStorage.getList(QueueStorage.Lists.FTAR_BACKGROUND_LIST_ID, "myx@amial.com")).map(x => { return { id: x, userId: "myx@amial.com" } }))
+                        }
+                            */
                     }
-                    backgroundList = await getListDualUser(QueueStorage.Lists.FTAR_BACKGROUND_LIST_ID, "id", userId,self.needMyxAccount)
-                }
+                    if (!backgroundList || backgroundList.length === 0) {
+                        log("requestiong default backgrounds")
+                        const defaultBackgrounds = await self.defaultBackgroundFn()
+                        log("defaultBackgrounds", defaultBackgrounds)
+                        for (const bkg of defaultBackgrounds) {
+                            await QueueStorage.addBackgroundToStorage(bkg, userId)
+                        }
+                        backgroundList = await getListDualUser(QueueStorage.Lists.FTAR_BACKGROUND_LIST_ID, "id", userId, self.needMyxAccount)
+                    }
 
-                const backgrounds = []
+                    const backgrounds = []
 
-                for (const { id, userId } of backgroundList) {
-                    const dataUrl = await QueueStorage.getByKey(QueueStorage.Prefixes.BACKGROUND_SRC_IMAGE, id, userId)
-                    // backgrounds.push([bkgId, null])
-                    backgrounds.push([{ id, userId }, dataUrl])
-                }
+                    for (const { id, userId } of backgroundList) {
+                        const dataUrl = await QueueStorage.getByKey(QueueStorage.Prefixes.BACKGROUND_SRC_IMAGE, id, userId)
+                        // backgrounds.push([bkgId, null])
+                        backgrounds.push([{ id, userId }, dataUrl])
+                    }
 
-                port.postMessage({ msgID: msg.msgID, payload: backgrounds })
+                    port.postMessage({ msgID: msg.msgID, payload: backgrounds })
+                })
             } else if (msg.preview) {
                 log("requesting preview", msg.preview)
                 let previewBuffer = await getPreviewCE({ id: msg.preview.id }, tokenDict[msg.preview.userId], msg.preview.userId)
@@ -1355,6 +1790,7 @@ class Manager {
                     await setCurrentFlexatarIdSlot2(msg.flexatar, userId)
                     // log("confirm current ftar recorded",await getCurrentFlexatarId( userId))
                 }
+                log("sending flexatar data")
                 port.postMessage({ msgID: msg.msgID, payload: flexatarBuffer }, [flexatarBuffer])
 
             } else if (msg.closing) {
@@ -1420,12 +1856,12 @@ class Manager {
 
                 let currentFlexatar = await getCurrentFlexatarIdSlot2(userId)
                 if (!currentFlexatar) {
-                    const ftarList = await getFtarListDualUser(self.token, msg, userId,self.needMyxAccount)
+                    const ftarList = await getFtarListDualUser(self.token, msg, userId, self.needMyxAccount)
                     await setCurrentFlexatarIdSlot2(ftarList[0], userId)
                     /*
                     const ftarList = await getFtarList(tokenDict[userId], msg, userId, self.needMyxAccount)
                     if (ftarList[0]) {
-
+ 
                         await setCurrentFlexatarIdSlot2(ftarList[0], userId)
                     } else if (userId !== "myx@amial.com") {
                         const ftarList = await getFtarList(tokenDict["myx@amial.com"], msg, "myx@amial.com", self.needMyxAccount)
@@ -1438,20 +1874,21 @@ class Manager {
                 port.postMessage({ msgID: msg.msgID, payload: currentFlexatar })
             } else if (msg.currentFtar) {
                 msg.opts = { preview: true }
-
+                log("obtaining current ftar")
                 let currentFlexatar = await getCurrentFlexatarId(userId)
                 if (!currentFlexatar) {
                     /*
                     const ftarList = await getFtarList(tokenDict[userId], msg, userId, self.needMyxAccount)
                     if (ftarList[0]) {
-
+ 
                         await setCurrentFlexatarId(ftarList[0], userId)
                     } else if (userId !== "myx@amial.com") {
                         const ftarList = await getFtarList(tokenDict["myx@amial.com"], msg, "myx@amial.com", self.needMyxAccount)
                         await setCurrentFlexatarId(ftarList[0], userId)
                     }*/
                     //    log("current ftar req list",userId)
-                    const ftarList = await getFtarListDualUser(self.token, msg, userId,self.needMyxAccount)
+                    log("no current ftar requesting list")
+                    const ftarList = await getFtarListDualUser(self.token, msg, userId, self.needMyxAccount)
                     //    log("ftarList",ftarList)
                     await setCurrentFlexatarId(ftarList[0], userId)
                 }
@@ -1504,11 +1941,18 @@ class Manager {
             } else if (msg.decrementFtarCount) {
                 await setFtarCount(userId, uInfo.FtarCount - 1)
                 port.postMessage({ msgID: msg.msgID, payload: { success: true } })
+            } else if (msg.animationPatternResponse) {
+                log("animationPatternResponse", msg.animationPatternResponse)
+                self.animPorts.forEach(p => {
+                    p.postMessage(msg)
+                })
             } else if (msg.effectStateResponse) {
                 log("effectStateResponse")
                 self.effectPorts.forEach(p => {
                     p.postMessage(msg)
                 })
+            } else if (msg.showAnimate) {
+                self.showAnimate()
             } else if (msg.showRetarg) {
                 self.showRetarg()
             } else if (msg.showEffects) {
@@ -1539,11 +1983,72 @@ class Manager {
             } else if (msg.setViewportSize) {
                 await QueueStorage.saveWithKey(QueueStorage.Prefixes.CURRENT_VIEWPORT_SIZE, "", msg.setViewportSize, userId)
                 port.postMessage({ msgID: msg.msgID, payload: { success: true } })
-
             } else if (msg.getViewportSize) {
-                let viewportSize = await QueueStorage.getByKey(QueueStorage.Prefixes.CURRENT_VIEWPORT_SIZE, "", userId,{ width: 320, height: 640 })
-
+                let viewportSize = await QueueStorage.getByKey(QueueStorage.Prefixes.CURRENT_VIEWPORT_SIZE, "", userId, { width: 320, height: 640 })
+                log("posting vieport size")
                 port.postMessage({ msgID: msg.msgID, payload: viewportSize || { width: 640, height: 480 } })
+
+
+
+            } else if (msg.setSpeechPattern) {
+                await QueueStorage.saveWithKey(QueueStorage.Prefixes.CURRENT_SPEECH_PATTERN, "", msg.setSpeechPattern, userId)
+                port.postMessage({ msgID: msg.msgID, payload: { success: true } })
+
+
+            } else if (msg.getSpeechPattern) {
+                let speechPattern = await QueueStorage.getByKey(QueueStorage.Prefixes.CURRENT_SPEECH_PATTERN, "", userId, { value: "calm" })
+
+                port.postMessage({ msgID: msg.msgID, payload: speechPattern || { value: "calm" } })
+            } else if (msg.setMood) {
+                await QueueStorage.saveWithKey(QueueStorage.Prefixes.CURRENT_MOOD, "", msg.setMood, userId)
+                port.postMessage({ msgID: msg.msgID, payload: { success: true } })
+            } else if (msg.getMood) {
+                let mood = await QueueStorage.getByKey(QueueStorage.Prefixes.CURRENT_MOOD, "", userId, { value: "friendly" })
+
+                port.postMessage({ msgID: msg.msgID, payload: mood || { value: "friendly" } })
+
+
+            } else if (msg.getFavorite) {
+                const favoriteList = await QueueStorage.getList(QueueStorage.Lists.FTAR_FAV_LIST_ID, userId)
+                port.postMessage({ msgID: msg.msgID, payload: favoriteList })
+            } else if (msg.removeFromFavorite) {
+                const favoriteId = msg.removeFromFavorite.value
+                await QueueStorage.removeFromList(QueueStorage.Lists.FTAR_FAV_LIST_ID, { id: favoriteId }, userId)
+                port.postMessage({ msgID: msg.msgID, payload: { success: true } })
+            } else if (msg.addToFavorite) {
+                const favoriteId = msg.addToFavorite.value
+                // const currentPresetList = await QueueStorage.getList(QueueStorage.Lists.FTAR_FAV_LIST_ID, userId)
+                await QueueStorage.addToListIfNotAlreadyIn(QueueStorage.Lists.FTAR_FAV_LIST_ID, [{ id: favoriteId }], userId)
+                port.postMessage({ msgID: msg.msgID, payload: { success: true } })
+
+            } else if (msg.getRecordedAudio) {
+                const dataUrl = await QueueStorage.getByKey(QueueStorage.Prefixes.RECORDED_AUDIO_ID, msg.getRecordedAudio.id, userId)
+                port.postMessage({ msgID: msg.msgID, payload: dataUrl })
+
+            } else if (msg.deleteRecordedAudio) {
+                await QueueStorage.removeFromList(QueueStorage.Lists.AUIDIO_RECORD_LIST_ID + "_" + msg.deleteRecordedAudio.folder, msg.deleteRecordedAudio, userId)
+                await QueueStorage.removeByKey(QueueStorage.Prefixes.RECORDED_AUDIO_ID, msg.deleteRecordedAudio.id, userId)
+                port.postMessage({ msgID: msg.msgID, payload: { success: true } })
+
+            } else if (msg.getRecordedAudioList) {
+
+                const audioList = await QueueStorage.getList(QueueStorage.Lists.AUIDIO_RECORD_LIST_ID + "_" + msg.getRecordedAudioList, userId)
+                port.postMessage({ msgID: msg.msgID, payload: audioList })
+
+
+            } else if (msg.saveAudioEntry) {
+                const folder = msg.saveAudioEntry.folder
+                const dataUrl = msg.saveAudioEntry.dataUrl
+                msg.saveAudioEntry.dataUrl = undefined
+                msg.saveAudioEntry.folder = undefined
+                // QueueStorage.updateListEntry
+                if (dataUrl) {
+                    await QueueStorage.addToList(QueueStorage.Lists.AUIDIO_RECORD_LIST_ID + "_" + folder, [msg.saveAudioEntry], userId)
+                    await QueueStorage.saveWithKey(QueueStorage.Prefixes.RECORDED_AUDIO_ID, msg.saveAudioEntry.id, dataUrl, userId)
+                } else {
+                    await QueueStorage.updateListEntry(QueueStorage.Lists.AUIDIO_RECORD_LIST_ID + "_" + folder, msg.saveAudioEntry.id, msg.saveAudioEntry, userId)
+                }
+                port.postMessage({ msgID: msg.msgID, payload: { success: true } })
 
 
             } else if (msg.deleteEffectPreset) {
@@ -1557,7 +2062,7 @@ class Manager {
 
 
             } else if (msg.getEffectPresets) {
-                const presetList = await getListDualUser(QueueStorage.Lists.FTAR_PRESET_LIST_ID, "presetInfo", userId,self.needMyxAccount)
+                const presetList = await getListDualUser(QueueStorage.Lists.FTAR_PRESET_LIST_ID, "presetInfo", userId, self.needMyxAccount)
                 port.postMessage({ msgID: msg.msgID, payload: presetList })
                 // port.postMessage({ msgID: msg.msgID, payload: await QueueStorage.getList(QueueStorage.Lists.FTAR_PRESET_LIST_ID, userId) })
             } else if (msg.saveEffectPreset) {
@@ -1593,7 +2098,7 @@ function sendWithResponse(port, msg) {
     return new Promise(resolve => {
         function handler(event) {
             if (!event.data) return
-            console.log("responese", event.data)
+            log("responese", event.data)
             if (event.data.msgID === msgID) {
                 resolve(event.data.payload)
                 port.removeEventListener("message", handler)
@@ -1632,6 +2137,9 @@ class ManagerConnection {
             } else if (e.data && e.data.effectStateRequest) {
                 if (this.onEffectStateRequest)
                     this.onEffectStateRequest(e.data)
+            } else if (e.data && e.data.animationPatternRequest) {
+                if (this.onAnimationPatternRequest)
+                    this.onAnimationPatternRequest(e.data)
             } else if (e.data && e.data.newFlexatar) {
                 if (this.onNewFlexatar)
                     this.onNewFlexatar(e.data.newFlexatar)
@@ -1658,7 +2166,7 @@ class ManagerConnection {
         return new Promise(resolve => {
             function handler(event) {
                 if (!event.data) return
-                console.log("responese", event.data)
+                log("responese", event.data)
                 if (event.data.msgID === msgID) {
                     resolve(event.data.payload)
                     port.removeEventListener("message", handler)
@@ -1746,6 +2254,10 @@ class ManagerConnection {
         return await this.sendWithResponse({ showRetarg: true })
 
     }
+    async showAnimate() {
+        return await this.sendWithResponse({ showAnimate: true })
+
+    }
     sendEffectState(msg) {
         this.port.postMessage(msg)
     }
@@ -1769,8 +2281,20 @@ class ManagerConnection {
     async getViewportSize() {
         return await this.sendWithResponse({ getViewportSize: true })
     }
+    async getSpeechPattern() {
+        return await this.sendWithResponse({ getSpeechPattern: true })
+    }
+    async getMood() {
+        return await this.sendWithResponse({ getMood: true })
+    }
     async setViewportSize(val) {
         return await this.sendWithResponse({ setViewportSize: val })
+    }
+    async setSpeechPattern(val) {
+        return await this.sendWithResponse({ setSpeechPattern: val })
+    }
+    async setMood(val) {
+        return await this.sendWithResponse({ setMood: val })
     }
     async getRetargetingStatus() {
         return await this.sendWithResponse({ getRetargetingStatus: true })
@@ -1783,6 +2307,28 @@ class ManagerConnection {
     }
     async setRetargetingCalibration(val) {
         return await this.sendWithResponse({ setRetargetingCalibration: val })
+    }
+
+    async addToFavorite(value) {
+        return await this.sendWithResponse({ addToFavorite: { value } })
+    }
+    async removeFromFavorite(value) {
+        return await this.sendWithResponse({ removeFromFavorite: { value } })
+    }
+    async getFavorite() {
+        return await this.sendWithResponse({ getFavorite: true })
+    }
+    async saveAudioEntry(saveAudioEntry) {
+        return await this.sendWithResponse({ saveAudioEntry })
+    }
+    async getRecordedAudioList(getRecordedAudioList = "default") {
+        return await this.sendWithResponse({ getRecordedAudioList })
+    }
+    async deleteRecordedAudio(deleteRecordedAudio) {
+        return await this.sendWithResponse({ deleteRecordedAudio })
+    }
+    async getRecordedAudio(getRecordedAudio) {
+        return await this.sendWithResponse({ getRecordedAudio })
     }
     // async getAnimationNames() {
     //     return await this.sendWithResponse({ getAnimationNames: true })

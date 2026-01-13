@@ -17,6 +17,7 @@ const LENS = path.join(__dirname, "../ftar-lens/dist");
 const EFFECT = path.join(__dirname, "../ftar-effect/dist");
 const RETARG = path.join(__dirname, "../ftar-retarg/dist");
 const PROGRESS = path.join(__dirname, "../ftar-progress/dist");
+const ANIM = path.join(__dirname, "../ftar-anim/dist");
 const VCAM_PLUGIN = path.join(__dirname, "../../vcam-interface/dist");
 const FILES = path.join(ROOT, "../../../files");
 
@@ -52,6 +53,10 @@ app.use("/effect", serveIndex(EFFECT));
 
 app.use("/retarg",express.static(RETARG));
 app.use("/retarg", serveIndex(RETARG));
+
+app.use("/anim",express.static(ANIM));
+app.use("/anim", serveIndex(ANIM));
+
 
 app.use((req, res, next) => {
     res.setHeader("Content-Security-Policy", "frame-ancestors 'self' https://flexatar-sdk.com;");

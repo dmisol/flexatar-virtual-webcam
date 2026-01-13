@@ -66,6 +66,8 @@ async function resample(float32Array, targetSampleRate, inputSampleRate, numChan
     source.connect(offlineContext.destination);
     source.start();
     const resampledBuffer = await offlineContext.startRendering();
+    source.disconnect();
+    source.buffer = null;
 
 
     return resampledBuffer
@@ -122,16 +124,104 @@ class MediaRecorderBasedTrackProcessor {
     // onAudio = ()=>{}
 }
 
+
+class AudioWorkletBasedTrackProcessor {
+    constructor(track, targetSampleRate = 16000, audioContext) {
+        this.isExternalAudioContext = !!audioContext;
+        this.context = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+        this.targetSampleRate = targetSampleRate;
+        this.onAudio = () => { };
+
+        const stream = new MediaStream([track]);
+        this.source = this.context.createMediaStreamSource(stream);
+
+        const workletCode = `
+      class TrackProcessor extends AudioWorkletProcessor {
+        constructor() {
+          super();
+          this._buffer = new Float32Array(4096); 
+          this._offset = 0;
+        }
+        process(inputs) {
+          const input = inputs[0];
+          if (input && input[0]) {
+            const channelData = input[0];
+            this._buffer.set(channelData, this._offset);
+            this._offset += channelData.length;
+            if (this._offset >= this._buffer.length) {
+              this.port.postMessage(
+                { pcm: this._buffer.buffer, sampleRate: sampleRate }, 
+                [this._buffer.buffer]
+              );
+              this._buffer = new Float32Array(4096);
+              this._offset = 0;
+            }
+          }
+          return true;
+        }
+      }
+      registerProcessor("track-processor", TrackProcessor);
+    `;
+
+        this._blob = new Blob([workletCode], { type: "application/javascript" });
+        this._url = URL.createObjectURL(this._blob);
+
+        this.context.audioWorklet.addModule(this._url).then(() => {
+            this.node = new AudioWorkletNode(this.context, "track-processor");
+
+            this.node.port.onmessage = async (event) => {
+                const { pcm, sampleRate } = event.data;
+                const inputFloats = new Float32Array(pcm);
+
+                const rendered = await resample(inputFloats, 16000, sampleRate);
+                const resampled = rendered.getChannelData(0).buffer;
+
+                if (this.onAudio) this.onAudio(resampled);
+            };
+
+            this.source.connect(this.node);
+        });
+    }
+
+
+    // keep old stop for when you DO want to close the context
+    stop() {
+        if (!this.isExternalAudioContext)
+            this.context.close();
+        if (this.source) {
+            try {
+                this.source.disconnect();
+            } catch { }
+            this.source = null;
+        }
+
+        if (this.node) {
+            try {
+                this.node.disconnect();
+            } catch { }
+            this.node.port.onmessage = null;
+            this.node = null;
+        }
+
+        if (this._url) {
+            URL.revokeObjectURL(this._url);
+            this._url = null;
+        }
+
+        this.onAudio = null;
+    }
+}
+
 class ManagerWorkerWarper {
     constructor(tokenFunc, managerName,
         defaultBackgroundsFn = async () => {
             log("defaultBackgroundsFn not set returning empty")
             return []
-        },needGallery) {
+        }, needGallery) {
         const managerWorker = new ManagerWorker()
 
 
-        managerWorker.postMessage({ initManager: true,needGallery })
+        managerWorker.postMessage({ initManager: true, needGallery })
 
         managerWorker.postMessage({ managerName })
         const self = this;
@@ -147,6 +237,9 @@ class ManagerWorkerWarper {
                     managerWorker.postMessage({ defaultBackgrounds })
                 })
 
+            } else if (msg.visibilityRequest) {
+                managerWorker.postMessage({ documentState: { visible: !document.hidden } })
+
             } else if (msg.tokenRequest) {
                 tokenFunc().then(token => {
                     managerWorker.postMessage({ token })
@@ -154,9 +247,41 @@ class ManagerWorkerWarper {
 
 
                 return
+            } else if (msg.type === 'fetch-proxy-request') {
+                try {
+                    const res = await fetch(data.input, data.init);
+                    const text = await res.text();
+                    event.source.postMessage({
+                        type: 'fetch-proxy-response',
+                        id: data.id,
+                        body: text,
+                        options: {
+                            status: res.status,
+                            statusText: res.statusText,
+                            headers: Array.from(res.headers.entries())
+                        }
+                    });
+                } catch (err) {
+                    event.source.postMessage({
+                        type: 'fetch-proxy-response',
+                        id: data.id,
+                        error: err.message
+                    });
+                }
             }
         }
         this.managerWorker = managerWorker
+        function handleVisibilityChange() {
+            if (document.hidden) {
+                managerWorker.postMessage({ documentState: { visible: false } })
+            } else {
+                managerWorker.postMessage({ documentState: { visible: true } })
+            }
+        }
+
+        // Listen for visibility change event
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
     }
     destroy() {
         this.managerWorker.onmessage = undefined
@@ -229,6 +354,7 @@ class VCamMediaStream {
         let firstFrame = true
         this.isActive = true
         this.onLipState = () => { }
+        // this.onSpeechPattern = () => { }
         const self = this
         channel.port1.onmessage = e => {
 
@@ -249,6 +375,12 @@ class VCamMediaStream {
                 this.onLipState(e.data.lipState)
             } else if (e.data && e.data.canvasRatio) {
                 if (self.onCanvasRatio) self.onCanvasRatio(e.data.canvasRatio);
+            } else if (e.data && e.data.speechPattern) {
+                console.log("e.data.speechPattern",e.data.speechPattern)
+                if (self.onSpeechPattern) self.onSpeechPattern(e.data.speechPattern);
+            } else if (e.data && e.data.mood) {
+                console.log("e.data.onMood",e.data.mood)
+                if (self.onMood) self.onMood(e.data.mood);
             } else if (e.data && e.data.log) {
                 console.log("[VCAM MEDIA STREAM] msg from port", e.data);
             }
@@ -296,6 +428,14 @@ class VCamMediaStream {
     }
     setVoiceProcessingParameters(val) {
         this.selfPort.postMessage({ setVoiceProcessingParameters: val })
+    }
+    setSpeechPattern(val){
+        this.selfPort.postMessage({ setSpeechPattern: val })
+
+    }
+    setMood(val){
+        this.selfPort.postMessage({ setMood: val })
+
     }
 }
 
@@ -455,8 +595,8 @@ class VCAM {
         //     needGallery = true
         // }
 
-        log("VCAM opts",opts)
-        const managerWorker = new ManagerWorkerWarper(tokenFn, "authorized", opts.defaultBackgroundsFn,needGallery)
+        log("VCAM opts", opts)
+        const managerWorker = new ManagerWorkerWarper(tokenFn, "authorized", opts.defaultBackgroundsFn, needGallery)
 
         this.managerWorker = managerWorker
         const flexLens = new FlexatarLens(opts.url.lens, opts.lensClassName)
@@ -539,7 +679,7 @@ class VCAM {
                     //         : typeof SafariMediaStreamTrackProcessor !== "undefined"
                     //             ? SafariMediaStreamTrackProcessor
                     //             : null;
-                    
+
                     const processor = new MediaStreamTrackProcessor(track);
                     const reader = processor.readable.getReader();
                     let counter = 0
@@ -680,7 +820,9 @@ class VCAM {
         }
         getAudioTrack(mediaStream).then(trackMono => {
 
-            this.currentTrackProcessor = isTrackProcessorAvailable ? (new NativeTrackProcessor(trackMono)) : (new MediaRecorderBasedTrackProcessor(trackMono))
+            this.currentTrackProcessor = isTrackProcessorAvailable ? (new NativeTrackProcessor(trackMono)) : (new AudioWorkletBasedTrackProcessor(trackMono, undefined, this.audioContext))
+            // this.currentTrackProcessor = isTrackProcessorAvailable ? (new NativeTrackProcessor(trackMono)) : (new MediaRecorderBasedTrackProcessor(trackMono))
+            console.log("this.currentTrackProcessor", this.currentTrackProcessor)
             this.currentTrackProcessor.onAudio = audioBuffer => {
                 // console.log("audioBuffer")
                 this.vCamStream.port.postMessage({ audioBuffer }, [audioBuffer])
@@ -693,10 +835,11 @@ class VCAM {
         return this.vCamStream.stream
     }
     get delay() {
-        const isTrackProcessorAvailable =
-            'MediaStreamTrackProcessor' in window &&
-            typeof window.MediaStreamTrackProcessor === 'function';
-        return isTrackProcessorAvailable ? 0.45 : 0.95
+        // const isTrackProcessorAvailable =
+        //     'MediaStreamTrackProcessor' in window &&
+        //     typeof window.MediaStreamTrackProcessor === 'function';
+        // return isTrackProcessorAvailable ? 0.45 : 0.95
+        return 0.45
         // return isTrackProcessorAvailable ? 0.45 : 0.87
     }
 

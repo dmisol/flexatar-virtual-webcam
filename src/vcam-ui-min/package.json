@@ -9,6 +9,7 @@
     "dev": "webpack serve --mode development",
     "build": "webpack --mode production",
     "build-copy": "webpack --mode production && cp -r dist/* ../../../flexatar-sdk/chrome-extension/dist/vcam_ui/",
+    "build-copy-android": "webpack --mode production && cp  dist/bundle.js dist/index.html /home/naospennikov/AndroidStudioProjects/vgen/app/src/main/assets/vcam/",
     "build-copy-main-page": "webpack --mode production && cp -r dist/* ../../../flexatar-sdk/main-page/dist/vcam/",
     "android": "npx webpack --config webpack.config.android.js"
   },

@@ -1,7 +1,7 @@
 // const FormData = require("form-data");
 // const https = require('https');
 
-async function uploadImageForFtar(link,file){
+export async function uploadImageForFtar(link,file){
     const form = new FormData();
     Object.entries(link.fields).forEach(([field, value]) => {
       form.append(field, value);
@@ -89,7 +89,7 @@ async function uploadImageForFtar(link,file){
 //     return decodedData;
 // }
 
-export default async function makeFtar(url,token, imgFile,flexatarName,opts,fetchWithToken,onFtarId){
+export async function makeFtar(url,token, imgFile,flexatarName,opts,fetchWithToken,onFtarId){
     const response = await fetchWithToken(url, {
         method: 'POST',
         headers:{
@@ -145,4 +145,60 @@ export default async function makeFtar(url,token, imgFile,flexatarName,opts,fetc
             
         },5000)
     })
+}
+
+export async function getFtarUploadLink(url,token, fetchWithToken,aiPrompt1){
+   
+    let body = aiPrompt1 ? JSON.stringify({aiPrompt:JSON.parse(JSON.parse(aiPrompt1))}) : undefined
+    // console.log("[Make ftar] aiPrompt",aiPrompt1)
+    // console.log("[Make ftar] obj",obj)
+    // console.log("[Make ftar] body",body)
+    // return {error:true}
+    const response = await fetchWithToken(url, {
+        method: 'POST',
+        headers:{
+            "Content-Type": "application/json",
+            // "Authorization": "Bearer "+token
+        },
+        body
+    },token);
+    if (!response.ok) {
+        console.log("faild obtain make link",await response.json())
+        // if (onFtarId) await onFtarId("error_id")
+        return {error:{type:"unknown",message:response.status}}
+    }
+    const r = await response.json();
+    if (r.block){
+        return {error:{type:"block",reason:r.block}}
+    }
+    return r
+   
+
+}
+
+
+export async function pollFtar(url,token, fetchWithToken,ftarId){
+    const response = await fetchWithToken(url, {
+        method: 'POST',
+        headers:{
+            "Content-Type": "application/json",
+            // "Authorization": "Bearer "+token
+        },
+        body:JSON.stringify({id:ftarId})
+    },token);
+    if (!response.ok) {
+        if (response.status === 404){
+            return {status:"in_progress"}
+        }else{
+
+            return {error:await response.text()}
+        }
+
+        
+    }
+    const r = await response.json();
+    
+    return r
+   
+
 }

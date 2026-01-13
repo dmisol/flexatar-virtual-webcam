@@ -3,6 +3,29 @@ function log() {
     console.log("[RENDER_WORKER_WARPER]", ...arguments)
 }
 
+function collectArrayBuffers(obj) {
+    const result = [];
+
+    function recursiveScan(item) {
+        if (item instanceof ArrayBuffer) {
+            result.push(item);
+        } else if (Array.isArray(item)) {
+            for (const el of item) {
+                recursiveScan(el);
+            }
+        } else if (item && typeof item === 'object') {
+            for (const key in item) {
+                if (Object.prototype.hasOwnProperty.call(item, key)) {
+                    recursiveScan(item[key]);
+                }
+            }
+        }
+    }
+
+    recursiveScan(obj);
+    return result;
+}
+
 export class RenderWorkerWarper {
     constructor(url, size = { width: 640, height: 480 }) {
         const worker = new RenderWorker({ type: "module" });
@@ -54,6 +77,9 @@ export class RenderWorkerWarper {
             fetch(url + "/speachnn/mel2phon/group1-shard1of1.bin").then(response => response.arrayBuffer()),
             fetch(url + "/speachnn/phon2avec/model.json").then(response => response.arrayBuffer()),
             fetch(url + "/speachnn/phon2avec/group1-shard1of1.bin").then(response => response.arrayBuffer()),
+            fetch(url + "/calm_pattern.bin").then(response => response.arrayBuffer()),
+            fetch(url + "/lively_pattern.bin").then(response => response.arrayBuffer()),
+            fetch(url + "/silent_pattern.bin").then(response => response.arrayBuffer()),
             // fetch("/speachnn/mel2phon/model.json").then(response=>response.arrayBuffer()),
             // fetch("/speachnn/phon2avec/model.json").then(response=>response.arrayBuffer()),
         ]).then(
@@ -62,7 +88,7 @@ export class RenderWorkerWarper {
                 console.log("worker buffers ready", buffers)
 
                 worker.postMessage({
-                    initBuffers: [buffers[0], buffers[1]],
+                    initBuffers: [buffers[0], buffers[1], [buffers[10],buffers[11],buffers[12]]],
                     nnBuffers: {
                         wav2mel: {
                             model: buffers[2],
@@ -90,6 +116,10 @@ export class RenderWorkerWarper {
 
 
     }
+    async uploadCustomModel(inputBuffers){
+        this.worker.postMessage({customModel:inputBuffers}, collectArrayBuffers(inputBuffers));
+    }
+
     async setupRetargeting(url) {
         const wasmJs = await fetch(url + "/face-detection-asset/vision_wasm_internal.js").then(response => response.arrayBuffer());
         const wasm = await fetch(url + "/face-detection-asset/vision_wasm_internal.wasm").then(response => response.arrayBuffer());

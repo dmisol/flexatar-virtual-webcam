@@ -287,6 +287,9 @@ h3 {
     margin: 0 auto;
     padding: 5px;
     display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
 .item-holder {

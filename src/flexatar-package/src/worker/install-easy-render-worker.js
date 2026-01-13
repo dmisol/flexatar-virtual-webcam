@@ -11,7 +11,7 @@ export class RenderWorkerWarper {
             const msg = e.data
             if (!msg) return
 
-           if (msg.isContextLost) {
+            if (msg.isContextLost) {
                 self.onContextLost(msg.isContextLost.value)
 
                 console.log("isContextLost sandbox:", msg.isContextLost)
@@ -22,25 +22,35 @@ export class RenderWorkerWarper {
             } else if (msg.initComplete) {
                 if (this.onReady) this.onReady()
 
-            } 
+            }
         }
 
         this.worker = worker
-        console.log("stadrting worker at url", url)
-        Promise.all([
-            fetch(url + "/flx_gl_static.p").then(response => response.arrayBuffer()),
-            fetch(url + "/animation.bin").then(response => response.arrayBuffer()),
-            fetch(url + "/speachnn/wav2mel/model.json").then(response => response.arrayBuffer()),
-            fetch(url + "/speachnn/wav2mel/group1-shard1of3.bin").then(response => response.arrayBuffer()),
-            fetch(url + "/speachnn/wav2mel/group1-shard2of3.bin").then(response => response.arrayBuffer()),
-            fetch(url + "/speachnn/wav2mel/group1-shard3of3.bin").then(response => response.arrayBuffer()),
-            fetch(url + "/speachnn/mel2phon/model.json").then(response => response.arrayBuffer()),
-            fetch(url + "/speachnn/mel2phon/group1-shard1of1.bin").then(response => response.arrayBuffer()),
-            fetch(url + "/speachnn/phon2avec/model.json").then(response => response.arrayBuffer()),
-            fetch(url + "/speachnn/phon2avec/group1-shard1of1.bin").then(response => response.arrayBuffer()),
-            // fetch("/speachnn/mel2phon/model.json").then(response=>response.arrayBuffer()),
-            // fetch("/speachnn/phon2avec/model.json").then(response=>response.arrayBuffer()),
-        ]).then(
+        console.log("stadrting worker at url", url,worker)
+        let inputArrayBuffers
+        if (typeof url === "string") {
+            inputArrayBuffers = [
+                fetch(url + "/flx_gl_static.p").then(response => response.arrayBuffer()),
+                fetch(url + "/animation.bin").then(response => response.arrayBuffer()),
+                fetch(url + "/speachnn/wav2mel/model.json").then(response => response.arrayBuffer()),
+                fetch(url + "/speachnn/wav2mel/group1-shard1of3.bin").then(response => response.arrayBuffer()),
+                fetch(url + "/speachnn/wav2mel/group1-shard2of3.bin").then(response => response.arrayBuffer()),
+                fetch(url + "/speachnn/wav2mel/group1-shard3of3.bin").then(response => response.arrayBuffer()),
+                fetch(url + "/speachnn/mel2phon/model.json").then(response => response.arrayBuffer()),
+                fetch(url + "/speachnn/mel2phon/group1-shard1of1.bin").then(response => response.arrayBuffer()),
+                fetch(url + "/speachnn/phon2avec/model.json").then(response => response.arrayBuffer()),
+                fetch(url + "/speachnn/phon2avec/group1-shard1of1.bin").then(response => response.arrayBuffer()),
+                // fetch("/speachnn/mel2phon/model.json").then(response=>response.arrayBuffer()),
+                // fetch("/speachnn/phon2avec/model.json").then(response=>response.arrayBuffer()),
+            ]
+        } else if (Array.isArray(url)) {
+            // Array of URLs case
+            inputArrayBuffers = url;
+        }
+        else {
+            throw new Error("Invalid url parameter: must be a string or array of strings");
+        }
+        Promise.all(inputArrayBuffers).then(
 
             buffers => {
                 console.log("worker buffers ready", buffers)
@@ -74,7 +84,7 @@ export class RenderWorkerWarper {
 
 
     }
-   
+
     // start(){
     //     const worker = this.worker
     set size(val) {
@@ -119,5 +129,5 @@ export class RenderWorkerWarper {
     checkInUse() {
         this.worker.postMessage({ checkInUse: true })
     }
-    
+
 }

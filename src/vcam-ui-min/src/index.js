@@ -43,7 +43,12 @@ connection.onEffectStateRequest = msg => {
     flexatarControllerPortPromise.then(port => {
         port.postMessage(msg)
     })
-
+}
+connection.onAnimationPatternRequest = msg => {
+    log("onAnimationPatternRequest")
+    flexatarControllerPortPromise.then(port => {
+        port.postMessage(msg)
+    })
 }
 
 window.parent.postMessage({ ftarUIPort: connection.outPort }, "*", [connection.outPort])
@@ -62,12 +67,20 @@ const flexatarControllerPortPromise = new Promise(resolve => {
             flexatarControllerPort.onmessage = (e) => {
                 const msg = e.data;
                 if (!msg) return
+                // log("flexatarControllerPort Response",msg)
+
                 if (msg.effectStateResponse) {
                     log("effectStateResponse")
                     connection.sendEffectState(msg)
                 }
+                else if (msg.animationPatternResponse) {
+                    log("animationPatternResponse", msg)
+                    connection.sendEffectState(msg)
+                }
             }
             resolve(flexatarControllerPort)
+        } else if (e.data && e.data.clickFlexatarCreation) {
+            flexatarPhotoInputElement.click()
         } else if (e.data && e.data.closing) {
             console.log("iframe controller port close")
             if (flexatarControllerPort) {
@@ -124,13 +137,44 @@ confirmButton.onclick = async () => {
     isTrashPressed = !isTrashPressed
 
 }
+function removeFirstMatch(arr, predicate) {
+    const index = arr.findIndex(predicate);
+    if (index === -1) return null;
+    const ret = arr[index]
+    arr.splice(index, 1);
+    return ret;
+}
 
 async function loadFtarListPreviews(noCache, selectedFtar) {
     // const listUnauthorized = await connectionUnauthorized.getList({ preview: true, noCache: false })
 
 
-    const list = await connection.getList({ preview: true, noCache })
-    log("list", list)
+    const favList = await connection.getFavorite()
+    log("favList", favList)
+    const favProcessed = []
+    let list = await connection.getList({ preview: true, noCache })
+    for (const favEntry of favList){
+       const matchFound = removeFirstMatch(list,x=>x.id === favEntry.id )
+       log("matchFound",matchFound)
+       if (matchFound){
+        //  Object.assign(favEntry, matchFound);
+        favProcessed.push(matchFound)
+
+       }
+    }
+
+
+    // list = list.filter(item => {
+    //     for (const e of favList) {
+    //         if (e.id === item.id) {
+    //             Object.assign(e, item);
+    //             return false
+    //         }
+    //     }
+    //     return true
+    // });
+    list = favProcessed.reverse().concat(list)
+    // log("list", list)
     // return
     if (list.error) {
         showSubscriptionError()
@@ -141,6 +185,7 @@ async function loadFtarListPreviews(noCache, selectedFtar) {
 
     log("selectedFtar", selectedFtar)
     for (const listElement of list) {
+        log(listElement)
         const imgArrayBuffer = await connection.getPreview(listElement)
         const blob = new Blob([imgArrayBuffer], { type: "image/jpg" }); // Change type if needed
         const imgSrc = URL.createObjectURL(blob);
@@ -150,8 +195,7 @@ async function loadFtarListPreviews(noCache, selectedFtar) {
 
 }
 
-reloadFtarListButton.onclick = async () => {
-    log("reload clicked")
+async function reloadFtarList(noCache) {
     reloadFtarListButton.disabled = true
     reloadIcon.classList.add("roating")
 
@@ -161,10 +205,28 @@ reloadFtarListButton.onclick = async () => {
     }
 
     let currentFtar = await connection.getCurrentFtar()
-    await loadFtarListPreviews(true, currentFtar)
+    await loadFtarListPreviews(noCache, currentFtar)
 
     reloadIcon.classList.remove("roating")
     reloadFtarListButton.disabled = false
+}
+
+reloadFtarListButton.onclick = async () => {
+    log("reload clicked")
+    await reloadFtarList(true)
+    // reloadFtarListButton.disabled = true
+    // reloadIcon.classList.add("roating")
+
+
+    // while (previewListHolder.children.length > 0) {
+    //     previewListHolder.children[0]?.remove()
+    // }
+
+    // let currentFtar = await connection.getCurrentFtar()
+    // await loadFtarListPreviews(true, currentFtar)
+
+    // reloadIcon.classList.remove("roating")
+    // reloadFtarListButton.disabled = false
 }
 
 trashButton.onclick = () => {
@@ -197,7 +259,7 @@ function updateUserInfo(opts) {
 
 function showSubscriptionError() {
     reloadIcon.classList.remove("roating")
-    plusCircle.classList.add('rotated');
+    // plusCircle.classList.add('rotated');
     makeTextHolder.textContent = Texts.SUBSCRIPTION_END
 }
 connection.onNewFlexatar = async ftarLink => {
@@ -334,13 +396,14 @@ function createDropZone(element, handler) {
     input.type = "file";
 
     input.accept = "image/*"
-
+    input.capture = 'user';
     input.onchange = e => {
         handler(e);
         inputHolder.reset();
     }
 
     element.onclick = () => {
+        log("clicked on drop zone")
         input.click()
     }
     element.ondragover = (e) => {
@@ -357,8 +420,9 @@ function createDropZone(element, handler) {
         element.classList.remove('hover');
         const files = e.dataTransfer.files;
         handler({ target: { files } });
-         inputHolder.reset();
+        inputHolder.reset();
     }
+    return input
 }
 
 async function createFtar(file) {
@@ -372,7 +436,7 @@ async function createFtar(file) {
 function addMakeFlexatarButton() {
 
     const holder = createFlexatarHolder
-    const circle = plusCircle
+    // const circle = plusCircle
     const text = makeTextHolder
     text.textContent = Texts.DROP_PHOTO
 
@@ -380,22 +444,22 @@ function addMakeFlexatarButton() {
 
 
     const setErrorSign = (infoText) => {
-        circle.classList.add('rotated');
+        // circle.classList.add('rotated');
         text.textContent = infoText
         return () => {
-            circle.classList.remove('rotated');
+            // circle.classList.remove('rotated');
             text.textContent = Texts.DROP_PHOTO
         }
     }
 
     const setLoader = () => {
-        circle.style.display = "none"
+        // circle.style.display = "none"
         text.style.display = "none"
         blockOverlay.style.display = "block"
 
 
         return () => {
-            circle.style.display = "block"
+            // circle.style.display = "block"
             text.style.display = "block"
             blockOverlay.style.display = "none"
         }
@@ -403,7 +467,8 @@ function addMakeFlexatarButton() {
 
 
     let removeErrorSign
-    createDropZone(holder, async (e) => {
+    log("setting up flexatar create button")
+    return createDropZone(holder, async (e) => {
         let file = e.target.files[0];
 
         if (!file) return
@@ -435,7 +500,7 @@ function addMakeFlexatarButton() {
 
 
 }
-addMakeFlexatarButton()
+const flexatarPhotoInputElement = addMakeFlexatarButton()
 
 
 const ftarLinkDict = {}
@@ -457,8 +522,10 @@ async function previewLoader(ftarList, previewReadyCallback) {
 let oldClicked
 let selecteFtar
 let globalSelectedFtar
+let globalSelectedFtarIsFavorite = false
 let globalSelectedFtarElement
 let globalCurrentConnection
+
 async function addPreview(ftarLink, previewImage, first, selectedFtarId, connectionProvider) {
     ftarLinkDict[ftarLink.id] = ftarLink
     const previewImg = previewImage;
@@ -500,7 +567,7 @@ async function addPreview(ftarLink, previewImage, first, selectedFtarId, connect
     holder.onclick = async () => {
 
 
-
+        likeButton.disabled = true
         if (oldClicked) {
 
             oldClicked.classList.remove("selected-item")
@@ -517,9 +584,7 @@ async function addPreview(ftarLink, previewImage, first, selectedFtarId, connect
         // selecteFtar = { element: holder, ftarId: ftarLink.id }
 
         holder.appendChild(loader)
-        // await connection.setSelectedFtar(null)
-        // await connectionUnauthorized.setSelectedFtar(null)
-        // await connectionProvider.setSelectedFtar(ftarLink.id)
+
         const ftarBuffer = await connection.getFlexatar(ftarLink, true)
 
         console.log("ftarBuffer", ftarBuffer)
@@ -532,15 +597,28 @@ async function addPreview(ftarLink, previewImage, first, selectedFtarId, connect
 
 
         loader.remove()
+        likeButton.disabled = false
+        const favList = await connection.getFavorite()
+        if ((favList.filter(item => item.id === ftarLink.id)).length === 0) {
+            likeButton.classList.remove("like-selected")
+            globalSelectedFtarIsFavorite = false
+            trashButton.disabled = false
+        } else {
+            likeButton.classList.add("like-selected")
+            globalSelectedFtarIsFavorite = true
+            trashButton.disabled = true
+
+
+        }
 
 
     }
     // console.log("selecteFtar", selecteFtar, ftarLink.id)
 
     if (selectedFtarId === ftarLink.id) {
-        // globalSelectedFtar = selectedFtarId
+
         globalSelectedFtarElement = holder
-        // selecteFtar.element = holder
+
         if (selectedFtarId)
             holder.click()
     }
@@ -916,4 +994,34 @@ effectsButton.onclick = () => {
 // retargetingButton.style.display = "none"
 retargetingButton.onclick = () => {
     connection.showRetarg()
+}
+animateButton.onclick = () => {
+    connection.showAnimate()
+}
+
+likeButton.onclick = async () => {
+    if (!globalSelectedFtarIsFavorite) {
+        log("add to fav clciked")
+        likeButton.classList.add("like-selected")
+        await connection.addToFavorite(globalSelectedFtar)
+    }else{
+        log("remove from fav clciked")
+
+        likeButton.classList.remove("like-selected")
+        await connection.removeFromFavorite(globalSelectedFtar)
+        globalSelectedFtarIsFavorite = false
+    }
+
+   
+    await reloadFtarList(false)
+    // globalSelectedFtarIsFavorite = true
+    // if (globalSelectedFtarElement) {
+    //     // globalSelectedFtarElement.remove()
+    //     // previewListHolder.insertBefore(globalSelectedFtarElement, previewListHolder.firstChild);
+    //     // globalSelectedFtarElement.scrollIntoView({
+    //     //     behavior: 'smooth',
+    //     //     block: 'center',   // start | center | end | nearest
+    //     //     inline: 'nearest'
+    //     // });
+    // }
 }

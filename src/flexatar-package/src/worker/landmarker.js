@@ -59,7 +59,7 @@ export class Landmarker {
         const originalImportScripts = self.importScripts;
         if (assetMap) {
             self.fetch = async (url, options) => {
-                log("try to fetch landmarker patch", url)
+                // log("try to fetch landmarker patch", url)
                 if (url instanceof Request) {
                     options = {
                         method: url.method,

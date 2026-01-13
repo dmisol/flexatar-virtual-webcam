@@ -143,11 +143,14 @@ vCamStream.onCanvasRatio = ratio => {
 
 
 let portSelf
+let instanceId
 window.onmessage = (e) => {
     const msg = e.data
     if (!msg) return
 
     if (msg.managerPort) {
+        instanceId = msg.instanceId
+
         msg.managerPort.onmessage = portHandler
         log("port obtained")
         portSelf = msg.managerPort
@@ -163,7 +166,7 @@ window.onmessage = (e) => {
 }
 
 function closeThisWindow() {
-    window.parent.postMessage({ closeWindow: true, portSelf }, "*", [portSelf])
+    window.parent.postMessage({ closeWindow: true, portSelf,instanceId }, "*", [portSelf])
 }
 
 closeButton.onclick = () => {

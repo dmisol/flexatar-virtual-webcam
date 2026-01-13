@@ -1,0 +1,21 @@
+{
+  "name": "ftar-progress",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack --mode production",
+    "build-copy": "webpack --mode production && cp  dist/*  ../../../flexatar-sdk/chrome-extension/dist/notification/",
+    "build-copy-vgen": "webpack --mode production && cp  dist/bundle.js dist/index.html dist/style.css  ../../../flexatar-sdk/videogen-page/dist/notification/",
+    "build-copy-main-page": "webpack --mode production && cp  dist/bundle.js dist/index.html dist/style.css  ../../../flexatar-sdk/main-page/dist/notification/"
+  },
+  
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "webpack": "^5.99.7",
+    "webpack-cli": "^6.0.1"
+  }
+}

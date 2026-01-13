@@ -1,0 +1,8 @@
+{
+  "statup1": "Lansați orice întâlnire audio sau video, cum ar fi Google Meet, pentru a experimenta efectul în timp real.",
+  "statup2": "Deschide panoul Flexatar UI făcând clic pe pictograma extensiei Flexatar din bara de instrumente a Chrome.",
+  "statup3": "Creează-ți Flexatarul tău dintr-o singură poză frontală.",
+  "statup4": "Este posibil să observați o ușoară întârziere când Flexatarul dumneavoastră vorbește pe ecran; cu toate acestea, pentru celălalt participant, buzele sunt perfect sincronizate cu sunetul.\n\nro_code_example_startup4_translation_notes: This translation aims for natural flow and clarity in Romanian.  'Flexatarul dumneavoastră' is used to refer to the user's Flexatar. 'Celălalt participant' clearly indicates the other person involved. The phrase structure maintains the original meaning while sounding idiomatic in Romanian.",
+  "camshown1": "Este posibil să observați o ușoară întârziere când Flexatarul dumneavoastră vorbește pe ecran.",
+  "camshown2": "Cu toate acestea, pentru celălalt participant, buzele sunt perfect sincronizate cu sunetul."
+}

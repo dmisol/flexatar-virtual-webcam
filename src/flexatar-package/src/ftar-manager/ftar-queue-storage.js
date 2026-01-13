@@ -27,13 +27,16 @@ const FTAR_ERROR_LIST_ID = "_error_queue"
 const FTAR_SUCCESS_LIST_ID = "_success_queue"
 const FTAR_BACKGROUND_LIST_ID = "_background_list"
 const FTAR_PRESET_LIST_ID = "_preset_list"
+const FTAR_FAV_LIST_ID = "_favorite_list"
+const AUIDIO_RECORD_LIST_ID = "_audio_record_list"
 
 export const Lists = {
     FTAR_MAKE_QUEUE_LIST_ID,
     FTAR_PROCESSING_QUEUE_LIST_ID,
     FTAR_ERROR_LIST_ID,
     FTAR_SUCCESS_LIST_ID,
-    FTAR_BACKGROUND_LIST_ID, FTAR_PRESET_LIST_ID,FTAR_SENDING_REQUEST_QUEUE_LIST_ID
+    FTAR_BACKGROUND_LIST_ID, FTAR_PRESET_LIST_ID, FTAR_SENDING_REQUEST_QUEUE_LIST_ID, FTAR_FAV_LIST_ID,
+    AUIDIO_RECORD_LIST_ID
 }
 
 export async function addToList(listID, listOfImgId, userId) {
@@ -50,6 +53,30 @@ export async function addToList(listID, listOfImgId, userId) {
     objSchema[key] = listOfImgIdNew
     await chrome.storage.local.set(objSchema)
     return { success: true }
+}
+
+export async function addToListIfNotAlreadyIn(listID, listOfImgId, userId) {
+    // Get the current user ID
+    const currentUserId = await getCurrentUserId(userId);
+    if (currentUserId.error) return currentUserId;
+
+    const key = currentUserId + listID;
+
+    // Prepare storage schema with default empty array
+    const objSchema = {};
+    objSchema[key] = [];
+    const listOfImgIdSaved = (await chrome.storage.local.get(objSchema))[key];
+
+    // Filter out IDs that are already in the saved list
+    const listOfImgIdToAdd = listOfImgId.filter(id => !listOfImgIdSaved.includes(id));
+
+    // Only add if there are new IDs
+    if (listOfImgIdToAdd.length > 0) {
+        objSchema[key] = listOfImgIdSaved.concat(listOfImgIdToAdd);
+        await chrome.storage.local.set(objSchema);
+    }
+
+    return { success: true, addedCount: listOfImgIdToAdd.length };
 }
 
 export async function addToListAtBeginning(listID, listOfImgId, userId) {
@@ -137,8 +164,11 @@ export const Prefixes = {
     BACKGROUND_SRC_IMAGE: "_src_background_",
     BACKGROUND_CURRENT_ID: "_current_id_background_",
     CURRENT_VIEWPORT_SIZE: "_current_viewport_size_",
-    CURRENT_VIEWPORT_SIZE: "_current_viewport_size_",
-    RETARGETING_CALIBRATION: "_retargeting_calibration_"
+    CURRENT_SPEECH_PATTERN: "_current_speech_pattern_",
+    CURRENT_MOOD: "_current_mood_",
+    RETARGETING_CALIBRATION: "_retargeting_calibration_",
+    DO_NOT_SHOW_NOTIFICATION_ID: "_do_not_show_",
+    RECORDED_AUDIO_ID: "_recorded_audio_"
 }
 export async function saveWithKey(keyPrefix, keyModifier, val, userId) {
     const currentUserId = await getCurrentUserId(userId)
@@ -231,6 +261,26 @@ export async function moveListEntry(fromListId, toListId, value, userId) {
     await removeFromList(fromListId, value, userId)
     await addToListAtBeginning(toListId, [value], userId)
 }
+
+export async function updateListEntry(listId, ftarImgId, value, userId,prop="id") {
+    const queueList = await getList(listId, userId)
+    let condition = ftarImgId[prop]
+    if (!condition) {
+        condition = ftarImgId
+    }
+    log("list content", queueList, listId)
+
+    const newList = queueList.filter(x => (x[prop] || x) === condition)
+
+    log("list with target element", newList)
+    Object.assign(newList[0], value);
+    
+
+    await writeToList(listId, queueList, userId)
+    // await removeFromList(fromListId, value, userId)
+    // await addToListAtBeginning(toListId, [value], userId)
+}
+
 
 export function addBackgroundToStorage(dataUrl, userId) {
     return new Promise(resolve => {

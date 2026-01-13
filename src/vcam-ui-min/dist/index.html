@@ -100,12 +100,46 @@
         <div id="retargetingButton">
             RETARGET
         </div>
+        <div id="animateButton" hidden class="invisible">
+            ANIMATE
+        </div>
         <span id="createFlexatarHolder" class="item-holder bkg-color">
-
-            <div id="plusCircle" class="circle">
+            <svg height="40px" width="40px" version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg"
+                xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve" fill="#f68b1e">
+                <g  stroke-width="0"></g>
+                <g  stroke-linecap="round" stroke-linejoin="round"></g>
+                <g>
+                    <!-- <style type="text/css">
+                        .st0 {
+                            fill: #f68b1e;
+                        }
+                    </style> -->
+                    <g>
+                        <polygon class="st0"
+                            points="131.549,358.824 88.822,358.824 88.822,316.089 64.362,316.089 64.362,383.285 131.549,383.285 ">
+                        </polygon>
+                        <polygon class="st0"
+                            points="380.451,0 380.451,24.461 423.178,24.461 423.178,67.196 447.638,67.196 447.638,0 ">
+                        </polygon>
+                        <polygon class="st0"
+                            points="88.822,24.453 131.549,24.461 131.549,0 64.362,0 64.362,67.196 88.822,67.196 ">
+                        </polygon>
+                        <polygon class="st0"
+                            points="423.178,358.824 380.451,358.824 380.451,383.285 447.638,383.285 447.638,316.089 423.178,316.089 ">
+                        </polygon>
+                        <path class="st0"
+                            d="M255.996,316.67c69.052,0,125.028-55.969,125.028-125.028c0-69.051-55.976-125.028-125.028-125.028 c-69.051,0-125.028,55.977-125.028,125.028C130.968,260.701,186.945,316.67,255.996,316.67z">
+                        </path>
+                        <path class="st0"
+                            d="M255.996,341.378c-62.044,0-114.78,55.833-127.194,96.163C115.64,480.308,131.9,512,175.335,512h161.322 c43.435,0,59.695-31.692,46.533-74.458C370.776,397.211,318.04,341.378,255.996,341.378z">
+                        </path>
+                    </g>
+                </g>
+            </svg>
+            <!-- <div id="plusCircle" class="circle">
                 <div class="bar vertical"></div>
                 <div class="bar horizontal"></div>
-            </div>
+            </div>  -->
             <div id="makeTextHolder" class="drop-photo">CHOOSE PHOTO</div>
 
             <div id="makeOverlayElement" class="item-holder-block"></div>
@@ -130,8 +164,19 @@
             <div id="emptyBlock" class="drop-photo"></div>
         </span>
     </span>
+    <button id="likeButton" class="floating-button-like">
+        <svg  class="trash-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+            <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+            <g id="SVGRepo_iconCarrier">
+                <path fill-rule="evenodd" clip-rule="evenodd"
+                    d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z"
+                    stroke="#f68b1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            </g>
+        </svg>
+    </button>
 
-    <div id="trashButton" class="floating-button invisible">
+    <button id="trashButton" class="floating-button invisible">
         <svg id="trashIcon" class="trash-icon" viewBox="0 0 16 16">
             <path
                 d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z" />
@@ -146,7 +191,7 @@
             <path
                 d="M2 14.5a.5.5 0 0 0 .5.5h11a.5.5 0 1 0 0-1h-1v-1a4.5 4.5 0 0 0-2.557-4.06c-.29-.139-.443-.377-.443-.59v-.7c0-.213.154-.451.443-.59A4.5 4.5 0 0 0 12.5 3V2h1a.5.5 0 0 0 0-1h-11a.5.5 0 0 0 0 1h1v1a4.5 4.5 0 0 0 2.557 4.06c.29.139.443.377.443.59v.7c0 .213-.154.451-.443.59A4.5 4.5 0 0 0 3.5 13v1h-1a.5.5 0 0 0-.5.5m2.5-.5v-1a3.5 3.5 0 0 1 1.989-3.158c.533-.256 1.011-.79 1.011-1.491v-.702s.18.101.5.101.5-.1.5-.1v.7c0 .701.478 1.236 1.011 1.492A3.5 3.5 0 0 1 11.5 13v1z" />
         </svg>
-    </div>
+    </button>
     <div id="confirmButton" class="floating-button floating-button-ok invisible">
 
         <svg xmlns="http://www.w3.org/2000/svg" class="trash-icon " viewBox="0 0 16 16">
@@ -256,7 +301,7 @@
 
             </span>
             <span id="bottomEmptySpace"></span>
-            
+
         </span>
         <span id="backgroundText">backgnd</span>
     </span>

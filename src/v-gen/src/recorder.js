@@ -113,6 +113,8 @@ export class FlexatarRecorder{
     stop(){
         // clearInterval( this.#interval)
         this.mediaRecorder.stop()
+        // this.mediaRecorder.reset()
+        // this.mediaRecorder.release()
       
         // this.mediaRecorder.requestData()
         // setTimeout(()=>{ this.mediaRecorder.stop()},2000)

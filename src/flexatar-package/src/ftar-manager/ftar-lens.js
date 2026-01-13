@@ -3,8 +3,8 @@ function log() {
 }
 
 export class FlexatarLens {
-
-    constructor(url, className) {
+    instanceId = crypto.randomUUID()
+    constructor(url, className,iframeSize) {
         const channel = new MessageChannel()
         this.portSelf = channel.port1
         this.portOut = channel.port2
@@ -18,17 +18,18 @@ export class FlexatarLens {
             log("port message", msg)
             if (msg.managerPort) {
                 if (self.iframeWillInstalled) self.iframeWillInstalled()
-                showIframeOverlay(url, 500, 500, () => {
+                
+                showIframeOverlay(url, iframeSize? iframeSize.width : 500, iframeSize? iframeSize.height : 500, () => {
                     log("canceled")
                     self.iframe = null
                 }, className).then(({ iframe, closeFn }) => {
                     this.portSelf.onmessage = null
-                    iframe.contentWindow.postMessage({ managerPort: this.portSelf, msgID: msg.msgID }, "*", [this.portSelf])
+                    iframe.contentWindow.postMessage({ managerPort: this.portSelf, msgID: msg.msgID, instanceId:self.instanceId,notificationText:msg.notificationText,notificationId:msg.notificationId}, "*", [this.portSelf])
                     self.iframe = iframe
                     function handlerClose(e) {
                         const msg = e.data
                         if (!msg) return
-                        if (msg.closeWindow) {
+                        if (msg.closeWindow && msg.instanceId === self.instanceId) {
                             self.portSelf = msg.portSelf
                             self.portSelf.onmessage = portMessageHandler
                             // overlay.remove()
@@ -108,8 +109,8 @@ function showIframeOverlay(url, width, height, onClose, className) {
 
         }
 
-        dragContainer.style.width = "500px";
-        dragContainer.style.height = "500px";
+        // dragContainer.style.width = "500px";
+        // dragContainer.style.height = "500px";
         dragContainer.style.border = 'none';
         dragContainer.style.borderRadius = '8px';
         //          iframe.style.width = width +"px"

@@ -43,6 +43,7 @@ const faceParser = new FaceParser(faceDetectionAssetUrl);
 let isMainImagePlaced = false
 let currentSelectedImage
 let portSelf
+let instanceId
 
 
 window.onmessage = async e => {
@@ -50,14 +51,33 @@ window.onmessage = async e => {
     if (!msg) return
 
     if (msg.managerPort) {
+        instanceId = msg.instanceId
+
         portSelf = msg.managerPort
         setupPort(portSelf)
         portSelf.postMessage({ msgID: msg.msgID })
+        log("ai prompts requesting")
+
+        portSelf.postMessage({ aiPromptsRequest: true })
+
         // window.parent.postMessage({getPort:portOut,msgID:msg.msgID})
     } else if (msg.closeThisWindow) {
         closeThisWindow()
     }
 }
+
+
+const select = document.getElementById('enhance-prompts');
+const enhanceCheckbox = document.getElementById('enhance-checkbox');
+
+select.addEventListener("change", (event) => {
+    const selectedValue = event.target.value;
+    const prompt = JSON.parse(selectedValue).prompt
+    infoBtn.setAttribute("title", prompt);
+
+
+});
+
 
 function setupPort(port) {
     port.onmessage = async e => {
@@ -168,6 +188,15 @@ function setupPort(port) {
                 waitIcon.classList.add("invisible")
             }
             log("detections", detections)
+        } else if (msg.promptList) {
+            log("recv prompt list")
+            infoBtn.setAttribute("title", msg.promptList[0].prompt);
+            msg.promptList.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = JSON.stringify(p);
+                opt.textContent = p.caption;
+                select.appendChild(opt);
+            });
         } else if (msg.needAuthorize) {
             waitIcon.classList.add("invisible")
             needAuthorizeButton.classList.remove("invisible")
@@ -194,7 +223,7 @@ mainImage.ondblclick = () => {
 }
 
 function closeThisWindow() {
-    window.parent.postMessage({ closeWindow: true, portSelf }, "*", [portSelf])
+    window.parent.postMessage({ closeWindow: true, portSelf, instanceId }, "*", [portSelf])
 
 }
 closeButton.onclick = () => {
@@ -218,27 +247,13 @@ makeButton.onclick = () => {
         log("imageList ready", imagesList)
         encodingProgress.textContent = `( ${encodedCounter} / ${selectedCounter} )`
         flexatarCreationInfo.classList.remove("invisible")
-        portSelf.postMessage({ imagesList })
+
+        // log("aiPromptContent",select.options[select.selectedIndex].value)
+
+        portSelf.postMessage({ imagesList, aiPrompt: enhanceCheckbox.checked ? JSON.stringify(select.options[select.selectedIndex].value) : undefined })
 
         closeThisWindow()
-        // const imgIdList = imagesList.map(x=>x.id)
 
-        // const addResult = await addImgIdToMakeFtarList(imagesList)
-        // const addResult = await QueueStorage.addToList(QueueStorage.Lists.FTAR_MAKE_QUEUE_LIST_ID,imagesList)
-
-        // log("addImgIdResult",addResult)
-
-        // // const storedImageId = await  QueueStorage.getList(QueueStorage.Lists.FTAR_MAKE_QUEUE_LIST_ID)
-        // const storedImageId = await getImgIdToMakeFtarList()
-        // log("storedImageId",storedImageId)
-
-        // for (const {dataUrl,id} of imagesList){
-        //     const result = await storeImageToMakeFtar(dataUrl,id)
-        //     log("image stored",result)
-
-        // }
-
-        // window.parent.postMessage({closeFlexatarLens:true},"*")
     })
 }
 

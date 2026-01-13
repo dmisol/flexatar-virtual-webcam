@@ -1,0 +1,109 @@
+:root {
+    --main-color-1: #f68b1e;
+    --main-color-2: #344d23;
+    --select-color: #4c8a22;
+    --hoover-color: #6e8d59;
+    --error-color: #bb2121;
+    --white: #fff;
+    --black: black;
+    --disabled: rgb(65, 65, 65);
+}
+
+body {
+    background-color: black;
+    color: white;
+    display: flex;
+    height: 100vh;
+    /* Full window height */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#switchToEnglishButton {
+    background-color: var(--main-color-2);
+    color: var(--main-color-1);
+    border: 0px;
+    cursor: pointer;
+}
+
+.trash-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 50px;
+    transform: translate(-50%, -50%);
+    aspect-ratio: 1 / 1;
+    fill: var(--main-color-1);
+    /* White icon color */
+}
+
+
+#closeButton {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: auto;
+    cursor: pointer;
+}
+
+#progressContainer {
+    width: 100%;
+    display: flex;
+
+    flex-direction: column;
+    /*gap: 15px; */
+}
+
+
+h2 {
+    color: var(--main-color-1);
+    /* margin-top: 10px;
+    margin-bottom: 10px;
+    margin-top: 10px; */
+    padding: 0px;
+}
+
+h3 {
+    color: var(--main-color-1);
+    margin-top: 5px;
+    margin-bottom: 5px;
+
+    padding: 0px;
+}
+
+
+
+
+
+
+
+
+.invisible {
+    display: none !important;
+}
+
+.title {
+    margin: 0 auto;
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    align-content: center;
+}
+
+#delayNotification {
+    padding: 10px;
+    font-size: 15px;
+}
+
+#startupNotification {
+    padding: 10px;
+    font-size: 15px;
+}
+
+#startupNotification li,
+#delayNotification li {
+
+    padding: 5px;
+}

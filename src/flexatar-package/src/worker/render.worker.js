@@ -10,8 +10,9 @@ import { Landmarker } from "./landmarker.js"
 
 let landmarker
 let setVoiceProcessingParameters
-function log() {
-    console.log("[RENDER WORKER]", ...arguments)
+function log(...args) {
+    const now = new Date().toLocaleTimeString();
+    console.log(`[${now}] [RENDER WORKER]`, ...args);
 }
 
 
@@ -59,28 +60,6 @@ class AudioPacker {
 
     }
 
-    // addBuffer(buffer,onBufferReady,onFail){
-    //   if (buffer){
-    //     const arr = new Float32Array(buffer)
-    //     this.collector.push(arr);
-    //     const totalLength = (this.collector.length - 1) * arr.length +  this.collector[0].length
-    //     // console.log(arr.length,totalLength,this.windowSize)
-
-    //     if (totalLength >this.windowSize) {
-    //         const audioBuffer = concatenateFloat32Arrays(this.collector);
-    //         // const message = {audioBuffer:,sampleRate:sampleRate}
-    //         onBufferReady(audioBuffer.subarray(0,this.windowSize));
-    //         this.collector = [];
-    //         if (audioBuffer.length > this.windowSize){
-    //             const tail = audioBuffer.subarray(this.windowSize,audioBuffer.length);
-    //             this.collector.push(tail);
-    //         }
-
-    //     }
-    //   }else{
-    //     onFail()
-    //   }
-    // }
     addBuffer(buffer, onBufferReady, onFail) {
         if (buffer) {
             const arr = new Float32Array(buffer)
@@ -245,7 +224,7 @@ function drawImageCover(ctx, img, x, y, w, h) {
 }
 
 
-async function generateTransparentCircleImage(image, size = 512, circleRadius = 190) {
+async function generateTransparentCircleImage(image, size = 512, circleRadius = 220) {
     const canvas = new OffscreenCanvas(size, size);
     const ctx = canvas.getContext('2d');
 
@@ -301,17 +280,17 @@ async function generateTransparentCircleImage(image, size = 512, circleRadius = 
 }
 
 
-console.log(FtarView)
+// console.log(FtarView)
 let renderer
 let offscreen
 let ftarManagerConnection
 // let ftarManagerConnectionU
 let flexatarSDK
-async function initRender(url1, url2, size) {
+async function initRender(url1, url2, calmPatUrl, livePatUrl, silentPatUrl, size) {
 
+    log("start init renderer")
 
-
-    console.log("offscreen", FtarView)
+    // console.log("offscreen", FtarView)
     const connection = new Ftar.ManagerConnection()
 
     ftarManagerConnection = connection
@@ -322,18 +301,19 @@ async function initRender(url1, url2, size) {
 
     log("manager connection ready")
 
-    const token = new FtarView.GetToken(async () => {
+    // const token = new FtarView.GetToken(async () => {
 
 
-        log("requesting token")
-        const token = await connection.getToken()
-        log("token", token)
-        return token
-    });
+    //     log("requesting token")
+    //     const token = await connection.getToken()
+    //     log("token", token)
+    //     return token
+    // });
 
-    flexatarSDK = new FtarView.SDK(token,
-        url1, url2
-    )
+    flexatarSDK = new FtarView.SDK(null,
+        url1, url2,
+        { calmPatUrl, livePatUrl, silentPatUrl })
+    // {xrot:"/static/x_anim.json"})
     offscreen = new OffscreenCanvas(size.width, size.height);
 
     log("starting render")
@@ -354,8 +334,8 @@ async function initRender(url1, url2, size) {
         let fistFrameNotSent = true
         renderer.start = async () => {
             log("start called")
-            if (renderer.slot1.id === "id1"){
-                log("start canceled",renderer.slot1)
+            if (renderer.slot1.id === "id1") {
+                log("start canceled", renderer.slot1)
 
                 return
             }
@@ -376,6 +356,7 @@ async function initRender(url1, url2, size) {
         renderer.pause = () => {
             fistFrameNotSent = false
         }
+
         renderResolve()
 
 
@@ -390,17 +371,20 @@ async function initRender(url1, url2, size) {
         self.postMessage({ videoStreamFromCameraRequest: cameraLabel })
 
     }
+    log("retargeting status obtained")
+
 
     currentCalibrationHeadMotionState = await connection.getRetargetingCalibration()
+    log("calibration finished")
 
 
 
 
     const currentFtar = await connection.getCurrentFtar()
-
+    log("current ftar obtained")
 
     const viewportSize = await connection.getViewportSize()
-
+    log("viewportSize obtained")
     renderer.canvas.width = viewportSize.width
     renderer.canvas.height = viewportSize.height
     if (mediaPorts) mediaPorts.forEach(p => {
@@ -465,6 +449,14 @@ async function initRender(url1, url2, size) {
         }
 
     }
+    const savedSpeachPattern = (await ftarManagerConnection.getSpeechPattern()).value;
+    log("savedSpeachPattern", savedSpeachPattern)
+    renderer.animator.setCurrentSpeechPattern(savedSpeachPattern)
+
+    const savedMood = (await ftarManagerConnection.getMood()).value;
+    log("savedMood", savedMood)
+    renderer.animator.isFriendly = savedMood === "friendly"
+
     log("rend init fin")
     renderResolve()
     postMessage({ initComplete: true })
@@ -500,7 +492,7 @@ function pumpCameraFrames() {
     const f = framesToProcess.pop()
     while (framesToProcess.length > 0) {
         framesToProcess.pop().close()
-        log("dropping frame")
+        // log("dropping frame")
     }
     if (noFrameCounter > 20) {
         log("stop processing frames")
@@ -523,6 +515,9 @@ function pumpCameraFrames() {
                 const [headMotionStateClean, headMotionState, uLipOp] = result
                 currentRetargetingHeadMotionState = result
 
+                if (animationEditorPort) {
+                    animationEditorPort.postMessage({ animationPatternResponse: { headMotionState } })
+                }
                 if (renderer) {
                     // renderer.speechState = [0, 0, 0, uLipOp, 0, 1]
                     renderer.headMotion(...headMotionState)
@@ -552,7 +547,7 @@ function pumpCameraFrames() {
 
 }
 // pumpCameraFrames()
-
+let animationEditorPort
 onmessage = (event) => {
 
     const msg = event.data
@@ -603,7 +598,7 @@ onmessage = (event) => {
                 log("msg.slot1", data)
                 rendererPromise.then(() => {
                     if (renderer.error) {
-                        log("renderer error",renderer.error)
+                        log("renderer error", renderer.error)
                         renderer.start()
                         return
                     }
@@ -611,6 +606,43 @@ onmessage = (event) => {
                     renderer.slot1 = { data, ready: Promise.resolve(true), id: msg.id, name: "noname" }
                     renderer.start()
                 })
+
+            } else if (msg.animationPatternRequest) {
+                // log("animationPatternRequest")
+                if (msg.animationPatternRequest.giveMePatterns) {
+                    animationEditorPort = channel.port1
+                    rendererPromise.then(() => {
+                        log("animationPatternRequest", flexatarSDK.animator)
+                        channel.port1.postMessage({ animationPatternResponse: { patternsDict: flexatarSDK.animator.pattern } })
+
+                    })
+                } else if (msg.animationPatternRequest.playAnimation) {
+                    rendererPromise.then(() => {
+                        renderer.animator.isPlaying = true
+
+                    })
+                } else if (msg.animationPatternRequest.position) {
+                    log("animationPatternRequest.position", msg.animationPatternRequest.position)
+                    rendererPromise.then(() => {
+                        renderer.animator.isPlaying = false
+                        renderer.animator.position = msg.animationPatternRequest.position.value
+                        console.log("renderer.animator", renderer.animator)
+                    })
+
+                } else if (msg.animationPatternRequest.changePattern) {
+                    log("animationPatternRequest.changePattern", msg.animationPatternRequest.changePattern)
+
+                    if (renderer)
+                        renderer.animator.currentAnimationPattern = msg.animationPatternRequest.changePattern
+                } else if (msg.animationPatternRequest.selectedPattern) {
+                    log("animationPatternRequest.selectedPattern", msg.animationPatternRequest.selectedPattern)
+
+                    Object.keys(msg.animationPatternRequest.selectedPattern).forEach(key => {
+                        flexatarSDK.animator.pattern[key] = msg.animationPatternRequest.selectedPattern[key]
+                        renderer.animator.currentAnimationPattern = key
+                    })
+
+                }
 
             } else if (msg.effectStateRequest) {
                 log("effectStateRequest")
@@ -698,9 +730,14 @@ onmessage = (event) => {
                     channel.port1.postMessage({ animationNames: renderer.animator.patternList })
                 })
             } else if (msg.animation) {
+
                 if (renderer.error) return
+                console.log("setting animation pattern",msg.animation)
                 renderer.animator.currentAnimationPattern = msg.animation.pattern
             } else if (msg.closing) {
+                if (channel.port1 == animationEditorPort) {
+                    animationEditorPort = null
+                }
                 ports = ports.filter(fn => fn !== channel.port1);
                 channel.port1.close()
                 console.log("controller, closing port ", ports.length)
@@ -718,6 +755,14 @@ onmessage = (event) => {
             // if (mediaPorts) mediaPorts.forEach(p => {
             log("sending to mediaport canvas ratio")
             msg.mediaPort.postMessage({ canvasRatio: renderer.canvas.width / renderer.canvas.height })
+            ftarManagerConnection.getSpeechPattern().then(p => {
+                log("sending speech pattern ", p)
+                msg.mediaPort.postMessage({ speechPattern: p.value })
+            })
+            ftarManagerConnection.getMood().then(p => {
+                log("sending mood ", p)
+                msg.mediaPort.postMessage({ mood: p.value })
+            })
 
             // })
         })
@@ -726,18 +771,19 @@ onmessage = (event) => {
             if (!msg1) return
             if (msg1.audioBuffer) {
                 if (!processAudio) return
-                // return
-                // console.log("render worker audio buffer")
+                // log("audioBuffer",msg1.audioBuffer)
+
                 aPacker.addBuffer(msg1.audioBuffer, (packedAudio) => {
                     // console.log("packedAudio",packedAudio)
                     processAudio(packedAudio, (anim) => {
-
+                        // Unlink here to check mem issue in browser on iphone
                         if (renderer) renderer.speechState = anim
                         // console.log("anim",anim)
                     })
                 }, () => {
                     console.log("fail")
                 })
+
             } else if (msg1.videoStreamFromCameraStopRequest) {
                 rendererPromise.then(() => {
                     ftarManagerConnection.setRetargetingStatus({ value: false })
@@ -776,6 +822,28 @@ onmessage = (event) => {
                 }
 
                 msg.mediaPort.postMessage({ canvasRatio: renderer.canvas.width / renderer.canvas.height })
+
+            } else if (msg1.setMood) {
+                log("msg1.setMood", msg1.setMood)
+                 if (ftarManagerConnection) {
+                    ftarManagerConnection.setMood(msg1.setMood)
+                }
+                rendererPromise.then(() => {
+                    
+                    renderer.animator.isFriendly = msg1.setMood.value === "friendly"
+                })
+            } else if (msg1.setSpeechPattern) {
+                log("msg1.setSpeechPattern", msg1.setSpeechPattern)
+                if (ftarManagerConnection) {
+                    ftarManagerConnection.setSpeechPattern(msg1.setSpeechPattern)
+                }
+                rendererPromise.then(() => {
+                    renderer.animator.setCurrentSpeechPattern(msg1.setSpeechPattern.value)
+                    for (let i = 0; i < 50; i++) {
+                        renderer.animator.patternType = 0
+                    }
+                })
+
 
             } else if (msg1.setLipState) {
                 if (renderer) renderer.speechState = msg1.setLipState
@@ -829,10 +897,36 @@ onmessage = (event) => {
         log("enableRetargeting received")
         landmarker = new Landmarker(msg.enableRetargeting)
 
+    } else if (msg.customModel) {
+        const encoder = msg.customModel.encoder
+        const fuse = msg.customModel.fuse
+        const files = {
+            encoder: [
+                arrayBufferToFile(encoder.model, "model.json", "application/json"),
+                arrayBufferToFile(encoder.shrad1, "group1-shard1of2.bin"),
+                arrayBufferToFile(encoder.shrad2, "group1-shard2of2.bin"),
+            ],
+            fuse: [
+                arrayBufferToFile(fuse.model, "model.json", "application/json"),
+                arrayBufferToFile(fuse.shrad1, "group1-shard1of1.bin"),
+                //  arrayBufferToFile(fuse.shrad2, "group1-shard2of3.bin"),
+                //  arrayBufferToFile(fuse.shrad3, "group1-shard3of3.bin"),
+            ],
+            anim: msg.customModel.anim
+        }
+
+        FtarLipSync.initCustom(files).then(({ sendMessage, checkGLContextLost, setProcessingParameters }) => {
+            processAudio = sendMessage
+
+        })
+
     } else if (msg.initBuffers) {
         initRender(
             arrayBufferToDataURL(msg.initBuffers[0]),
             arrayBufferToDataURL(msg.initBuffers[1]),
+            arrayBufferToDataURL(msg.initBuffers[2][0]),
+            arrayBufferToDataURL(msg.initBuffers[2][1]),
+            arrayBufferToDataURL(msg.initBuffers[2][2]),
             msg.size
         )
         const nnBuffers = msg.nnBuffers;

@@ -133,9 +133,17 @@ button:disabled{
 }
 h2{
     color: var(--main-color-1);
+    margin-bottom: 0px;
+    padding-bottom: 0px;
 }
+
 p{
     color: var(--main-color-2);
+    margin-top:5px;
+    margin-bottom:5px;
+}
+.ai-enhance{
+    color: var(--main-color-1);
 }
 .selected-color{
     color: var(--select-color) !important;
@@ -198,4 +206,7 @@ p{
     gap:20px;
     align-items: center;
     justify-content: center;
+}
+#infoBtn{
+    cursor: pointer;
 }

@@ -1,5 +1,45 @@
 import { Manager } from "../ftar-manager/ftar-connection.js"
 
+
+
+
+const originalFetch = self.fetch;
+
+self.fetch1 = async function (input, init) {
+    console.log("fetch override")
+  // Create a unique ID for this request
+  const id = Math.random().toString(36).slice(2);
+
+  // Send the request details to the client (the main page)
+  const clientsList = await self.clients.matchAll();
+  if (clientsList.length === 0) {
+    // No client available — fallback
+    return originalFetch(input, init);
+  }
+  const client = clientsList[0];
+
+  client.postMessage({
+    type: 'fetch-proxy-request',
+    id,
+    input,
+    init
+  });
+
+  // Wait for response message
+  return new Promise((resolve, reject) => {
+    const onMessage = (event) => {
+      const data = event.data;
+      if (data && data.type === 'fetch-proxy-response' && data.id === id) {
+        self.removeEventListener('message', onMessage);
+        if (data.error) reject(data.error);
+        else resolve(new Response(data.body, data.options));
+      }
+    };
+    self.addEventListener('message', onMessage);
+  });
+};
+
+
 let managerPromiseResolve
 let managerPromise = new Promise(resolve => {
     managerPromiseResolve = resolve

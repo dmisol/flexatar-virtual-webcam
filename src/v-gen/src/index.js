@@ -16,14 +16,15 @@ function log() {
 
 
 function getFtarViewSize() {
-    const ftarViewSize = window.innerWidth - 60
+    const ftarViewSize = window.innerWidth - 70
     log("Calculated FTAR view size:", ftarViewSize)
     return ftarViewSize
 }
-
+const isIframe = window.self !== window.top
 const vCam = new VCAM(async () => {
     const msgID = generateUUID()
-    // return "no token"
+    if (!isIframe)
+        return "no_token"
     return await new Promise(resolve => {
         const handler = e => {
             if (!e.data) return
@@ -55,17 +56,20 @@ const vCam = new VCAM(async () => {
         },
         canvas: document.getElementById("top-canvas"),
         roundOverlay: true,
-        needGallery:false,
+        needGallery: true,
         defaultBackgroundsFn: async () => {
             log("defaultBackgroundsFn called - loading default backgrounds")
-            const backgroundNames = ["1.jpg", "2.jpg", "3.jpg"]
+            const backgroundNames = ['Restaurant_03.jpg', 'Gym_01.jpg', 'Restaurant_02.jpg', 'City_02.jpg', 'Laboratory_01.jpg', 'Car Inside_03.jpg', 'Airplane_01.jpg', 'Balcony_03.jpg', 'Servant_02.jpg', 'Balcony_01.jpg', 'Country_02.jpg', 'Musical Instruments_01.jpg', 'Balcony_02.jpg', 'Kitchen_01.jpg', 'Tram Car_02.jpg', 'Office_01.jpg', 'Appliances_01.jpg', 'Bookstore_01.jpg', 'Anfild_01.jpg', 'Servant_01.jpg', 'Train_01.jpg', 'City_01.jpg', 'Balcony_05.jpg', 'City_04.jpg', 'Anfild_02.jpg', 'Crosswalk_01.jpg', 'Playground_01.jpg', 'Car Inside_02.jpg', 'Marina_01.jpg', 'Laboratory_02.jpg', 'Kitchen_02.jpg', 'Ship_01.jpg', 'CheeseShop_01.jpg', 'City_03.jpg', 'Country_01.jpg', 'Cars_01.jpg', 'Balcony_04.jpg', 'Car Inside_01.jpg', 'Tram Car_01.jpg', 'Ship_02.jpg', 'Country_03.jpg', 'Butterflies_01.jpg', 'Crosswalk_02.jpg', 'Phones_01.jpg', 'City_05.jpg', 'Restaurant_01.jpg', 'Airplane_02.jpg', 'Hardware Store_01.jpg', 'Airplane_03.jpg', 'Birds_01.jpg', 'Vintage_01.jpg', 'Crosswalk_03.jpg', 'Ship_03.jpg', 'Train_02.jpg', 'Birds_02.jpg']
+
+            // const backgroundNames = ["1.jpg", "2.jpg", "3.jpg"]
 
             const backgrounds = await Promise.all(
                 backgroundNames.map(async name => {
-                    const res = await fetch(`$files/${name}`);
+                    log("try to fetch " + `files/${name}`)
+                    const res = await fetch(`/files/backgrounds/${name}`);
                     const blob = await res.blob();
                     const file = new File([blob], name, { type: blob.type });
-                    return await getCroppedImageDataUrlFromBuffer(file, 480, 640);
+                    return await getCroppedImageDataUrlFromBuffer(file, 480, 480);
                 })
             );
             return backgrounds;
@@ -87,11 +91,17 @@ window.addEventListener("resize", handleResize)
 
 
 document.getElementById("left-panel").appendChild(vCam.element)
-
+vCam.element.id = "ui_iframe"
 
 vCam.element.style.height = "100%"
+vCam.element.style.width = "70px"
+// vCam.element.style.paddingTop="20px"
+// vCam.element.style.paddingBottom="20px"
+function engageFtarCreation() {
+    vCam.element.contentWindow.postMessage({ clickFlexatarCreation: true })
 
-
+}
+window.engageFtarCreation = engageFtarCreation
 function checkFileTypeIsAudio(fileType) {
     return fileType.startsWith("audio/")
 }
@@ -339,18 +349,48 @@ shareSign.onclick = async () => {
             log("Video URL shared successfully!");
         }
     } catch (err) {
-        alert("Share failed:" + err)
-        console.error("Share failed:", err);
+        log("trying android share", window.AndroidShare)
+        if (window.AndroidShare && AndroidShare.shareDataUrlVideo) {
+            fileToDataUrl(dataUrl => {
+                AndroidShare.shareDataUrlVideo("", "Flexatar", dataUrl);
+            })
+
+
+        } else {
+            alert("Share failed:" + err)
+            console.error("Share failed:", err);
+        }
+
     }
 }
+function fileToDataUrl(callback) {
+    const reader = new FileReader();
+    reader.onloadend = function () {
+        const dataUrl = reader.result;
+        callback(dataUrl)
 
-
-downloadVideoSign.onclick = () => {
+    }
+    reader.readAsDataURL(videoFile);
+}
+function downloadFlexatar(url) {
     const link = document.createElement('a');
-    link.href = videoUrl;
+
+    link.href = url;
     link.download = "flexatarVideo.mp4";
 
     link.click();
+}
+downloadVideoSign.onclick = () => {
+
+    if (window.AndroidShare) {
+        fileToDataUrl(dataUrl => {
+            downloadFlexatar(dataUrl)
+        })
+
+    } else {
+        downloadFlexatar(videoUrl)
+    }
+
 }
 // ==============microphone input=========
 
@@ -398,11 +438,11 @@ recordAudioUI(
         toggleRecordingUI(true)
 
     }, () => {
-         toggleRecordingUI(false)
+        toggleRecordingUI(false)
     },
 
     async (dur, url) => {
-       
+
         const response = await fetch(url); // Fetch the Blob from the URL
         const blob = await response.blob(); // Convert response to Blob
         const file = new File([blob], "Recorded." + supportedFormats[0].split("/")[1], { type: supportedFormats[0] });
@@ -419,7 +459,7 @@ recordAudioUI(
     },
 
     () => {
-      
+
         showPopup(texts.noMicPerm)
     },
     () => {
