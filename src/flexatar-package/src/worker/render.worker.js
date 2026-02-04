@@ -410,15 +410,25 @@ async function initRender(url1, url2, calmPatUrl, livePatUrl, silentPatUrl, size
 
         // log("current background", background)
         if (background) {
-            flexatarSDK.newOverlay(background).then(overlay => {
-                renderer.addOverlay(overlay, { x: 0, y: 0, width: 100, height: 100, mode: "back" });
+            let breakCounter = 0
+            while (true) {
+                flexatarSDK.newOverlay(background).then(overlay => {
+                    renderer.addOverlay(overlay, { x: 0, y: 0, width: 100, height: 100, mode: "back" });
 
-            })
-            generateTransparentCircleImage(background).then(roundOverlay => {
-                flexatarSDK.newOverlay(roundOverlay).then(overlay => {
-                    renderer.addOverlay(overlay, { x: 0, y: 0, width: 100, height: 100, mode: "front" });
                 })
-            })
+                generateTransparentCircleImage(background).then(roundOverlay => {
+                    flexatarSDK.newOverlay(roundOverlay).then(overlay => {
+                        renderer.addOverlay(overlay, { x: 0, y: 0, width: 100, height: 100, mode: "front" });
+                    })
+                })
+                if (background || breakCounter>5) {
+                    break
+                } else {
+                    await new Promise(resolve => { setTimeout(resolve, 500) })
+                    breakCounter+=1
+
+                }
+            }
         }
     }
 
@@ -732,7 +742,7 @@ onmessage = (event) => {
             } else if (msg.animation) {
 
                 if (renderer.error) return
-                console.log("setting animation pattern",msg.animation)
+                console.log("setting animation pattern", msg.animation)
                 renderer.animator.currentAnimationPattern = msg.animation.pattern
             } else if (msg.closing) {
                 if (channel.port1 == animationEditorPort) {
@@ -825,11 +835,11 @@ onmessage = (event) => {
 
             } else if (msg1.setMood) {
                 log("msg1.setMood", msg1.setMood)
-                 if (ftarManagerConnection) {
+                if (ftarManagerConnection) {
                     ftarManagerConnection.setMood(msg1.setMood)
                 }
                 rendererPromise.then(() => {
-                    
+
                     renderer.animator.isFriendly = msg1.setMood.value === "friendly"
                 })
             } else if (msg1.setSpeechPattern) {

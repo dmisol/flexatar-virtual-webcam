@@ -563,7 +563,9 @@ async function addPreview(ftarLink, previewImage, first, selectedFtarId, connect
         previewListHolder.appendChild(holder);
 
     }
-
+    holder.ondblclick = ()=>{
+        alert("Flexatar id is:"+ftarLink.id)
+    }
     holder.onclick = async () => {
 
 
@@ -997,6 +999,9 @@ retargetingButton.onclick = () => {
 }
 animateButton.onclick = () => {
     connection.showAnimate()
+}
+aiButton.onclick = () => {
+    connection.showPopupWindow("autopilot")
 }
 
 likeButton.onclick = async () => {

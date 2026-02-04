@@ -44,9 +44,13 @@
             <p id="photoCounter">Selected photos: <span id="selectedCount">0</span></p>
         </span>
 
-        <div class="ai-enhance">
+         <div id="aiNotAvailable" class="ai-enhance invisible">
+            <a id="authPageLinkElement" href="https://vgen.flexatar.com" target="_blank" rel="noopener noreferrer">Authorize</a>
+            to enable AI preprocessing.
+         </div>
+        <div id="aiAvailable" class="ai-enhance invisible" >
             <label>
-                <input type="checkbox" id="enhance-checkbox" checked />
+                <input type="checkbox" id="enhance-checkbox"  />
                 Enhance with AI
             </label>
 

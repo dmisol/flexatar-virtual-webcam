@@ -10,7 +10,7 @@ module.exports = {
   },
   // mode: 'development',
   resolve:{
-    fallback: {"fs": false,"path":  require.resolve("path-browserify")}
+    fallback: {"fs": false,"path":  false}
   },
   mode: 'production',
   module: {

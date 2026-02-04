@@ -20,6 +20,17 @@ function getFtarViewSize() {
     log("Calculated FTAR view size:", ftarViewSize)
     return ftarViewSize
 }
+const isLocalhost = false;
+const domain = isLocalhost ? "http://localhost:8081" : "https://flexatar-sdk.com";
+    const urls = {
+        vcam: `${domain}/vcam/index.html`,
+        lens: `${domain}/lens/index.html`,
+        progress: `${domain}/progress/index.html`,
+        files: `${domain}/files`,
+        effects: `${domain}/effect`,
+        retarg: `${domain}/retarg`,
+    };
+
 const isIframe = window.self !== window.top
 const vCam = new VCAM(async () => {
     const msgID = generateUUID()
@@ -46,27 +57,29 @@ const vCam = new VCAM(async () => {
             width: getFtarViewSize(),
             height: getFtarViewSize(),
         },
-        url: {
-            vcam: "/vcam",
-            lens: "/lens",
-            progress: "/progress",
-            files: "/files",
-            effects: "/effect",
-            retarg: "/retarg",
-        },
+        url:urls,
+        // url: {
+        //     vcam: "/vcam",
+        //     lens: "/lens",
+        //     progress: "/progress",
+        //     files: "/files",
+        //     effects: "/effect",
+        //     retarg: "/retarg",
+        // },
         canvas: document.getElementById("top-canvas"),
         roundOverlay: true,
         needGallery: true,
         defaultBackgroundsFn: async () => {
             log("defaultBackgroundsFn called - loading default backgrounds")
-            const backgroundNames = ['Restaurant_03.jpg', 'Gym_01.jpg', 'Restaurant_02.jpg', 'City_02.jpg', 'Laboratory_01.jpg', 'Car Inside_03.jpg', 'Airplane_01.jpg', 'Balcony_03.jpg', 'Servant_02.jpg', 'Balcony_01.jpg', 'Country_02.jpg', 'Musical Instruments_01.jpg', 'Balcony_02.jpg', 'Kitchen_01.jpg', 'Tram Car_02.jpg', 'Office_01.jpg', 'Appliances_01.jpg', 'Bookstore_01.jpg', 'Anfild_01.jpg', 'Servant_01.jpg', 'Train_01.jpg', 'City_01.jpg', 'Balcony_05.jpg', 'City_04.jpg', 'Anfild_02.jpg', 'Crosswalk_01.jpg', 'Playground_01.jpg', 'Car Inside_02.jpg', 'Marina_01.jpg', 'Laboratory_02.jpg', 'Kitchen_02.jpg', 'Ship_01.jpg', 'CheeseShop_01.jpg', 'City_03.jpg', 'Country_01.jpg', 'Cars_01.jpg', 'Balcony_04.jpg', 'Car Inside_01.jpg', 'Tram Car_01.jpg', 'Ship_02.jpg', 'Country_03.jpg', 'Butterflies_01.jpg', 'Crosswalk_02.jpg', 'Phones_01.jpg', 'City_05.jpg', 'Restaurant_01.jpg', 'Airplane_02.jpg', 'Hardware Store_01.jpg', 'Airplane_03.jpg', 'Birds_01.jpg', 'Vintage_01.jpg', 'Crosswalk_03.jpg', 'Ship_03.jpg', 'Train_02.jpg', 'Birds_02.jpg']
+            // const backgroundNames = ['Restaurant_03.jpg', 'Gym_01.jpg', 'Restaurant_02.jpg', 'City_02.jpg', 'Laboratory_01.jpg', 'Car Inside_03.jpg', 'Airplane_01.jpg', 'Balcony_03.jpg', 'Servant_02.jpg', 'Balcony_01.jpg', 'Country_02.jpg', 'Musical Instruments_01.jpg', 'Balcony_02.jpg', 'Kitchen_01.jpg', 'Tram Car_02.jpg', 'Office_01.jpg', 'Appliances_01.jpg', 'Bookstore_01.jpg', 'Anfild_01.jpg', 'Servant_01.jpg', 'Train_01.jpg', 'City_01.jpg', 'Balcony_05.jpg', 'City_04.jpg', 'Anfild_02.jpg', 'Crosswalk_01.jpg', 'Playground_01.jpg', 'Car Inside_02.jpg', 'Marina_01.jpg', 'Laboratory_02.jpg', 'Kitchen_02.jpg', 'Ship_01.jpg', 'CheeseShop_01.jpg', 'City_03.jpg', 'Country_01.jpg', 'Cars_01.jpg', 'Balcony_04.jpg', 'Car Inside_01.jpg', 'Tram Car_01.jpg', 'Ship_02.jpg', 'Country_03.jpg', 'Butterflies_01.jpg', 'Crosswalk_02.jpg', 'Phones_01.jpg', 'City_05.jpg', 'Restaurant_01.jpg', 'Airplane_02.jpg', 'Hardware Store_01.jpg', 'Airplane_03.jpg', 'Birds_01.jpg', 'Vintage_01.jpg', 'Crosswalk_03.jpg', 'Ship_03.jpg', 'Train_02.jpg', 'Birds_02.jpg']
 
+           const backgroundNames = ["bkg_chatgpt_1.png", "bkg_chatgpt_2.png", "bkg_chatgpt_3.png"]
             // const backgroundNames = ["1.jpg", "2.jpg", "3.jpg"]
 
             const backgrounds = await Promise.all(
                 backgroundNames.map(async name => {
-                    log("try to fetch " + `files/${name}`)
-                    const res = await fetch(`/files/backgrounds/${name}`);
+                    // log("try to fetch " + `files/${name}`)
+                    const res = await fetch(`${urls.files}/backgrounds/${name}`);
                     const blob = await res.blob();
                     const file = new File([blob], name, { type: blob.type });
                     return await getCroppedImageDataUrlFromBuffer(file, 480, 480);

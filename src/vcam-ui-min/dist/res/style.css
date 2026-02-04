@@ -350,7 +350,8 @@ body::-moz-scrollbar {
 
 #effectsButton,
 #retargetingButton,
-#animateButton {
+#animateButton,
+#aiButton {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -363,7 +364,8 @@ body::-moz-scrollbar {
 }
 
 #effectsButton:hover,
-#retargetingButton:hover {
+#retargetingButton:hover,
+#aiButton:hover {
   background-color: var(--hoover-color);
 }
 

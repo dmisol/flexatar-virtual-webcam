@@ -8,6 +8,9 @@ import {
     calculateImageFileHash
 } from "./face-detector/image-proc.js"
 import { FaceParser } from "./face-detector/face-parser.js"
+
+import { ManagerClient } from "../../flexatar-package/src/ftar-manager/default-manager-client.js"
+
 // import {addImgIdToMakeFtarList} from "./face-detector/make-ftar-manager.js"
 // import { ManagerConnection } from "../../flexatar-package/src/ftar-manager/ftar-connection.js"
 
@@ -46,6 +49,35 @@ let portSelf
 let instanceId
 
 
+const managerClient = new ManagerClient({
+    closeButton,
+    incomingMessageHandler: (msg) => {
+        incomingMessageHandler(msg)
+
+
+        log("message from manager", msg)
+    },
+    onClose: () => {
+
+    },
+    onReady: () => {
+
+        // managerClient.sendMessage({ pageCtxMsg: { checkVirtualParticipantActive: true } })
+
+        managerClient.sendMessage({ aiPromptsRequest: true })
+        managerClient.sendMessage({ isAutorizedRequest: true })
+
+    }
+})
+
+authPageLinkElement.onclick = e => {
+    e.preventDefault();
+    managerClient.sendMessage({ pageCtxMsg: { goToFlexatarAuthPage: true } })
+    managerClient.closeThisWindow()
+}
+
+
+/*
 window.onmessage = async e => {
     const msg = e.data
     if (!msg) return
@@ -65,7 +97,7 @@ window.onmessage = async e => {
         closeThisWindow()
     }
 }
-
+*/
 
 const select = document.getElementById('enhance-prompts');
 const enhanceCheckbox = document.getElementById('enhance-checkbox');
@@ -75,137 +107,150 @@ select.addEventListener("change", (event) => {
     const prompt = JSON.parse(selectedValue).prompt
     infoBtn.setAttribute("title", prompt);
 
-
 });
 
+async function incomingMessageHandler(msg) {
+    if (msg.imageBuffer) {
 
-function setupPort(port) {
-    port.onmessage = async e => {
-        const msg = e.data
-        if (!msg) return
-        if (msg.imageBuffer) {
+        const hashSumPromise = calculateImageFileHash(msg.imageBuffer)
 
-            const hashSumPromise = calculateImageFileHash(msg.imageBuffer)
+        const imageBitmap = await bitmapFromArrayBuffer(msg.imageBuffer)
+        await faceParser.ready
+        const { detections } = await faceParser.detect(imageBitmap)
+        const boxes = detections.map(x => x.boundingBox)
+        let faceFound = false
+        const promises = []
+        let imgCounter = 0
+        for (const detection of detections) {
 
-            const imageBitmap = await bitmapFromArrayBuffer(msg.imageBuffer)
-            await faceParser.ready
-            const { detections } = await faceParser.detect(imageBitmap)
-            const boxes = detections.map(x => x.boundingBox)
-            let faceFound = false
-            const promises = []
-            let imgCounter = 0
-            for (const detection of detections) {
+            const entryPromise = (async () => {
+                const imageIdx = imgCounter
+                const maskedBitmap = await maskUnwantedFaces(imageBitmap, boxes.filter(x => x !== detection.boundingBox))
+                const croppedBitmap = await cropImage(maskedBitmap, detection)
+                const checkResult = await faceParser.checkImage(croppedBitmap)
+                if (checkResult.isValid) {
+                    faceFound = true
+                    const rotBitmap = await rotateImageBitmap(croppedBitmap, checkResult.angles.roll)
+                    const imageSrc = await rotBitmap.toObjectUrl()
+                    const img = new Image()
+                    img.src = imageSrc
+                    img.className = "preview-in-list"
+                    img.readyToUseBitmap = rotBitmap
+                    img.ftarImgId = imageIdx
+                    img.hashSumPromise = hashSumPromise
+                    img.onclick = () => {
+                        currentSelectedImage = img
 
-                const entryPromise = (async () => {
-                    const imageIdx = imgCounter
-                    const maskedBitmap = await maskUnwantedFaces(imageBitmap, boxes.filter(x => x !== detection.boundingBox))
-                    const croppedBitmap = await cropImage(maskedBitmap, detection)
-                    const checkResult = await faceParser.checkImage(croppedBitmap)
-                    if (checkResult.isValid) {
-                        faceFound = true
-                        const rotBitmap = await rotateImageBitmap(croppedBitmap, checkResult.angles.roll)
-                        const imageSrc = await rotBitmap.toObjectUrl()
-                        const img = new Image()
-                        img.src = imageSrc
-                        img.className = "preview-in-list"
-                        img.readyToUseBitmap = rotBitmap
-                        img.ftarImgId = imageIdx
-                        img.hashSumPromise = hashSumPromise
-                        img.onclick = () => {
-                            currentSelectedImage = img
-
-                            clearContainerExcept(warnContainer, "okElement")
-                            mainImage.src = imageSrc
-                            let isGood = true
-                            okElement.classList.add("invisible")
-                            if (checkResult.errorYaw || checkResult.errorPitch) {
-                                const warnEntry = document.createElement("li")
-                                warnEntry.textContent = Texts.YAW_ERROR
-                                warnEntry.style.color = "red"
-                                warnContainer.appendChild(warnEntry)
-                                isGood = false
-                            } else if (checkResult.warnYaw) {
-                                const warnEntry = document.createElement("li")
-                                warnEntry.textContent = Texts.YAW_WARN
-                                warnContainer.appendChild(warnEntry)
-                                isGood = false
-                            }
-                            if (checkResult.warnSize) {
-                                const warnEntry = document.createElement("li")
-                                warnEntry.textContent = Texts.SIZE_WARN
-                                warnContainer.appendChild(warnEntry)
-                                isGood = false
-                            }
-                            if (isGood) {
-                                okElement.classList.remove("invisible")
-                            }
-                            if (img.isChosen) {
-                                mainImage.classList.add("selected")
-
-                            } else {
-                                mainImage.classList.remove("selected")
-                            }
+                        clearContainerExcept(warnContainer, "okElement")
+                        mainImage.src = imageSrc
+                        let isGood = true
+                        okElement.classList.add("invisible")
+                        if (checkResult.errorYaw || checkResult.errorPitch) {
+                            const warnEntry = document.createElement("li")
+                            warnEntry.textContent = Texts.YAW_ERROR
+                            warnEntry.style.color = "red"
+                            warnContainer.appendChild(warnEntry)
+                            isGood = false
+                        } else if (checkResult.warnYaw) {
+                            const warnEntry = document.createElement("li")
+                            warnEntry.textContent = Texts.YAW_WARN
+                            warnContainer.appendChild(warnEntry)
+                            isGood = false
                         }
-                        img.ondblclick = () => {
-                            toggleChosen(img)
-
-
+                        if (checkResult.warnSize) {
+                            const warnEntry = document.createElement("li")
+                            warnEntry.textContent = Texts.SIZE_WARN
+                            warnContainer.appendChild(warnEntry)
+                            isGood = false
                         }
-
-                        if (!isMainImagePlaced) {
-                            log("first image installed")
-                            isMainImagePlaced = true
-                            img.click()
-                            mainImage.classList.remove("invisible")
-                            waitIcon.classList.add("invisible")
-                            aproveContainer.classList.remove("invisible")
+                        if (isGood) {
+                            okElement.classList.remove("invisible")
                         }
-                        // img.alt = 'Generated Image'
-                        // img.style.border = "solid 1px black"
-                        // img.style.width = "100px"
-                        // img.style.height = "auto"
-                        // img.style.border = "solid 1px black"
+                        if (img.isChosen) {
+                            mainImage.classList.add("selected")
 
-                        imagePreviewList.appendChild(img)
+                        } else {
+                            mainImage.classList.remove("selected")
+                        }
+                    }
+                    img.ondblclick = () => {
+                        toggleChosen(img)
+
+
                     }
 
+                    if (!isMainImagePlaced) {
+                        log("first image installed")
+                        isMainImagePlaced = true
+                        img.click()
+                        mainImage.classList.remove("invisible")
+                        waitIcon.classList.add("invisible")
+                        aproveContainer.classList.remove("invisible")
+                    }
+                    // img.alt = 'Generated Image'
+                    // img.style.border = "solid 1px black"
+                    // img.style.width = "100px"
+                    // img.style.height = "auto"
+                    // img.style.border = "solid 1px black"
 
-                })()
+                    imagePreviewList.appendChild(img)
+                }
 
 
-                promises.push(entryPromise)
+            })()
 
-                imgCounter++;
-            }
-            const results = await Promise.all(promises)
-            if (results.length == 1) {
-                toggleChosen(currentSelectedImage)
-                // currentSelectedImage.dblClick()
-            }
-            if (!faceFound) {
 
-                noFaceFound.classList.remove("invisible")
-                waitIcon.classList.add("invisible")
-            }
-            log("detections", detections)
-        } else if (msg.promptList) {
-            log("recv prompt list")
-            infoBtn.setAttribute("title", msg.promptList[0].prompt);
-            msg.promptList.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = JSON.stringify(p);
-                opt.textContent = p.caption;
-                select.appendChild(opt);
-            });
-        } else if (msg.needAuthorize) {
-            waitIcon.classList.add("invisible")
-            needAuthorizeButton.classList.remove("invisible")
+            promises.push(entryPromise)
+
+            imgCounter++;
         }
+        const results = await Promise.all(promises)
+        if (results.length == 1) {
+            toggleChosen(currentSelectedImage)
+            // currentSelectedImage.dblClick()
+        }
+        if (!faceFound) {
+
+            noFaceFound.classList.remove("invisible")
+            waitIcon.classList.add("invisible")
+        }
+        log("detections", detections)
+    } else if (msg.promptList) {
+        log("recv prompt list")
+        infoBtn.setAttribute("title", msg.promptList[0].prompt);
+        msg.promptList.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = JSON.stringify(p);
+            opt.textContent = p.caption;
+            select.appendChild(opt);
+        });
+    } else if (msg.isAutorizedResponse) {
+        if (msg.isAutorizedResponse.value){
+            aiAvailable.classList.remove("invisible")
+            enhanceCheckbox.checked = true
+        }else{
+            aiNotAvailable.classList.remove("invisible")
+            enhanceCheckbox.checked = false
+
+        }
+    } else if (msg.needAuthorize) {
+        waitIcon.classList.add("invisible")
+        needAuthorizeButton.classList.remove("invisible")
     }
 }
+
+// function setupPort(port) {
+//     port.onmessage = async e => {
+//         const msg = e.data
+//         if (!msg) return
+//         incomingMessageHandler(msg)
+//     }
+// }
+
 needAuthorizeButton.onclick = () => {
-    portSelf.postMessage({ needAuthorize: true })
-    closeThisWindow()
+    managerClient.sendMessage({ needAuthorize: true })
+    // portSelf.postMessage({ needAuthorize: true })
+    managerClient.closeThisWindow()
 }
 
 let oldChosen
@@ -222,14 +267,14 @@ mainImage.ondblclick = () => {
     toggleChosen(currentSelectedImage)
 }
 
-function closeThisWindow() {
-    window.parent.postMessage({ closeWindow: true, portSelf, instanceId }, "*", [portSelf])
+// function closeThisWindow() {
+//     window.parent.postMessage({ closeWindow: true, portSelf, instanceId }, "*", [portSelf])
 
-}
-closeButton.onclick = () => {
-    closeThisWindow()
+// }
+// closeButton.onclick = () => {
+//     closeThisWindow()
 
-}
+// }
 
 makeButton.onclick = () => {
     aproveContainer.classList.add("invisible")
@@ -250,9 +295,10 @@ makeButton.onclick = () => {
 
         // log("aiPromptContent",select.options[select.selectedIndex].value)
 
-        portSelf.postMessage({ imagesList, aiPrompt: enhanceCheckbox.checked ? JSON.stringify(select.options[select.selectedIndex].value) : undefined })
+        managerClient.sendMessage({ imagesList, aiPrompt: enhanceCheckbox.checked ? JSON.stringify(select.options[select.selectedIndex].value) : undefined })
+        // portSelf.postMessage({ imagesList, aiPrompt: enhanceCheckbox.checked ? JSON.stringify(select.options[select.selectedIndex].value) : undefined })
 
-        closeThisWindow()
+        managerClient.closeThisWindow()
 
     })
 }

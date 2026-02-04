@@ -92,6 +92,9 @@ onmessage = async (event) => {
         manager.managerName = msg.managerName
     } else if (msg.tokenRequestArguments) {
 
+    } else if (msg.popupWindowPort) {
+        console.log("msg.popupWindowPort", msg.popupWindowPort)
+        manager.addPopupWindowPort(msg.popupWindowPort)
     } else if (msg.ftarUIPort) {
         console.log("msg.ftarUIPort", msg.ftarUIPort)
         manager.addPort(msg.ftarUIPort)
@@ -108,8 +111,9 @@ onmessage = async (event) => {
     else if (msg.ftarEffectsPort) {
         console.log("msg.ftarEffectsPort", msg.ftarEffectsPort)
         manager.addEffectPort(msg.ftarEffectsPort)
-    }
-    else if (msg.ftarRetargPort) {
+    }else if (msg.msgToPopup) {
+        manager.msgToPopup(msg.msgToPopup)
+    }else if (msg.ftarRetargPort) {
         console.log("msg.ftarRetargPort", msg.ftarRetargPort)
         manager.addRetargPort(msg.ftarRetargPort)
     }

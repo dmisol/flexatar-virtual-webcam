@@ -303,6 +303,9 @@ class ManagerWorkerWarper {
     addRetargPort(port) {
         this.managerWorker.postMessage({ ftarRetargPort: port }, [port])
     }
+    addPopupWindowPort(portObject) {
+        this.managerWorker.postMessage({ popupWindowPort: portObject }, [portObject.port])
+    }
     showProgress() {
         this.managerWorker.postMessage({ showProgress: true })
     }
@@ -615,9 +618,15 @@ class VCAM {
         vCamUi.managerPort.then(port => {
             managerWorker.addPort(port)
             managerWorker.addFtarLensPort(flexLens.portOut)
-            managerWorker.addProgressPort(flexProgress.portOut)
             managerWorker.addEffectsPort(flexEffects.portOut)
             managerWorker.addRetargPort(flexRetarg.portOut)
+            managerWorker.addPopupWindowPort({
+                name:"progress",
+                port:flexProgress.portOut
+            })
+
+            // managerWorker.addProgressPort(flexProgress.portOut)
+
         })
         // vCamUi.managerPortUnauthorized.then(port => {
         //     managerWorkerUnauthorized.addPort(port)

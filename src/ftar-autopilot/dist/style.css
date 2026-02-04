@@ -1,0 +1,278 @@
+:root {
+    --main-color-1: #f68b1e;
+    --main-color-2: #344d23;
+    --select-color: #4c8a22;
+    --hoover-color: #6e8d59;
+    --error-color: #bb2121;
+    --white: #fff;
+    --black: black;
+    --disabled: rgb(65, 65, 65);
+    --main-color-2-hoover: #6e8d59;
+    --main-color-1-hoover: #fa7000;
+    --dsiabled-color: #818181;
+}
+
+body {
+    background-color: black;
+    color: white;
+    display: flex;
+    height: 95vh;
+    /* Full window height */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+
+
+
+#closeButton {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: auto;
+    cursor: pointer;
+}
+
+#progressContainer {
+    width: 100%;
+    height: 90%;
+    display: block;
+    margin-top: 25px;
+    /* flex-direction: column;
+    gap: 15px; */
+}
+
+
+h2 {
+    color: var(--main-color-1);
+    /* margin-top: 10px;
+    margin-bottom: 10px;
+    margin-top: 10px; */
+    padding: 0px;
+}
+
+h3 {
+    color: var(--main-color-1);
+    margin-top: 5px;
+    margin-bottom: 5px;
+
+    padding: 0px;
+}
+
+
+.title {
+    margin: 0 auto;
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    align-content: center;
+}
+
+
+* {
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background-color: var(--black);
+    color: var(--black);
+    margin: 0;
+    padding: 20;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding-top: 50px;
+}
+
+.container {
+    width: 90%;
+    /* max-width: 500px; */
+    background-color: var(--black);
+    color: var(--white);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    padding-top: 0px;
+    margin-top: 0px;
+}
+
+h1 {
+    text-align: center;
+    color: var(--main-color-1);
+    margin-top: 0px;
+    padding-top: 0px;
+    margin-bottom: 10px;
+    font-size: 28px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 6px;
+    font-size: 18px;
+}
+
+.description {
+    font-size: 14px;
+    color: var(--white);
+    opacity: 0.8;
+    margin-bottom: 8px;
+}
+
+input[type="text"],
+textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 2px solid var(--main-color-1);
+    outline: none;
+    font-size: 16px;
+    background-color: var(--white);
+    color: var(--black);
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+input[type="text"]:focus,
+textarea:focus {
+    border-color: var(--select-color);
+    box-shadow: 0 0 5px var(--select-color);
+}
+
+textarea {
+    resize: vertical;
+}
+
+button {
+    background-color: var(--main-color-1);
+    color: var(--white);
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    width: 100%;
+    margin: 5px;
+}
+
+button:disabled {
+    background-color: var(--dsiabled-color);
+    cursor :not-allowed;
+}
+button:hover {
+    background-color: var(--main-color-1-hoover);
+}
+.invisble, .invisible{
+    display: none !important;
+}
+#avatarContainer{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.info-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 18px; /* размер эмоджи */
+  cursor: pointer;
+}
+
+.info-tooltip:hover .tooltip-text {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 8px);
+}
+a{
+    color:aqua
+}
+
+.tooltip-text {
+  position: absolute;
+  top: 100%;  /* ниже значка */
+  left: 50%;
+  transform: translate(-50%, 0);
+  width: 260px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #111;
+  color: #fff;
+  font-size: 16px;
+  line-height: 1.4;
+  text-align: left;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 1000;
+}
+
+.button-info-line{
+    display: flex;
+    flex-direction: row;
+    gap:5px;
+    justify-content: center;
+    align-items: center;
+}
+
+.info-tooltip-left {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px; /* размер эмоджи */
+}
+
+.info-tooltip-left:hover .tooltip-text-left {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-8px); /* сдвиг вверх */
+}
+
+.tooltip-text-left {
+  position: absolute;
+  bottom: 100%;       /* над значком */
+  right: 0;           /* правый край tooltip совпадает с левым краем значка */
+  width: 350px;       /* фиксированная ширина */
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #111;
+  color: #fff;
+  font-size: 16px;
+  line-height: 1.4;
+  text-align: left;
+  word-wrap: break-word;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 1000;
+}
+
+/* Опционально: маленькая стрелка сверху */
+.tooltip-text-left::after {
+  content: "";
+  position: absolute;
+  top: 100%;         /* внизу tooltip, указывает на значок */
+  left: 90%;         /* стрелка будет ближе к правому краю tooltip */
+  transform: translateX(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: #111 transparent transparent transparent;
+}
+
+.error-color{
+    background: red !important;
+}

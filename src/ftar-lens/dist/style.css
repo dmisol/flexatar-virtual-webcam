@@ -145,6 +145,9 @@ p{
 .ai-enhance{
     color: var(--main-color-1);
 }
+.ai-enhance a{
+    color: aqua;
+}
 .selected-color{
     color: var(--select-color) !important;
 

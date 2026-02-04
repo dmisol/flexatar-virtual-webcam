@@ -16,7 +16,7 @@ export async function getCurrentUserId(userId, userIdKey = "currentUserId") {
     const keySetup = {}
     keySetup[userIdKey] = null
     const currentUserId = await chrome.storage.local.get(keySetup)
-    log("currentUserId", currentUserId)
+    // log("currentUserId", currentUserId)
     if (!currentUserId) return { error: "not_authorized" }
     return currentUserId[userIdKey]
 }
@@ -168,7 +168,9 @@ export const Prefixes = {
     CURRENT_MOOD: "_current_mood_",
     RETARGETING_CALIBRATION: "_retargeting_calibration_",
     DO_NOT_SHOW_NOTIFICATION_ID: "_do_not_show_",
-    RECORDED_AUDIO_ID: "_recorded_audio_"
+    RECORDED_AUDIO_ID: "_recorded_audio_",
+    OPEN_AI_API_KEY: "_open_ai_api_key_",
+    OPEN_AI_API_INSTRUCTIONS: "_open_ai_api_instructions_"
 }
 export async function saveWithKey(keyPrefix, keyModifier, val, userId) {
     const currentUserId = await getCurrentUserId(userId)

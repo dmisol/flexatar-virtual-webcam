@@ -843,7 +843,7 @@ function arrayBufferToDataURL1(arrayBuffer, mimeType = "image/jpeg") {
 async function pollFlexatarCreationQueues(token, userIdKey, needMyxAccount) {
     const userId = await QueueStorage.getCurrentUserId(null, userIdKey)
     const ftarListProcessing = await QueueStorage.getList(QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID, userId)
-    log("ftarListProcessing", ftarListProcessing)
+    // log("ftarListProcessing", ftarListProcessing)
     if (ftarListProcessing.length === 0) {
         return { status: "empty" }
     }
@@ -1196,12 +1196,12 @@ class Manager {
         self.cancelPolling()
         log("polling created flexatar started")
         self.pollingInterval = setInterval(async () => {
-            log("trying to poll flexatar in queue")
+            // log("trying to poll flexatar in queue")
             const userInfo = await userInfoLoader.enqueue(async () => {
                 return await self.getUserInfo()
             })
 
-            log("user info while polling", userInfo)
+            // log("user info while polling", userInfo)
             const pollResult = await pollFlexatarCreationQueues(userInfo.user_id === 'myx@amial.com' ? myxGetToken : self.token, self.userIdKey(), self.needMyxAccount)
             const userId = await QueueStorage.getCurrentUserId(null, self.userIdKey())
             if (pollResult.status === "ready") {
@@ -1382,9 +1382,95 @@ class Manager {
 
     }
     showProgress() {
+        // this.showPopupWindow("progress")
         this.progressPorts.forEach(port => {
             port.postMessage({ managerPort: true })
         })
+    }
+
+    async handleAutopilotPortMessage(user_id, msg, port) {
+        log("handleAutopilotPortMessage", msg)
+        if (msg.storeOpenAIApiKey) {
+            await QueueStorage.saveWithKey(QueueStorage.Prefixes.OPEN_AI_API_KEY, "", msg.storeOpenAIApiKey, user_id)
+
+        } else if (msg.getOpenAIApiKey) {
+            const apiKey = await QueueStorage.getByKey(QueueStorage.Prefixes.OPEN_AI_API_KEY, "", user_id, null)
+
+            port.postMessage({ openAIApiKey: { value: apiKey } })
+
+        } else if (msg.requestOpenAiInstructions) {
+            let instructions = await QueueStorage.getByKey(QueueStorage.Prefixes.OPEN_AI_API_INSTRUCTIONS, "", user_id, "")
+            if (!instructions) {
+                instructions = ""
+            }
+            port.postMessage({ openAiInstructions: instructions })
+
+
+
+        } else if (msg.saveOpenAiInstructions) {
+            await QueueStorage.saveWithKey(QueueStorage.Prefixes.OPEN_AI_API_INSTRUCTIONS, "", msg.saveOpenAiInstructions, user_id)
+        }
+    }
+    async getAIData() {
+        const _this = this
+        const uInfo = await userInfoLoader.enqueue(async () => {
+            counter++
+            // log("userInfo counter", counter)
+            return await _this.getUserInfo()
+
+
+        })
+        const user_id = uInfo.user_id
+        let instructions = await QueueStorage.getByKey(QueueStorage.Prefixes.OPEN_AI_API_INSTRUCTIONS, "", user_id, "")
+        if (!instructions) {
+            instructions = ""
+        }
+        const apiKey = await QueueStorage.getByKey(QueueStorage.Prefixes.OPEN_AI_API_KEY, "", user_id, null)
+        return { apiKey, instructions }
+    }
+
+
+    async handleProgressPortMessage(user_id, msg, port) {
+        const self = this;
+        if (msg.progressLists) {
+            log("request progress list")
+            // QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID
+            if (msg.reloadFtarCount) {
+                await self.getUserInfo({ noCache: true })
+
+            }
+            const progressLists = await makeProgressLists(self.managerName)
+            port.postMessage({ progressLists })
+
+
+        } else if (msg.pauseMakeQueue) {
+            await QueueStorage.saveWithKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS, "", false, user_id)
+        } else if (msg.clearMakeQueue) {
+            await QueueStorage.clearList(QueueStorage.Lists.FTAR_MAKE_QUEUE_LIST_ID, user_id)
+            // await QueueStorage.clearList(QueueStorage.Lists.FTAR_PROCESSING_QUEUE_LIST_ID, user_id)
+            const progressLists = await makeProgressLists(self.managerName)
+            port.postMessage({ progressLists })
+
+        } else if (msg.startMakeQueue) {
+
+            await QueueStorage.saveWithKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS, "", true, user_id)
+
+            self.ftarQueueDelegate(self.token, async () => {
+                // if (!(ftarLink.err || ftarLink.error)) {
+                //     await decFtarCount(user_id)
+
+                //     self.ports.forEach(port => {
+                //         port.postMessage({ newFlexatar: ftarLink })
+                //     })
+                // }
+
+
+
+                const progressLists = await makeProgressLists(self.managerName)
+                log("sending updated progress list")
+                port.postMessage({ progressLists })
+            }, self.userIdKey())
+        }
     }
 
     progressPorts = []
@@ -1535,6 +1621,22 @@ class Manager {
     }
     makeFtar(arrayBuffer) {
         const self = this
+        this.popupWindowPorts.get("lens").forEach(async port => {
+            const uInfo = await userInfoLoader.enqueue(async () => {
+                return await self.getUserInfo()
+            })
+            await sendWithResponse(port, { managerPort: true })
+            // port.postMessage({ managerPort: true })
+            log("lens port connected and answered")
+            if (uInfo.error) {
+                port.postMessage({ needAuthorize: true }, [arrayBuffer])
+
+            } else {
+                port.postMessage({ imageBuffer: arrayBuffer }, [arrayBuffer])
+
+            }
+        })
+        /*
         this.lensPorts.forEach(async port => {
             const uInfo = await userInfoLoader.enqueue(async () => {
                 return await self.getUserInfo()
@@ -1550,104 +1652,142 @@ class Manager {
                 port.postMessage({ imageBuffer: arrayBuffer }, [arrayBuffer])
 
             }
+        })*/
+
+    }
+    popupWindowPorts = new Map();
+    popupHandlers = {
+        "progress": "handleProgressPortMessage",
+        "autopilot": "handleAutopilotPortMessage",
+        "lens": "handleFtarLensPortMessage"
+    }
+    addPopupWindowPort(portObject) {
+        const _this = this
+        if (!_this.popupWindowPorts.has(portObject.name)) {
+            _this.popupWindowPorts.set(portObject.name, [])
+        }
+        const port = portObject.port
+        const curentWindowPorts = _this.popupWindowPorts.get(portObject.name)
+        curentWindowPorts.push(port);
+
+        port.onmessage = async e => {
+            const msg = e.data;
+            if (!msg) return
+            const userInfo = await userInfoLoader.enqueue(async () => {
+                return await _this.getUserInfo()
+            })
+            const user_id = userInfo.user_id
+            await _this[_this.popupHandlers[portObject.name]](user_id, msg, portObject.port)
+            if (msg.closing) {
+                let curentWindowPorts = _this.popupWindowPorts.get(portObject.name)
+
+                curentWindowPorts = curentWindowPorts.filter(fn => fn !== port);
+                _this.popupWindowPorts.set(portObject.name, curentWindowPorts)
+                console.log("popup window port closing", portObject.name, _this.popupWindowPorts.get(portObject.name).length)
+
+            } else if (msg.pageCtxMsg) {
+                self.postMessage(msg)
+            } else if (msg.mediaPort) {
+                _this.onMediaPort(msg.mediaPort)
+            }
+
+        }
+
+    }
+    showPopupWindow(windowName) {
+        this.popupWindowPorts.get(windowName).forEach(port => {
+            port.postMessage({ managerPort: true })
         })
-        // startFaceParserUi(arrayBuffer)
+        // this.animPorts.forEach(port => {
+        //     port.postMessage({ managerPort: true })
+        // })
+    }
+    msgToPopup(msg) {
+        this.popupWindowPorts.get(msg.popupName).forEach(port => {
+            port.postMessage(msg.msg)
+        })
     }
     lensPorts = []
     ftarQueueDelegate = startMakeFtarFromQueue
+
+    async handleFtarLensPortMessage(user_id, msg, port) {
+        const userId = user_id;
+        const _this = this;
+        const userIdKey = "currentUserId"
+        // const userIdKey = _this.userIdKey()
+
+        if (msg.imagesList) {
+            const imagesList = msg.imagesList
+            log("imagesList", imagesList)
+
+            const imgIdList = imagesList.map(x => { return { aiPrompt: msg.aiPrompt, id: x.id } })
+
+
+            // const userId = await QueueStorage.getCurrentUserId(null, self.userIdKey())
+            const tokenToUse = userId === "myx@amial.com" ? myxGetToken : _this.token
+
+            await QueueStorage.addToList(QueueStorage.Lists.FTAR_MAKE_QUEUE_LIST_ID, imgIdList, userId)
+
+
+            for (const { dataUrl, id } of imagesList) {
+
+                const result = await QueueStorage.saveWithKey(QueueStorage.Prefixes.FTAR_SRC_IMG, id, dataUrl, userId)
+
+                log("FTAR_SRC_IMG saved", result)
+
+            }
+
+            log("from ftar lens starting ftar creation", _this)
+
+
+            _this.ftarQueueDelegate(tokenToUse, async () => {
+
+                _this.progressPorts.forEach(async port => {
+                    port.postMessage({ progressLists: await makeProgressLists(_this.managerName) })
+                })
+            }, userIdKey)
+            // }
+            _this.showProgress()
+        } else if (msg.isAutorizedRequest) {
+            const value = userId !== "myx@amial.com"
+            const isAutorizedResponse = { value }
+            port.postMessage({ isAutorizedResponse })
+        } else if (msg.needAuthorize) {
+
+            _this.onNeedAuthorize()
+            // } else if (msg.closing) {
+            //     self.lensPorts = self.lensPorts.filter(fn => fn !== port);
+            //     console.log("lens port count", self.lensPorts.length)
+
+        } else if (msg.aiPromptsRequest) {
+            log("ai prompts responsing")
+
+            port.postMessage({
+                promptList: await getAiPrompts({
+                    load: async () => {
+                        const saved = await QueueStorage.getByKey("AI_PROMPTS", "", "no_user")
+                        log("loading stored prompts")
+                        return saved
+
+                    },
+                    save: async (jsonToSave) => {
+                        log("saving loaded prompts")
+                        await QueueStorage.saveWithKey("AI_PROMPTS", "", jsonToSave, "no_user")
+
+                    }
+                })
+            })
+
+        }
+    }
+
     addFtarLens(port) {
         const self = this
         this.lensPorts.push(port)
         port.onmessage = async e => {
             const msg = e.data;
             if (!msg) return
-            const userInfo = await userInfoLoader.enqueue(async () => {
-                return await self.getUserInfo()
-            })
-
-            if (msg.imagesList) {
-                const imagesList = msg.imagesList
-                log("imagesList", imagesList)
-
-                const imgIdList = imagesList.map(x => { return { aiPrompt: msg.aiPrompt, id: x.id } })
-
-
-                const userId = await QueueStorage.getCurrentUserId(null, self.userIdKey())
-                const tokenToUse = userId === "myx@amial.com" ? myxGetToken : self.token
-                // log("addFtarLens", userId, self.userIdKey())
-                await QueueStorage.addToList(QueueStorage.Lists.FTAR_MAKE_QUEUE_LIST_ID, imgIdList, userId)
-
-                // .then(result=>{
-                //     console.log("addImgIdToMakeFtarList",result)
-                //     // sendResponse(result)
-
-                // })
-                // let ftarQueueExecuted = false
-
-                for (const { dataUrl, id } of imagesList) {
-
-                    const result = await QueueStorage.saveWithKey(QueueStorage.Prefixes.FTAR_SRC_IMG, id, dataUrl, userId)
-                    // .then(result=>{
-                    log("FTAR_SRC_IMG saved", result)
-                    // if (!ftarQueueExecuted){
-
-
-
-                    // ftarQueueExecuted = true
-                    // }
-                    // QueueStorage.printAllLists()
-                    // })
-                }
-                // const currentProcessingState = await QueueStorage.getByKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS, "", userId)
-                // if (!currentProcessingState) {
-                //     await QueueStorage.saveWithKey(QueueStorage.Prefixes.IS_QUEUE_IN_PROGRESS, "", true, userId)
-                log("from ftar lens starting ftar creation")
-
-
-                self.ftarQueueDelegate(tokenToUse, async () => {
-                    // if ((!ftarLink.err || ftarLink.error)) {
-
-                    //     // await decFtarCount(userId)
-                    //     await decFtarCount(await QueueStorage.getCurrentUserId(null, self.userIdKey()))
-
-                    //     ftarLink.userId = userId
-                    //     self.ports.forEach(port => {
-                    //         port.postMessage({ newFlexatar: ftarLink })
-                    //     })
-                    // }
-                    self.progressPorts.forEach(async port => {
-                        port.postMessage({ progressLists: await makeProgressLists(self.managerName) })
-                    })
-                }, self.userIdKey())
-                // }
-                self.showProgress()
-            } else if (msg.needAuthorize) {
-
-                self.onNeedAuthorize()
-            } else if (msg.closing) {
-                self.lensPorts = self.lensPorts.filter(fn => fn !== port);
-                console.log("lens port count", self.lensPorts.length)
-
-            } else if (msg.aiPromptsRequest) {
-                log("ai prompts responsing")
-
-                port.postMessage({
-                    promptList: await getAiPrompts({
-                        load: async () => {
-                            const saved = await QueueStorage.getByKey("AI_PROMPTS", "", "no_user")
-                            log("loading stored prompts")
-                            return saved
-
-                        },
-                        save: async (jsonToSave) => {
-                            log("saving loaded prompts")
-                            await QueueStorage.saveWithKey("AI_PROMPTS", "", jsonToSave, "no_user")
-
-                        }
-                    })
-                })
-
-            }
+            handleFtarLensPortMessage(msg)
 
         }
     }
@@ -1690,7 +1830,7 @@ class Manager {
             log("msg on manager port:", msg)
             const uInfo = await userInfoLoader.enqueue(async () => {
                 counter++
-                log("userInfo counter", counter)
+                // log("userInfo counter", counter)
                 return await self.getUserInfo()
 
             })
@@ -1809,30 +1949,28 @@ class Manager {
                 //     port.postMessage({ msgID: msg.msgID, payload: "empty" })
                 //     return
                 // }
-
-                let currentBkgId = await QueueStorage.getByKey(QueueStorage.Prefixes.BACKGROUND_CURRENT_ID, "", userId)
-                // log("getCurrentBkgId1", userId, currentBkgId)
-                if (!currentBkgId) {
-                    currentBkgId = await QueueStorage.getByKey(QueueStorage.Prefixes.BACKGROUND_CURRENT_ID, "", "myx@amial.com")
-
-                }
-                // if (!currentBkgId) {
-                //     currentBkgId = { id: "no" }
-
-                // }
-                // log("getCurrentBkgId2", userId, currentBkgId)
-
-                if (currentBkgId && msg.getCurrentBkg.dataUrl) {
-                    if (currentBkgId.id === "no") {
-                        currentBkgId = null
-                    } else {
-                        currentBkgId = await QueueStorage.getByKey(QueueStorage.Prefixes.BACKGROUND_SRC_IMAGE, currentBkgId.id, currentBkgId.userId)
-                        // log("getCurrentBkgI2", userId, currentBkgId)
+                // while (true) {
+                    let currentBkgId = await QueueStorage.getByKey(QueueStorage.Prefixes.BACKGROUND_CURRENT_ID, "", userId)
+                    // log("getCurrentBkgId1", userId, currentBkgId)
+                    if (!currentBkgId) {
+                        currentBkgId = await QueueStorage.getByKey(QueueStorage.Prefixes.BACKGROUND_CURRENT_ID, "", "myx@amial.com")
 
                     }
 
 
-                }
+                    if (currentBkgId && msg.getCurrentBkg.dataUrl) {
+                        if (currentBkgId.id === "no") {
+                            currentBkgId = null
+                        } else {
+                            currentBkgId = await QueueStorage.getByKey(QueueStorage.Prefixes.BACKGROUND_SRC_IMAGE, currentBkgId.id, currentBkgId.userId)
+                            // log("getCurrentBkgI2", userId, currentBkgId)
+
+                        }
+
+
+                    }
+
+       
                 port.postMessage({ msgID: msg.msgID, payload: currentBkgId })
 
             } else if (msg.deleteBackground) {
@@ -1861,7 +1999,7 @@ class Manager {
                     /*
                     const ftarList = await getFtarList(tokenDict[userId], msg, userId, self.needMyxAccount)
                     if (ftarList[0]) {
- 
+     
                         await setCurrentFlexatarIdSlot2(ftarList[0], userId)
                     } else if (userId !== "myx@amial.com") {
                         const ftarList = await getFtarList(tokenDict["myx@amial.com"], msg, "myx@amial.com", self.needMyxAccount)
@@ -1880,7 +2018,7 @@ class Manager {
                     /*
                     const ftarList = await getFtarList(tokenDict[userId], msg, userId, self.needMyxAccount)
                     if (ftarList[0]) {
- 
+     
                         await setCurrentFlexatarId(ftarList[0], userId)
                     } else if (userId !== "myx@amial.com") {
                         const ftarList = await getFtarList(tokenDict["myx@amial.com"], msg, "myx@amial.com", self.needMyxAccount)
@@ -1902,13 +2040,21 @@ class Manager {
                 // } else {
                 log("photo obtained")
 
-                this.lensPorts.forEach(async port => {
+                this.popupWindowPorts.get("lens").forEach(async port => {
+                    log("lens port found")
                     await sendWithResponse(port, { managerPort: true })
-                    log("lens port connected and answered")
+                    log("lens port responded")
+                    // port.postMessage({ managerPort: true })
                     port.postMessage({ imageBuffer: msg.buffer }, [msg.buffer])
                 })
+
+                // this.lensPorts.forEach(async port => {
+                //     await sendWithResponse(port, { managerPort: true })
+                //     log("lens port connected and answered")
+                //     port.postMessage({ imageBuffer: msg.buffer }, [msg.buffer])
+                // })
                 port.postMessage({ msgID: msg.msgID, payload: { status: "ok" } })
-                // }
+
 
 
 
@@ -1953,6 +2099,8 @@ class Manager {
                 })
             } else if (msg.showAnimate) {
                 self.showAnimate()
+            } else if (msg.showPopupWindow) {
+                self.showPopupWindow(msg.showPopupWindow)
             } else if (msg.showRetarg) {
                 self.showRetarg()
             } else if (msg.showEffects) {
@@ -2252,6 +2400,10 @@ class ManagerConnection {
     }
     async showRetarg() {
         return await this.sendWithResponse({ showRetarg: true })
+
+    }
+    async showPopupWindow(val) {
+        return await this.sendWithResponse({ showPopupWindow: val })
 
     }
     async showAnimate() {
