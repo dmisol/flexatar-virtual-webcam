@@ -29,6 +29,16 @@ const Texts = {
 }
 log("face_parser_script")
 let faceDetectionAssetUrl = isChromeExtensionContext() ? "/static/face-detection-asset" : "/files/face-detection-asset"
+try {
+    const params = new URLSearchParams(window.location.search)
+    const filesParam = params.get("files")
+    if (filesParam) {
+        faceDetectionAssetUrl = filesParam + "/face-detection-asset"
+    }
+} catch (e) {
+    log("Failed to read query params", e)
+}
+
 // let faceDetectionAssetUrl = "./face-detection-asset"
 // try{
 //     faceDetectionAssetUrl = chrome.runtime.getURL("/static/face-detection-asset")

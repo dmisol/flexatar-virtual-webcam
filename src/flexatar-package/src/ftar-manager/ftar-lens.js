@@ -4,7 +4,15 @@ function log() {
 
 export class FlexatarLens {
     instanceId = crypto.randomUUID()
-    constructor(url, className,iframeSize) {
+    constructor(url, className,iframeSize,queryParameters = {}) {
+        const urlObj = new URL(url, window.location.href)
+        for (const [key, value] of Object.entries(queryParameters || {})) {
+            if (value !== undefined && value !== null) {
+                urlObj.searchParams.set(key, String(value))
+            }
+        }
+        url = urlObj.toString()
+        log("url",url)
         const channel = new MessageChannel()
         this.portSelf = channel.port1
         this.portOut = channel.port2

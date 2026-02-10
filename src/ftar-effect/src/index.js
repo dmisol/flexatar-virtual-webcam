@@ -155,6 +155,7 @@ window.onmessage = (e) => {
         log("port obtained")
         portSelf = msg.managerPort
         portSelf.postMessage({ effectStateRequest: true })
+         portSelf.postMessage({ msgID: msg.msgID })
         msg.managerPort.postMessage({ managerConnectionPort: connection.outPort }, [connection.outPort])
         // msg.managerPortUnauthorized.postMessage({ managerConnectionPort: connection.outPort }, [connection.outPort])
 
@@ -182,6 +183,15 @@ function portHandler(e) {
     if (!msg) return
     log("from manager", msg)
     if (msg.effectStateResponse) {
+        if (msg.effectStateResponse === "fake") {
+            msg.effectStateResponse = {
+                effectIsAnimated: false,
+                currentMode: 0,
+                effectParameter: 0.5,
+                currentEffectFtarId: null,
+                currentEffectFtarIsMyx: false
+            }
+        }
         toggleEffectAnimation.checked = msg.effectStateResponse.effectIsAnimated
 
         if (toggleEffectAnimation.checked) {

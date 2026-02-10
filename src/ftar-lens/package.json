@@ -6,6 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack --mode production",
+    "copy-win": "npx webpack --mode production && xcopy dist\\* ..\\..\\..\\cef-project\\examples\\html\\production\\interface\\dist\\lens\\ /E /I /Y",
     "build-copy": "webpack --mode production && cp  dist/bundle.js dist/index.html dist/style.css  ../../../flexatar-sdk/chrome-extension/dist/lens/",
     "build-copy-main-page": "webpack --mode production && cp  dist/bundle.js dist/index.html dist/style.css  ../../../flexatar-sdk/main-page/dist/lens/"
   },
