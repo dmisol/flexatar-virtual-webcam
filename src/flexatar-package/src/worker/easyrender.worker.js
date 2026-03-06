@@ -219,7 +219,7 @@ function drawImageCover(ctx, img, x, y, w, h) {
 }
 
 
-async function generateTransparentCircleImage(image, size = 512, circleRadius = 190) {
+async function generateTransparentCircleImage(image, size = 512, circleRadius = 220) {
     const canvas = new OffscreenCanvas(size, size);
     const ctx = canvas.getContext('2d');
 
@@ -281,13 +281,14 @@ let offscreen
 let ftarManagerConnection
 // let ftarManagerConnectionU
 let flexatarSDK
-async function initRender(url1, url2, size) {
+async function initRender(url1, url2, calmPatUrl, livePatUrl, silentPatUrl, size) {
 
 
 
 
     flexatarSDK = new FtarView.SDK(null,
-        url1, url2
+        url1, url2,
+        { calmPatUrl, livePatUrl, silentPatUrl }
     )
     offscreen = new OffscreenCanvas(size.width, size.height);
 
@@ -334,7 +335,7 @@ async function initRender(url1, url2, size) {
     }
 
 
-   
+
 
 
 
@@ -346,7 +347,7 @@ async function initRender(url1, url2, size) {
         p.postMessage({ canvasRatio: renderer.canvas.width / renderer.canvas.height })
     })
 
-   
+
 
     renderer.onDraw = () => {
         let drawCounts = 0
@@ -484,7 +485,7 @@ onmessage = (event) => {
                 })
 
                 // renderer.effect = () => { return { mode: 2, parameter: effectParameter } }
-
+            } else if (msg.backgroundArrayBuffer) {
 
             } else if (msg.background) {
                 if (msg.no) {
@@ -509,11 +510,11 @@ onmessage = (event) => {
             } else if (msg.animationNames) {
                 rendererPromise.then(() => {
                     // log("msg.animationNames worker received request", renderer.animator.patternList,msg.msgId)
-                    channel.port1.postMessage({ animationNames: renderer.animator.patternList,msgId:msg.msgId })
+                    channel.port1.postMessage({ animationNames: renderer.animator.patternList, msgId: msg.msgId })
                 })
             } else if (msg.animation) {
                 if (renderer.error) return
-                log("animation is set",msg.animation)
+                log("animation is set", msg.animation)
                 renderer.animator.currentAnimationPattern = msg.animation.pattern
             } else if (msg.closing) {
                 ports = ports.filter(fn => fn !== channel.port1);
@@ -618,6 +619,9 @@ onmessage = (event) => {
         initRender(
             arrayBufferToDataURL(msg.initBuffers[0]),
             arrayBufferToDataURL(msg.initBuffers[1]),
+            arrayBufferToDataURL(msg.initBuffers[2][0]),
+            arrayBufferToDataURL(msg.initBuffers[2][1]),
+            arrayBufferToDataURL(msg.initBuffers[2][2]),
             msg.size
         )
         const nnBuffers = msg.nnBuffers;

@@ -42,7 +42,7 @@ export class FlexatarLens {
                             self.portSelf.onmessage = portMessageHandler
                             // overlay.remove()
                             window.removeEventListener("message", handlerClose)
-
+                            if (self.iframeOnCLose) self.iframeOnCLose()
                             closeFn()
                         }
                     }

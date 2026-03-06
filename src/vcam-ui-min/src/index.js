@@ -795,6 +795,7 @@ backgroundText.onclick = expandBkgButton.onclick = async () => {
     isBkgBlockExpanded = !isBkgBlockExpanded
 }
 async function loadBackgroundList() {
+    log("loadBackgroundList")
     const list = (await connection.getBackgrounds()).reverse()
 
     let currentBackground = await connection.getCurrentBackground()

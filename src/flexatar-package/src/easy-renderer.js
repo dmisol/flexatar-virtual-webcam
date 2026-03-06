@@ -39,6 +39,10 @@ export class FtarRenderer {
             }, 500)
 
         }
+        if ( this.currentTrackProcessor){
+             this.currentTrackProcessor.stop();
+              this.currentTrackProcessor.onAudio = null;
+        }
         this.currentTrackProcessor = isTrackProcessorAvailable ? (new NativeTrackProcessor(trackMono)) : (new MediaRecorderBasedTrackProcessor(trackMono))
         this.currentTrackProcessor.onAudio = audioBuffer => {
             // console.log("audioBuffer", audioBuffer)
@@ -97,9 +101,28 @@ export class FtarRenderer {
    
     }
 
+        set slot2(val) {
+        if (checkIfValueArrayBuffer(val)) {
+            this.controllerPortPromise.then(port => {
+                port.postMessage({ slot2: val, id: crypto.randomUUID() }, [val])
+            })
+        } else {
+            const self = this
+            obtainArrayBufferFromUrl(val).then(arrayBuffer => {
+                self.slot2 = arrayBuffer
+            })
+        }
+   
+    }
+
     set background(val) {
         this.controllerPortPromise.then(port => {
             port.postMessage({ background: val })
+        })
+    }
+    set backgroundArrayBuffer(val) {
+        this.controllerPortPromise.then(port => {
+            port.postMessage({ backgroundArrayBuffer: val },[val])
         })
     }
     set size(val){

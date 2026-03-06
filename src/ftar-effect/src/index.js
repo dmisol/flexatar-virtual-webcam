@@ -71,6 +71,8 @@ class VCamMediaStream {
                     // ctx.transferFromImageBitmap(e.data.frame);
             } else if (e.data && e.data.canvasRatio) {
                 if (self.onCanvasRatio) self.onCanvasRatio(e.data.canvasRatio);
+            } else if (e.data && e.data.noMedia) {
+                 canvas.style.display = "none"
             } else if (e.data && e.data.log) {
                 console.log("[VCAM MEDIA STREAM] msg from port", e.data);
             }

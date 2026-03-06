@@ -193,9 +193,56 @@ class VCAM {
         const managerWorker = new ManagerWorkerWarper(tokenFn, "authorized", opts.defaultBackgroundsFn, needGallery)
 
         this.managerWorker = managerWorker
-        const flexLens = new FlexatarLens(opts.url.lens, opts.lensClassName,null,{files:opts.url.files})
+        const flexLens = new FlexatarLens(opts.url.lens, opts.lensClassName, null, { files: opts.url.files })
+         flexLens.iframeWillInstalled = () => {
+            if (opts.callbacks) {
+                if (opts.callbacks.onExpandForPopup) {
+                    opts.callbacks.onExpandForPopup();
+                }
+
+            }
+        }
+        flexLens.iframeOnCLose = () => {
+            if (opts.callbacks.onCloseForPopup) {
+                opts.callbacks.onCloseForPopup();
+            }
+        }
+        
         const flexProgress = new FlexatarLens(opts.url.progress, opts.progressClassName)
+        
+        flexProgress.iframeWillInstalled = () => {
+            if (opts.callbacks) {
+                if (opts.callbacks.onExpandForPopup) {
+                    opts.callbacks.onExpandForPopup();
+                }
+
+            }
+        }
+        flexProgress.iframeOnCLose = () => {
+            if (opts.callbacks.onCloseForPopup) {
+                opts.callbacks.onCloseForPopup();
+            }
+        }
+
         const flexEffects = new FlexatarLens(opts.url.effects, opts.effectsClassName)
+        flexEffects.iframeWillInstalled = () => {
+            if (opts.callbacks) {
+                // if (opts.callbacks.onExpandForPopup) {
+                //     opts.callbacks.onExpandForPopup();
+                // }
+                if (opts.callbacks.onExpandCamera) {
+                    opts.callbacks.onExpandCamera();
+                }
+            }
+        }
+        flexEffects.iframeOnCLose = () => {
+            // if (opts.callbacks.onCloseForPopup) {
+            //     opts.callbacks.onCloseForPopup();
+            // }
+            if (opts.callbacks.onCloseCamera) {
+                opts.callbacks.onCloseCamera();
+            }
+        }
         const flexRetarg = new FlexatarLens(opts.url.retarg, opts.effectsClassName)
 
         this.flexLens = flexLens
@@ -215,12 +262,13 @@ class VCAM {
         })
 
         managerWorker.onMediaPort = port => {
-            port.onmessage = (e) => { 
+            port.onmessage = (e) => {
                 const msg = e.data
                 if (!msg) return
-                log("fake media port message",msg)
+                log("fake media port message", msg)
             }
-        
+            port.postMessage({noMedia:true})
+
 
         }
         // vCamUi.managerPortUnauthorized.then(port => {
@@ -239,20 +287,33 @@ class VCAM {
         // Provide a controller port stub so UI can still connect.
         const controllerChannel = new MessageChannel()
         this.controllerPort = controllerChannel.port1
-        this.controllerPort.onmessage = (e) => { 
+        this.controllerPort.onmessage = (e) => {
             const msg = e.data
             if (!msg) return
-            if (msg.effectStateRequest){
+            if (msg.effectStateRequest) {
                 controllerChannel.port1.postMessage(
-                    {effectStateResponse:"fake"}
+                    { effectStateResponse: "fake" }
                 )
 
-            }else if (msg.slot1){
-                const payload = [1, 2, 3, 4, 5, 255, 0, 128];
-                 window.sendFile(msg.slot1);
-                log("obtained slot 1")
+            } else if (msg.slot1) {
+                // const payload = [1, 2, 3, 4, 5, 255, 0, 128];
+                window.sendFile(msg.slot1, "slot1");
+                log("obtained slot 1",)
+            } else if (msg.slot2) {
+                log("sending slot2", msg.slot2)
+                window.sendFile(msg.slot2, "slot2");
+            } else if (msg.background) {
+                fetch(msg.background).then(r => r.arrayBuffer()).then(arrayBuffer => {
+                    window.sendFile(arrayBuffer, "background");
+
+                })
+
+            } else {
+                const messageString = JSON.stringify(msg)
+                const arrayBuffer = new TextEncoder().encode(messageString).buffer
+                window.sendFile(arrayBuffer, "message");
             }
-            log("fake controller port message",msg)
+            log("fake controller port message", msg)
         }
         vCamUi.controllerPort = controllerChannel.port2
     }
