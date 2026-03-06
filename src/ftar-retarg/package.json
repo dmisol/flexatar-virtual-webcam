@@ -6,6 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack --mode production",
+    "copy-win": "npx webpack --mode production && xcopy dist\\* ..\\..\\..\\flexatar-sdk\\chrome-extension\\dist\\retarg\\ /E /I /Y",
     "build-copy": "webpack --mode production && cp  dist/bundle.js dist/index.html dist/style.css  ../../../flexatar-sdk/chrome-extension/dist/retarg/",
     "build-copy-android": "webpack --mode production && cp  dist/bundle.js dist/index.html dist/style.css  /home/naospennikov/AndroidStudioProjects/vgen/app/src/main/assets/retarg/",
     "build-copy-vgen": "webpack --mode production && cp  dist/bundle.js dist/index.html dist/style.css  ../../../flexatar-sdk/videogen-page/dist/retarg/",
