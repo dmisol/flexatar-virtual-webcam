@@ -253,6 +253,15 @@ body::-moz-scrollbar {
 .st0 {
   fill: #f68b1e;
 }
+.mainTextColor{
+  color: var(--main-color-1);
+  padding: 3px;
+  display: block;
+  text-align: center;
+  /* margin: auto 0; */
+  /* align-items: center;
+  justify-content: center; */
+}
 
 .floating-button {
   width: 28px;

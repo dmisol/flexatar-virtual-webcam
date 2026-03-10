@@ -80,6 +80,8 @@ export class RenderWorkerWarper {
             fetch(url + "/calm_pattern.bin").then(response => response.arrayBuffer()),
             fetch(url + "/lively_pattern.bin").then(response => response.arrayBuffer()),
             fetch(url + "/silent_pattern.bin").then(response => response.arrayBuffer()),
+            fetch(url + "/animation-additional.bin").then(response => response.arrayBuffer()),
+           
             // fetch("/speachnn/mel2phon/model.json").then(response=>response.arrayBuffer()),
             // fetch("/speachnn/phon2avec/model.json").then(response=>response.arrayBuffer()),
         ]).then(
@@ -88,7 +90,7 @@ export class RenderWorkerWarper {
                 console.log("worker buffers ready", buffers)
 
                 worker.postMessage({
-                    initBuffers: [buffers[0], buffers[1], [buffers[10],buffers[11],buffers[12]]],
+                    initBuffers: [buffers[0], buffers[1], [buffers[10],buffers[11],buffers[12]],buffers[13]],
                     nnBuffers: {
                         wav2mel: {
                             model: buffers[2],

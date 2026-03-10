@@ -736,7 +736,11 @@ closeEmoButton.onclick = () => {
 }
 
 
-const emoButtons = [Joy, Anger, Sadness, Surprise, Disgust, Confusion]
+const emoButtons = [Joy, Anger, Sadness, Surprise, Disgust, Confusion,
+    document.getElementById("Wobble Yes"),
+    document.getElementById("Wobble Doubt"),
+    document.getElementById("Wobble Ok"),
+]
 let oldPressd = AllEmo
 oldPressd.classList.add("color-emo-selected")
 for (const b of emoButtons) {

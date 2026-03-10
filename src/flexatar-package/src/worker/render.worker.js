@@ -286,7 +286,7 @@ let offscreen
 let ftarManagerConnection
 // let ftarManagerConnectionU
 let flexatarSDK
-async function initRender(url1, url2, calmPatUrl, livePatUrl, silentPatUrl, size) {
+async function initRender(url1, url2, calmPatUrl, livePatUrl, silentPatUrl,additionalAnimUrl, size) {
 
     log("start init renderer")
 
@@ -312,7 +312,7 @@ async function initRender(url1, url2, calmPatUrl, livePatUrl, silentPatUrl, size
 
     flexatarSDK = new FtarView.SDK(null,
         url1, url2,
-        { calmPatUrl, livePatUrl, silentPatUrl })
+        { calmPatUrl, livePatUrl, silentPatUrl },additionalAnimUrl)
     // {xrot:"/static/x_anim.json"})
     offscreen = new OffscreenCanvas(size.width, size.height);
 
@@ -937,6 +937,7 @@ onmessage = (event) => {
             arrayBufferToDataURL(msg.initBuffers[2][0]),
             arrayBufferToDataURL(msg.initBuffers[2][1]),
             arrayBufferToDataURL(msg.initBuffers[2][2]),
+            arrayBufferToDataURL(msg.initBuffers[3]),
             msg.size
         )
         const nnBuffers = msg.nnBuffers;
