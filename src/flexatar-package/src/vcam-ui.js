@@ -85,7 +85,12 @@ class ManagerWorkerWarper {
         this.managerWorker.postMessage({ ftarUIPort: port }, [port])
     }
     addFtarLensPort(port) {
-        this.managerWorker.postMessage({ ftarLensPort: port }, [port])
+        this.managerWorker.postMessage({ popupWindowPort: {
+            name:"lens",
+            port
+        } }, [port])
+
+        // this.managerWorker.postMessage({ ftarLensPort: port }, [port])
     }
     addProgressPort(port) {
         this.managerWorker.postMessage({ ftarProgressPort: port }, [port])

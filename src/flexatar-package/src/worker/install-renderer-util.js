@@ -18,6 +18,8 @@ export function postBuffersToWorker(url, worker,size) {
             fetch(url + "/calm_pattern.bin").then(response => response.arrayBuffer()),
             fetch(url + "/lively_pattern.bin").then(response => response.arrayBuffer()),
             fetch(url + "/silent_pattern.bin").then(response => response.arrayBuffer()),
+            fetch(url + "/animation-additional.bin").then(response => response.arrayBuffer()),
+
         ]
     } else if (Array.isArray(url)) {
         // Array of URLs case
@@ -32,7 +34,7 @@ export function postBuffersToWorker(url, worker,size) {
             console.log("worker buffers ready", buffers)
 
             worker.postMessage({
-                initBuffers: [buffers[0], buffers[1], [buffers[10], buffers[11], buffers[12]]],
+                initBuffers: [buffers[0], buffers[1], [buffers[10], buffers[11], buffers[12]],buffers[13]],
                 nnBuffers: {
                     wav2mel: {
                         model: buffers[2],

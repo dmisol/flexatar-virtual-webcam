@@ -281,14 +281,14 @@ let offscreen
 let ftarManagerConnection
 // let ftarManagerConnectionU
 let flexatarSDK
-async function initRender(url1, url2, calmPatUrl, livePatUrl, silentPatUrl, size) {
+async function initRender(url1, url2, calmPatUrl, livePatUrl, silentPatUrl, additionalAnimUrl, size) {
 
 
 
 
     flexatarSDK = new FtarView.SDK(null,
         url1, url2,
-        { calmPatUrl, livePatUrl, silentPatUrl }
+        { calmPatUrl, livePatUrl, silentPatUrl }, additionalAnimUrl
     )
     offscreen = new OffscreenCanvas(size.width, size.height);
 
@@ -413,6 +413,7 @@ onmessage = (event) => {
         channel.port1.onmessage = e => {
             const msg = e.data
             if (!msg) return
+            log("msg on controller port", msg)
             if (msg.slot1) {
                 // const copiedBuffer = copyArrayBuffer(msg.slot1)
                 const data = new Uint8Array(msg.slot1)
@@ -520,6 +521,28 @@ onmessage = (event) => {
                 ports = ports.filter(fn => fn !== channel.port1);
                 channel.port1.close()
                 console.log("controller, closing port ", ports.length)
+            } else if (msg.setMood) {
+                if (ftarManagerConnection) {
+                    ftarManagerConnection.setMood(msg.setMood)
+                }
+                rendererPromise.then(() => {
+
+                    renderer.animator.isFriendly = msg.setMood.value === "friendly"
+                })
+
+            } else if (msg.setSpeechPattern) {
+                log("msg1.setSpeechPattern", msg.setSpeechPattern)
+                if (ftarManagerConnection) {
+                    ftarManagerConnection.setSpeechPattern(msg.setSpeechPattern)
+                }
+                rendererPromise.then(() => {
+                    renderer.animator.setCurrentSpeechPattern(msg.setSpeechPattern.value)
+                    for (let i = 0; i < 50; i++) {
+                        renderer.animator.patternType = 0
+                    }
+                })
+
+
             }
         }
         postMessage({ controllerPort: channel.port2, msgID: msg.msgID }, [channel.port2])
@@ -622,6 +645,7 @@ onmessage = (event) => {
             arrayBufferToDataURL(msg.initBuffers[2][0]),
             arrayBufferToDataURL(msg.initBuffers[2][1]),
             arrayBufferToDataURL(msg.initBuffers[2][2]),
+            arrayBufferToDataURL(msg.initBuffers[3]),
             msg.size
         )
         const nnBuffers = msg.nnBuffers;

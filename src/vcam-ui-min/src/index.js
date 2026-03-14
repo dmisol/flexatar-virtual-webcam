@@ -369,8 +369,41 @@ allowAuidoOverlay.textContent = Texts.ALLOW_AUDIO
 
 const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
+const queryParams = Object.fromEntries(urlParams.entries());
 let iframeId;
 let externalControl = false;
+
+function parseBoolParam(value) {
+    if (value === null || value === undefined) return null;
+    const normalized = String(value).trim().toLowerCase();
+    if (normalized === "true" || normalized === "1" || normalized === "yes" || normalized === "y") return true;
+    if (normalized === "false" || normalized === "0" || normalized === "no" || normalized === "n") return false;
+    return null;
+}
+
+function setVisibleIfParam(element, value) {
+    if (!element) return;
+    if (value === null) return;
+    if (value) {
+        element.classList.remove("invisible");
+    } else {
+        element.classList.add("invisible");
+    }
+}
+
+const uiFlags = {
+    log: parseBoolParam(urlParams.get("log")),
+    effect: parseBoolParam(urlParams.get("effect")),
+    ai: parseBoolParam(urlParams.get("ai")),
+    retarg: parseBoolParam(urlParams.get("retarg")),
+    animate: parseBoolParam(urlParams.get("animate")),
+};
+
+setVisibleIfParam(ftarLogButton, uiFlags.log);
+setVisibleIfParam(effectsButton, uiFlags.effect);
+setVisibleIfParam(aiButton, uiFlags.ai);
+setVisibleIfParam(retargetingButton, uiFlags.retarg);
+setVisibleIfParam(animateButton, uiFlags.animate);
 
 
 function fileToArrayBuffer(file) {

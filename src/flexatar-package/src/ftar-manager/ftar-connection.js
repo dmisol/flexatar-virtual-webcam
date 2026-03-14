@@ -1662,6 +1662,7 @@ class Manager {
         "lens": "handleFtarLensPortMessage"
     }
     addPopupWindowPort(portObject) {
+        log("popup window port",portObject)
         const _this = this
         if (!_this.popupWindowPorts.has(portObject.name)) {
             _this.popupWindowPorts.set(portObject.name, [])
@@ -1751,6 +1752,7 @@ class Manager {
         } else if (msg.isAutorizedRequest) {
             const value = userId !== "myx@amial.com"
             const isAutorizedResponse = { value }
+            log("isAutorizedResponse",isAutorizedResponse)
             port.postMessage({ isAutorizedResponse })
         } else if (msg.needAuthorize) {
 
