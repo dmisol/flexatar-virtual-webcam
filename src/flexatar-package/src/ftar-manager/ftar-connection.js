@@ -526,7 +526,7 @@ async function getListDualUser(listId, keyName, userId, needMyx = true) {
 async function getFtarListDualUser(token, msg, userId, needMyx = true) {
     let ftarList = []
     if (userId === "myx@amial.com") {
-        msg.opts.noCache = false
+        // msg.opts.noCache = false
         ftarList = await getFtarList(myxGetToken, msg, userId, false)
         ftarList = ftarList.reverse()
 
