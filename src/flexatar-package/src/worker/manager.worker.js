@@ -7,36 +7,36 @@ const originalFetch = self.fetch;
 
 self.fetch1 = async function (input, init) {
     console.log("fetch override")
-  // Create a unique ID for this request
-  const id = Math.random().toString(36).slice(2);
+    // Create a unique ID for this request
+    const id = Math.random().toString(36).slice(2);
 
-  // Send the request details to the client (the main page)
-  const clientsList = await self.clients.matchAll();
-  if (clientsList.length === 0) {
-    // No client available — fallback
-    return originalFetch(input, init);
-  }
-  const client = clientsList[0];
+    // Send the request details to the client (the main page)
+    const clientsList = await self.clients.matchAll();
+    if (clientsList.length === 0) {
+        // No client available — fallback
+        return originalFetch(input, init);
+    }
+    const client = clientsList[0];
 
-  client.postMessage({
-    type: 'fetch-proxy-request',
-    id,
-    input,
-    init
-  });
+    client.postMessage({
+        type: 'fetch-proxy-request',
+        id,
+        input,
+        init
+    });
 
-  // Wait for response message
-  return new Promise((resolve, reject) => {
-    const onMessage = (event) => {
-      const data = event.data;
-      if (data && data.type === 'fetch-proxy-response' && data.id === id) {
-        self.removeEventListener('message', onMessage);
-        if (data.error) reject(data.error);
-        else resolve(new Response(data.body, data.options));
-      }
-    };
-    self.addEventListener('message', onMessage);
-  });
+    // Wait for response message
+    return new Promise((resolve, reject) => {
+        const onMessage = (event) => {
+            const data = event.data;
+            if (data && data.type === 'fetch-proxy-response' && data.id === id) {
+                self.removeEventListener('message', onMessage);
+                if (data.error) reject(data.error);
+                else resolve(new Response(data.body, data.options));
+            }
+        };
+        self.addEventListener('message', onMessage);
+    });
 };
 
 
@@ -45,6 +45,7 @@ let managerPromise = new Promise(resolve => {
     managerPromiseResolve = resolve
 })
 
+// let manager
 onmessage = async (event) => {
     const msg = event.data
     if (!msg) return
@@ -54,7 +55,7 @@ onmessage = async (event) => {
     }
     if (msg.initManager) {
 
-
+console.log("msg.managerName",msg.managerName)
 
         const manager = new Manager(() => {
             return new Promise(resolve => {
@@ -70,7 +71,7 @@ onmessage = async (event) => {
 
 
 
-        },"defaultManager",()=>{
+        },msg.managerName ?? "defaultManager", () => {
             return new Promise(resolve => {
                 function handler(e) {
                     if (e.data && e.data.defaultBackgrounds) {
@@ -82,14 +83,16 @@ onmessage = async (event) => {
                 postMessage({ defaultBackgroundsRequest: true })
             })
 
-        }, false,false,msg.needGallery)
+        }, false, false, msg.needGallery)
         manager.onMediaPort = port => {
             postMessage({ onMediaPort: port }, [port])
         }
         managerPromiseResolve(manager)
 
     } else if (msg.managerName) {
-        manager.managerName = msg.managerName
+        if (manager) {
+            manager.managerName = msg.managerName
+        }
     } else if (msg.tokenRequestArguments) {
 
     } else if (msg.popupWindowPort) {
@@ -111,9 +114,9 @@ onmessage = async (event) => {
     else if (msg.ftarEffectsPort) {
         console.log("msg.ftarEffectsPort", msg.ftarEffectsPort)
         manager.addEffectPort(msg.ftarEffectsPort)
-    }else if (msg.msgToPopup) {
+    } else if (msg.msgToPopup) {
         manager.msgToPopup(msg.msgToPopup)
-    }else if (msg.ftarRetargPort) {
+    } else if (msg.ftarRetargPort) {
         console.log("msg.ftarRetargPort", msg.ftarRetargPort)
         manager.addRetargPort(msg.ftarRetargPort)
     }

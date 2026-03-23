@@ -90,6 +90,13 @@ const flexatarControllerPortPromise = new Promise(resolve => {
             }
             connection.close()
             // connectionUnauthorized.close()
+        }else if (e.data && e.data.reloadFtarList) {
+            console.log("reloadFtarLsit received in iframe")
+            connection.resetToken().then(()=>{
+                console.log("token has been dropped")
+                reloadFtarList(true)
+
+            })
         }
     })
 

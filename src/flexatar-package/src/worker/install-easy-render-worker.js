@@ -6,14 +6,17 @@ function log() {
 }
 
 export class RenderWorkerWarper {
-    constructor(url, size = { width: 640, height: 480 }) {
+    constructor(url, size = { width: 640, height: 480 }, logCallback = () => {}) {
         const worker = new EasyrenderWorker({ type: "module" });
         const self = this
+        this.logCallback = logCallback
         worker.onmessage = e => {
             const msg = e.data
             if (!msg) return
 
-            if (msg.isContextLost) {
+            if (msg.logEvent) {
+                this.logCallback(msg.logEvent)
+            } else if (msg.isContextLost) {
                 self.onContextLost(msg.isContextLost.value)
 
                 console.log("isContextLost sandbox:", msg.isContextLost)

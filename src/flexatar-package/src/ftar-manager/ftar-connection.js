@@ -335,6 +335,24 @@ async function flexatarList(token, opts) {
 
 }
 
+async function logToCloud(token, logObject) {
+    const url = ftar_api_url + "/log"
+    const headers = {
+        // 'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+    };
+    const response = await fetchWithToken(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(logObject)
+    }, token);
+
+    if (!response.ok) {
+        log("failed to log to cloud")
+    }
+
+}
+
 async function flexatarEntry(token, ftarId, opts) {
     const url = ftar_api_url + "/list"
 
@@ -518,7 +536,7 @@ async function getFtarListDualUser(token, msg, userId, needMyx = true) {
         ftarList = await getFtarList(token, msg, userId, false)
         ftarList = ftarList.reverse()
         if (needMyx) {
-            msg.opts.noCache = false
+            // msg.opts.noCache = false
             const ftarListMyx = await getFtarList(myxGetToken, msg, "myx@amial.com", false)
             ftarList = ftarList.concat(ftarListMyx.reverse())
         }
@@ -1114,7 +1132,9 @@ class Manager {
         defaultBackgroundFn = async () => {
             return []
         }
-        , clearListsWhenRecreate = false, isExtension = false, needMyxAccount = true) {
+        , clearListsWhenRecreate = false, isExtension = false, needMyxAccount = true,logging={
+            initLog:true
+        }) {
         log("new instance of manager")
         let patchPromise
         this.userIdKey = () => { return "currentUserId" }
@@ -1180,6 +1200,13 @@ class Manager {
             }
 
         })
+        // self.managerInitLogEnabled = logging.initLog;
+        if ( logging.initLog) {
+            logToCloud(self.token, {
+                managerName: self.managerName,
+                type: "init"
+            })
+        }
 
     }
     cancelPolling() {
@@ -1662,7 +1689,7 @@ class Manager {
         "lens": "handleFtarLensPortMessage"
     }
     addPopupWindowPort(portObject) {
-        log("popup window port",portObject)
+        log("popup window port", portObject)
         const _this = this
         if (!_this.popupWindowPorts.has(portObject.name)) {
             _this.popupWindowPorts.set(portObject.name, [])
@@ -1752,7 +1779,7 @@ class Manager {
         } else if (msg.isAutorizedRequest) {
             const value = userId !== "myx@amial.com"
             const isAutorizedResponse = { value }
-            log("isAutorizedResponse",isAutorizedResponse)
+            log("isAutorizedResponse", isAutorizedResponse)
             port.postMessage({ isAutorizedResponse })
         } else if (msg.needAuthorize) {
 
@@ -1909,6 +1936,14 @@ class Manager {
                 console.log("previewBuffer", previewBuffer)
                 port.postMessage({ msgID: msg.msgID, payload: previewBuffer }, [previewBuffer])
             } else if (msg.flexatar) {
+                if (self.managerName) {
+                    if (self.flexatarRequestLogEnabled) {
+                        logToCloud(self.token, {
+                            managerName: self.managerName,
+                            flexatarRequest: { id: msg.flexatar.id }
+                        })
+                    }
+                }
                 log("msg.flexatar", msg.flexatar)
                 let flexatarBuffer = await getFlexatarCE(tokenDict[msg.flexatar.userId], { id: msg.flexatar.id, is_myx: false }, msg.flexatar.userId)
                 log("ftar buffer ", flexatarBuffer)
@@ -1952,27 +1987,27 @@ class Manager {
                 //     return
                 // }
                 // while (true) {
-                    let currentBkgId = await QueueStorage.getByKey(QueueStorage.Prefixes.BACKGROUND_CURRENT_ID, "", userId)
-                    // log("getCurrentBkgId1", userId, currentBkgId)
-                    if (!currentBkgId) {
-                        currentBkgId = await QueueStorage.getByKey(QueueStorage.Prefixes.BACKGROUND_CURRENT_ID, "", "myx@amial.com")
+                let currentBkgId = await QueueStorage.getByKey(QueueStorage.Prefixes.BACKGROUND_CURRENT_ID, "", userId)
+                // log("getCurrentBkgId1", userId, currentBkgId)
+                if (!currentBkgId) {
+                    currentBkgId = await QueueStorage.getByKey(QueueStorage.Prefixes.BACKGROUND_CURRENT_ID, "", "myx@amial.com")
+
+                }
+
+
+                if (currentBkgId && msg.getCurrentBkg.dataUrl) {
+                    if (currentBkgId.id === "no") {
+                        currentBkgId = null
+                    } else {
+                        currentBkgId = await QueueStorage.getByKey(QueueStorage.Prefixes.BACKGROUND_SRC_IMAGE, currentBkgId.id, currentBkgId.userId)
+                        // log("getCurrentBkgI2", userId, currentBkgId)
 
                     }
 
 
-                    if (currentBkgId && msg.getCurrentBkg.dataUrl) {
-                        if (currentBkgId.id === "no") {
-                            currentBkgId = null
-                        } else {
-                            currentBkgId = await QueueStorage.getByKey(QueueStorage.Prefixes.BACKGROUND_SRC_IMAGE, currentBkgId.id, currentBkgId.userId)
-                            // log("getCurrentBkgI2", userId, currentBkgId)
-
-                        }
+                }
 
 
-                    }
-
-       
                 port.postMessage({ msgID: msg.msgID, payload: currentBkgId })
 
             } else if (msg.deleteBackground) {
@@ -2185,6 +2220,11 @@ class Manager {
                 const audioList = await QueueStorage.getList(QueueStorage.Lists.AUIDIO_RECORD_LIST_ID + "_" + msg.getRecordedAudioList, userId)
                 port.postMessage({ msgID: msg.msgID, payload: audioList })
 
+            } else if (msg.resetToken) {
+                await chrome.storage.local.remove(["currentUserId"])
+                this.token.token = null
+                port.postMessage({ msgID: msg.msgID, payload: true })
+                log("token reset complete")
 
             } else if (msg.saveAudioEntry) {
                 const folder = msg.saveAudioEntry.folder
@@ -2483,6 +2523,9 @@ class ManagerConnection {
     }
     async getRecordedAudio(getRecordedAudio) {
         return await this.sendWithResponse({ getRecordedAudio })
+    }
+    async resetToken() {
+        return await this.sendWithResponse({ resetToken: true })
     }
     // async getAnimationNames() {
     //     return await this.sendWithResponse({ getAnimationNames: true })

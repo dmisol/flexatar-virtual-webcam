@@ -13,10 +13,10 @@ class ManagerWorkerWarper {
             return []
         }, needGallery) {
         const managerWorker = new ManagerWorker()
+            log("managerName",managerName)
+        managerWorker.postMessage({ initManager: true, needGallery,managerName })
 
-        managerWorker.postMessage({ initManager: true, needGallery })
-
-        managerWorker.postMessage({ managerName })
+        // managerWorker.postMessage({ managerName })
         const self = this;
         managerWorker.onmessage = async (event) => {
             const msg = event.data
@@ -141,6 +141,10 @@ class VCamControlUI {
 
         })
     }
+    reloadFtarList(){
+        log("sending to iframe reload ftar signal")
+         this.element.contentWindow.postMessage({reloadFtarList:true})
+    }
     /**
      * @param {Transferable} port
      */
@@ -195,7 +199,7 @@ class VCAM {
         // }
 
         log("VCAM UI opts", opts)
-        const managerWorker = new ManagerWorkerWarper(tokenFn, "authorized", opts.defaultBackgroundsFn, needGallery)
+        const managerWorker = new ManagerWorkerWarper(tokenFn, opts.managerName, opts.defaultBackgroundsFn, needGallery)
 
         this.managerWorker = managerWorker
         const flexLens = new FlexatarLens(opts.url.lens, opts.lensClassName, null, { files: opts.url.files })
@@ -258,6 +262,7 @@ class VCAM {
         const iframeUrl = opts.url.vcam
 
         const vCamUi = new VCamControlUI(iframeUrl)
+        this.vCamUi=vCamUi
         vCamUi.managerPort.then(port => {
             managerWorker.addPort(port)
             managerWorker.addFtarLensPort(flexLens.portOut)
@@ -353,6 +358,9 @@ class VCAM {
     }
     showProgress() {
         this.managerWorker.showProgress()
+    }
+    reloadFtarList(){
+         this.vCamUi.reloadFtarList()
     }
 }
 

@@ -8,6 +8,13 @@ let setVoiceProcessingParameters
 function log() {
     console.log("[RENDER WORKER]", ...arguments)
 }
+function logEvent(type, data = {}) {
+    try {
+        postMessage({ logEvent: { type, ts: Date.now(), ...data } })
+    } catch (err) {
+        console.warn("[RENDER WORKER] logEvent failed", err)
+    }
+}
 
 
 function arrayBufferToFile(arrayBuffer, fileName, mimeType = "application/octet-stream") {
@@ -371,6 +378,7 @@ async function initRender(url1, url2, calmPatUrl, livePatUrl, silentPatUrl, addi
     log("rend init fin")
     renderResolve()
     postMessage({ initComplete: true })
+    logEvent("renderer_init")
 }
 let renderResolve
 const rendererPromise = new Promise(resolve => {
@@ -426,6 +434,7 @@ onmessage = (event) => {
 
                     renderer.slot1 = { data, ready: Promise.resolve(true), id: msg.id, name: "noname" }
                     renderer.start()
+                    logEvent("slot1_assigned", { id: msg.id })
                 })
 
             } else if (msg.effectStateRequest) {
@@ -463,6 +472,7 @@ onmessage = (event) => {
                     if (renderer) renderer.effect = () => { return { mode: currentMode, parameter: effectParameter } }
 
                 }
+                logEvent("effect_enabled", { mode: "hybrid", animated: effectIsAnimated })
 
             } else if (msg.morphEffect) {
                 currentMode = 1
@@ -473,9 +483,11 @@ onmessage = (event) => {
                     if (renderer) renderer.effect = () => { return { mode: currentMode, parameter: effectParameter } }
 
                 }
+                logEvent("effect_enabled", { mode: "morph", animated: effectIsAnimated })
             } else if (msg.noEffect) {
                 currentMode = 0
                 if (renderer) renderer.effect = () => { return { mode: currentMode, parameter: 0 } }
+                logEvent("effect_enabled", { mode: "none", animated: false })
 
             } else if (msg.slot2) {
                 currentEffectFtarId = msg.id
@@ -484,6 +496,7 @@ onmessage = (event) => {
                 rendererPromise.then(() => {
                     renderer.slot2 = { data, ready: Promise.resolve(true), id: msg.id, name: "noname" }
                 })
+                logEvent("slot2_assaigned", { id: msg.id, userId: msg.userId })
 
                 // renderer.effect = () => { return { mode: 2, parameter: effectParameter } }
             } else if (msg.backgroundArrayBuffer) {
@@ -507,6 +520,7 @@ onmessage = (event) => {
                         })
                     })
                 })
+                logEvent("background_changed", { no: !!msg.no })
                 // console.log("overlay accepted")
             } else if (msg.animationNames) {
                 rendererPromise.then(() => {
