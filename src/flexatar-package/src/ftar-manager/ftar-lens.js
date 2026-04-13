@@ -101,7 +101,7 @@ function showIframeOverlay(url, width, height, onClose, className) {
         iframe.style.height = "100%"
         iframe.style.border = "none"
         iframe.style.borderRadius = '8px';
-         iframe.allow = "camera; microphone";
+         iframe.allow = "camera; microphone; clipboard-read; clipboard-write";
 
         if (className) {
             dragContainer.className = className

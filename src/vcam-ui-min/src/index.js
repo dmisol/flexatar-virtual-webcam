@@ -404,6 +404,7 @@ const uiFlags = {
     ai: parseBoolParam(urlParams.get("ai")),
     retarg: parseBoolParam(urlParams.get("retarg")),
     animate: parseBoolParam(urlParams.get("animate")),
+    agent: parseBoolParam(urlParams.get("agent")),
 };
 
 setVisibleIfParam(ftarLogButton, uiFlags.log);
@@ -411,6 +412,7 @@ setVisibleIfParam(effectsButton, uiFlags.effect);
 setVisibleIfParam(aiButton, uiFlags.ai);
 setVisibleIfParam(retargetingButton, uiFlags.retarg);
 setVisibleIfParam(animateButton, uiFlags.animate);
+setVisibleIfParam(agentButton, uiFlags.agent);
 
 
 function fileToArrayBuffer(file) {
@@ -1044,6 +1046,9 @@ retargetingButton.onclick = () => {
 }
 animateButton.onclick = () => {
     connection.showAnimate()
+}
+agentButton.onclick = () => {
+    connection.showPopupWindow("agent")
 }
 aiButton.onclick = () => {
     connection.showPopupWindow("autopilot")

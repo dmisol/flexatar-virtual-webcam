@@ -1,3 +1,6 @@
+import { ManagerConnection } from "./ftar-connection.js"
+
+
 function log() {
     console.log("[DEFAULT_MANAGER_CLIENT]", ...arguments)
 }
@@ -7,7 +10,7 @@ export class ManagerClient {
     portSelf
     instanceId
     constructor(inputs) {
-        const { closeButton, incomingMessageHandler, onClose, onReady } = inputs
+        const { closeButton, incomingMessageHandler, onClose, onReady,opts } = inputs
         const _this = this;
 
         function portHandler(e) {
@@ -28,8 +31,13 @@ export class ManagerClient {
                     _this.portSelf.postMessage({ msgID: msg.msgID })
                 }
                 log("port obtained")
-
-                onReady()
+                let connection
+                if (opts.managerConnection){
+                    connection = new ManagerConnection()
+                    msg.managerPort.postMessage({ managerConnectionPort: connection.outPort }, [connection.outPort])
+                   
+                }
+                onReady(connection)
                 // msg.managerPort.postMessage({ progressLists: true })
                 // log("request progress list")
             } else if (msg.closeThisWindow) {
@@ -54,5 +62,6 @@ export class ManagerClient {
             this.portSelf.postMessage(msg, transfer)
         }
     }
+
 
 }

@@ -1132,8 +1132,8 @@ class Manager {
         defaultBackgroundFn = async () => {
             return []
         }
-        , clearListsWhenRecreate = false, isExtension = false, needMyxAccount = true,logging={
-            initLog:true
+        , clearListsWhenRecreate = false, isExtension = false, needMyxAccount = true, logging = {
+            initLog: true
         }) {
         log("new instance of manager")
         let patchPromise
@@ -1201,7 +1201,7 @@ class Manager {
 
         })
         // self.managerInitLogEnabled = logging.initLog;
-        if ( logging.initLog) {
+        if (logging.initLog) {
             logToCloud(self.token, {
                 managerName: self.managerName,
                 type: "init"
@@ -1556,6 +1556,39 @@ class Manager {
         }
     }
 
+    async commonHandler(user_id, msg, port) {
+        if (msg.storeJsonWithKey) {
+            const { keyPrefix, keyModifier = "", json } = msg.storeJsonWithKey || {}
+            if (!keyPrefix) return
+            const value = JSON.stringify(json ?? null)
+            await QueueStorage.saveWithKey(keyPrefix, keyModifier, value, user_id)
+        } else if (msg.retriveJsonWithKey) {
+            const { keyPrefix, keyModifier = "", def = null } = msg.retriveJsonWithKey || {}
+            if (!keyPrefix) return
+            const stored = await QueueStorage.getByKey(keyPrefix, keyModifier, user_id, null)
+            let value = stored
+            if (typeof stored === "string") {
+                try {
+                    value = JSON.parse(stored)
+                } catch (_) {
+                    value = stored
+                }
+            }
+            if (value === null || value === undefined) {
+                value = def
+            }
+            port.postMessage({ retriveJsonWithKey: { keyPrefix, keyModifier, value } })
+        } else if (msg.managerConnectionPort) {
+
+            this.addPort(msg.managerConnectionPort)
+        }else if (msg.isAutorizedRequest) {
+            const value = user_id !== "myx@amial.com"
+            const isAutorizedResponse = { value }
+            log("isAutorizedResponse", isAutorizedResponse)
+            port.postMessage({ isAutorizedResponse })
+        } 
+    }
+
 
     async getUserInfo(opts) {
         // if (this.managerName === "empty") {
@@ -1705,7 +1738,11 @@ class Manager {
                 return await _this.getUserInfo()
             })
             const user_id = userInfo.user_id
-            await _this[_this.popupHandlers[portObject.name]](user_id, msg, portObject.port)
+            await _this.commonHandler(user_id, msg, portObject.port)
+            const portHandler = _this[_this.popupHandlers[portObject.name]]
+            if (portHandler) {
+                await portHandler.call(_this, user_id, msg, portObject.port)
+            }
             if (msg.closing) {
                 let curentWindowPorts = _this.popupWindowPorts.get(portObject.name)
 
@@ -1776,12 +1813,14 @@ class Manager {
             }, userIdKey)
             // }
             _this.showProgress()
-        } else if (msg.isAutorizedRequest) {
-            const value = userId !== "myx@amial.com"
-            const isAutorizedResponse = { value }
-            log("isAutorizedResponse", isAutorizedResponse)
-            port.postMessage({ isAutorizedResponse })
-        } else if (msg.needAuthorize) {
+        } 
+        // else if (msg.isAutorizedRequest) {
+        //     const value = userId !== "myx@amial.com"
+        //     const isAutorizedResponse = { value }
+        //     log("isAutorizedResponse", isAutorizedResponse)
+        //     port.postMessage({ isAutorizedResponse })
+        // } 
+        else if (msg.needAuthorize) {
 
             _this.onNeedAuthorize()
             // } else if (msg.closing) {
@@ -2615,4 +2654,3 @@ export {
 
     ERR_UNAUTHORIZED, ERR_UNEXPECTED
 }
-
