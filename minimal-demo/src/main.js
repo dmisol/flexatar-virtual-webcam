@@ -1,6 +1,6 @@
 import "./style.css";
-import { FtarRenderer } from "./easy-renderer.js";
-// import { FtarRenderer } from "flexatar-easy-renderer";
+// import { FtarRenderer } from "./easy-renderer.js";
+import { FtarRenderer } from "flexatar-easy-renderer";
 
 const canvas = document.getElementById("flexatarCanvas");
 const statusElement = document.getElementById("status");

@@ -1,152 +1,146 @@
 # How To Create a Flexatar
 
-This explanation is based on [quickstart/dist/index.html](/home/naospennikov/workspace/flexatar-virtual-webcam/quickstart/dist/index.html) and [quickstart/server.js](/home/naospennikov/workspace/flexatar-virtual-webcam/quickstart/server.js).
+This explanation is based on the Node.js CLI script [create-flexatar-cli/create-flexatar-cli.js](/home/naospennikov/workspace/flexatar-virtual-webcam/create-flexatar-cli/create-flexatar-cli.js).
 
 ## Overview
 
-The quickstart implements Flexatar creation as a two-part flow:
+The current repository implements Flexatar creation as a backend-style command line flow:
 
-- The browser lets the user select a photo and sends it to the local demo server.
-- The demo server uses `FLEXATAR_API_SECRET` to talk to the Flexatar API, obtains a presigned upload form, uploads the image, and returns creation metadata back to the browser.
+- a local Node.js script reads a source photo from disk
+- the script uses `FLEXATAR_API_SECRET` from the project root `.env`
+- it requests a presigned upload form from the Flexatar API
+- it uploads the source image to the returned storage URL
+- it polls the creation status until processing completes
+- it downloads the final Flexatar asset and preview image into a local output directory
 
-After that, the browser polls the status URL until processing is complete, then downloads either:
-
-- the final Flexatar file
-- the preview image
+This keeps the API secret out of any browser environment and makes the whole creation flow easy to inspect.
 
 ## Step-by-Step Flow
 
-### 1. User selects a source photo
+### 1. Run the CLI with an image path and output directory
 
-In `quickstart/dist/index.html`, the file input with id `fileInput` accepts an image:
+The script expects:
 
-- when the user selects a file, `fileInput.onchange` is triggered
-- the selected file is passed into `createFlexatar(file, callbacks)`
+- an input image path
+- an output directory
 
-This is the start of the Flexatar creation flow in the browser.
+Usage:
 
-### 2. Browser uploads the photo to the local server
-
-The `createFlexatar(...)` function does not call the Flexatar API directly. Instead, it sends the image to the local backend:
-
-```js
-const formData = new FormData();
-formData.append("file", file);
-
-await fetch("/upload", {
-    method: "POST",
-    body: formData
-});
+```bash
+node create-flexatar-cli.js <image-path> <output-dir>
 ```
 
-This design keeps `FLEXATAR_API_SECRET` out of the browser.
+The argument validation is implemented in [create-flexatar-cli/create-flexatar-cli.js](/home/naospennikov/workspace/flexatar-virtual-webcam/create-flexatar-cli/create-flexatar-cli.js).
 
-### 3. Local server requests a presigned upload link
+### 2. Load `FLEXATAR_API_SECRET` from the root `.env`
 
-In `quickstart/server.js`, the route `POST /upload` handles the uploaded image.
+At startup, the script loads environment variables from `../.env`:
 
-The first backend step is `requestUploadLink()`, which sends:
+```js
+require("dotenv").config({ path: "../.env" });
+```
+
+It then checks that `FLEXATAR_API_SECRET` is present before continuing.
+
+This means the secret stays on the machine running the CLI and is not exposed to a frontend client.
+
+### 3. Read the source photo from disk
+
+The CLI resolves the input path, reads the file into memory, and extracts the source filename:
+
+- `path.resolve(...)` is used to normalize the input paths
+- `fs.readFile(...)` loads the image
+- `path.basename(...)` is used as the upload filename
+
+This is the local input to the Flexatar creation flow.
+
+### 4. Request a presigned upload link from the Flexatar API
+
+The script calls `requestUploadLink()`, which sends:
 
 ```text
 POST https://api.flexatar-sdk.com/b2b/createflexatar
 Authorization: Bearer <FLEXATAR_API_SECRET>
+Content-Type: application/json
 ```
 
-If successful, the API returns creation metadata that includes:
+If successful, the API returns metadata that includes:
 
 - `id` for the future Flexatar
 - `poll` URL for checking processing status
 - `link.url` and `link.fields` for the presigned upload
 
-### 4. Local server uploads the image to the presigned storage URL
+### 5. Upload the source photo to the presigned storage URL
 
-Still inside `POST /upload`, the server calls `uploadToS3(ftarCreationInfo.link, req.file)`.
+The script calls `uploadImage(uploadInfo, fileBuffer, fileName)`.
 
 That function:
 
 - creates a `FormData` object
-- appends every field from `link.fields`
-- appends the uploaded image as `file`
-- sends the multipart request to `link.url`
+- appends every field from `uploadInfo.link.fields`
+- appends the local image file as `file`
+- sends a `POST` request to `uploadInfo.link.url`
 
 This means the actual photo file is uploaded using the presigned form returned by the Flexatar API.
 
-### 5. Server returns creation info to the browser
+### 6. Poll the creation status
 
-After the upload succeeds, the server removes `link` from the response and sends the remaining data back to the browser.
+After the upload succeeds, the CLI polls `uploadInfo.poll` every 5 seconds.
 
-The browser stores:
+The polling logic is:
 
-- `result.id` in `flexatarIdHolder`
-- `result.poll` in `creationStatusLink`
-
-At this point, the image upload is complete, but Flexatar processing may still be in progress.
-
-### 6. Browser checks processing status
-
-When the user clicks `Check`, the frontend calls `checkStatus(statusUrl, statusCallbacks)`.
-
-That function performs:
-
-```js
-fetch(statusUrl)
-```
-
-The quickstart interprets the response like this:
-
+- `404`: creation is still in progress
 - `200` with `data.success === true`: Flexatar is ready
 - `200` with `data.success === false`: creation failed
-- `404`: still in progress
+- any other non-OK response: treat as an error
 
-The UI message also notes an important practical requirement:
+If creation fails, the script reports that the source photo may need to be nearly frontal.
 
-- the photo should be nearly frontal
+### 7. Request download links for the result files
 
-### 7. Browser downloads the result
+Once processing succeeds, the script requests two download links in parallel:
 
-Once creation succeeds, the UI allows two download actions:
+- `POST https://api.flexatar-sdk.com/b2b/createflexatar/ftar/{id}`
+- `POST https://api.flexatar-sdk.com/b2b/createflexatar/preview/{id}`
 
-- `Download Flexatar`
-- `Download Preview`
+Both requests use the same bearer token from `FLEXATAR_API_SECRET`.
 
-These buttons call:
+The API responds with temporary direct file URLs.
 
-- `/download/ftar/:id`
-- `/download/preview/:id`
+### 8. Download and save the Flexatar and preview files
 
-### 8. Local server exchanges the ID for a real download link
+The script then downloads both files and writes them into the chosen output directory.
 
-In `quickstart/server.js`, the route `GET /download/:what/:id` calls:
+The saved files are:
 
-```text
-POST https://api.flexatar-sdk.com/b2b/createflexatar/{what}/{id}
-Authorization: Bearer <FLEXATAR_API_SECRET>
-```
+- `<flexatar-id>.p`
+- `<flexatar-id>-preview.jpg` or another image extension based on the returned content type
 
-The API returns a JSON payload with a `link` field. The server then fetches that file and streams it back to the browser.
-
-This is used for both:
-
-- the final `.p` Flexatar asset
-- the preview image
+The output directory is created automatically if it does not already exist.
 
 ## What You Need To Run It
 
-- a valid `FLEXATAR_API_SECRET` in the project-level `.env`
-- the local demo server running from `quickstart/server.js`
-- a source image uploaded by the user
+- a valid `FLEXATAR_API_SECRET` in the repository root `.env`
+- dependencies installed in [create-flexatar-cli](/home/naospennikov/workspace/flexatar-virtual-webcam/create-flexatar-cli)
+- a source image on disk
 
-The server is required because the API secret must stay on the backend.
+Run:
+
+```bash
+cd create-flexatar-cli
+npm install
+node create-flexatar-cli.js /path/to/photo.jpg ./output
+```
 
 ## Practical Notes
 
-- The source image should be close to frontal. The frontend explicitly warns that non-frontal photos may fail.
-- The browser never sends authenticated requests directly to the Flexatar API in this quickstart.
-- The backend acts as a thin proxy for secure API calls and download handling.
-- After the final Flexatar is downloaded, the demo can load it into the renderer through `renderer.slot1`.
+- The source image should be close to frontal.
+- The API secret is used only by the local CLI process.
+- The script is a thin, inspectable wrapper around the Flexatar creation API.
+- The resulting `.p` file can later be loaded by the renderer as a Flexatar asset.
 
 ## Minimal Mental Model
 
 The creation pipeline is:
 
-`photo -> local backend -> createflexatar API -> presigned upload -> poll -> download ftar/preview`
+`photo on disk -> local CLI -> createflexatar API -> presigned upload -> poll -> download ftar/preview`
