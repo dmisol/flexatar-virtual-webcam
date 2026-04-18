@@ -4,7 +4,7 @@ const path = require('path');
 module.exports = {
   entry: './src/easy-renderer.js',
   output: {
-    path: path.resolve(__dirname, '../../files'),
+    path: path.resolve(__dirname, '../../minimal-demo/src/'),
     filename: 'easy-renderer.js',
     library: {
       type: 'module',    // ⬅️ ESM output!

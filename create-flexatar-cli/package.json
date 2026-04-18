@@ -1,0 +1,12 @@
+{
+  "name": "create-flexatar-cli",
+  "version": "1.0.0",
+  "private": true,
+  "main": "create-flexatar-cli.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.2"
+  }
+}

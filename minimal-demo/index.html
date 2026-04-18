@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flexatar Minimal Demo</title>
+    <script type="module" src="/src/main.js"></script>
+  </head>
+  <body>
+    <div class="page">
+      <main class="panel">
+        <p class="eyebrow">Minimal Demo</p>
+        <h1>Flexatar Easy Renderer</h1>
+        <p class="copy">
+          This demo uses the npm package and the hosted Flexatar engine files.
+        </p>
+
+        <div class="actions">
+          <button id="startButton" type="button">Start microphone</button>
+          <button id="stopButton" type="button" disabled>Stop</button>
+        </div>
+
+        <p class="note">
+          Lip sync is intentionally delayed by about 450 ms. This is expected:
+          high-quality lip sync needs a short audio look-ahead, so technically it
+          cannot be both accurate and delay-free.
+        </p>
+
+        <p id="status" class="status">Initializing renderer…</p>
+        <canvas id="flexatarCanvas" width="320" height="320"></canvas>
+      </main>
+    </div>
+  </body>
+</html>

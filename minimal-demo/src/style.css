@@ -1,0 +1,147 @@
+:root {
+  --main-color-1: #f68b1e;
+  --main-color-2: #344d23;
+  --select-color: #4c8a22;
+  --hoover-color: #6e8d59;
+  --error-color: #bb2121;
+  --white: #fff;
+  --black: #000;
+  --disabled: #414141;
+  --main-color-2-hoover: #6e8d59;
+  --main-color-1-hoover: #fa7000;
+  --disabled-color: #818181;
+  --card-bg: #0f0f0f;
+  --card-border: #2a2a2a;
+  color-scheme: dark;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: var(--black);
+  color: var(--white);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, rgba(52, 77, 35, 0.22) 0%, rgba(0, 0, 0, 0) 32%),
+    radial-gradient(circle at top right, rgba(246, 139, 30, 0.18), transparent 28%),
+    var(--black);
+}
+
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.panel {
+  width: min(100%, 520px);
+  padding: 28px;
+  background:
+    linear-gradient(180deg, rgba(246, 139, 30, 0.08), rgba(246, 139, 30, 0) 18%),
+    var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--main-color-1);
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  line-height: 1;
+  color: var(--main-color-2);
+}
+
+.copy {
+  margin: 12px 0 20px;
+  color: var(--main-color-1);
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.note {
+  margin: 0 0 18px;
+  padding: 12px;
+  border: 1px solid var(--main-color-1);
+  background: rgba(246, 139, 30, 0.08);
+  color: var(--white);
+  line-height: 1.5;
+}
+
+button {
+  border: 1px solid var(--main-color-2);
+  padding: 12px 18px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--white);
+  background: var(--main-color-2);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+button:hover:not(:disabled) {
+  background: var(--main-color-2-hoover);
+  border-color: var(--main-color-2-hoover);
+}
+
+#startButton {
+  background: var(--main-color-2);
+  color: var(--white);
+}
+
+#stopButton {
+  background: transparent;
+  color: var(--main-color-1);
+  border-color: var(--main-color-1);
+}
+
+#stopButton:hover:not(:disabled) {
+  background: var(--main-color-1);
+  color: var(--black);
+  border-color: var(--main-color-1-hoover);
+}
+
+button:disabled {
+  background: var(--disabled);
+  border-color: var(--disabled);
+  color: var(--disabled-color);
+  cursor: default;
+  opacity: 1;
+}
+
+.status {
+  min-height: 1.5em;
+  margin: 0 0 18px;
+  padding: 10px 12px;
+  background: rgba(52, 77, 35, 0.22);
+  border-left: 3px solid var(--select-color);
+  color: var(--white);
+}
+
+canvas {
+  display: block;
+  width: min(100%, 320px);
+  height: auto;
+  border: 1px solid var(--card-border);
+  background: var(--black);
+}

@@ -74,3 +74,8 @@ flexatar-demo.env
 .env
 src/server/.env
 ./continue
+quickstart/output/
+create-flexatar-cli/output/
+!create-flexatar-cli/output/.gitkeep
+minimal-demo/dist/
+codex.md

@@ -1,7 +1,6 @@
-// importScripts("./ftar_view3_mod.js")
 
-import * as FtarView1 from "./engine.mod.js"
-import "../ftar-manager/ftar-connection.js"
+
+import  "./engine.mod.js"
 import "./ftar_lipsync_mod.js"
 
 let setVoiceProcessingParameters
@@ -45,12 +44,15 @@ function concatenateFloat32Arrays(arrays) {
 
     return result;
 }
-function splitFloat32Array(arr, firstLength) {
-    return [
-        new Float32Array(arr.slice(0, firstLength)),
-        new Float32Array(arr.slice(firstLength))
-    ];
-}
+
+// function splitFloat32Array(arr, firstLength) {
+//     return [
+//         new Float32Array(arr.slice(0, firstLength)),
+//         new Float32Array(arr.slice(firstLength))
+//     ];
+// }
+
+
 class AudioPacker {
     constructor() {
 
@@ -285,8 +287,6 @@ async function generateTransparentCircleImage(image, size = 512, circleRadius = 
 console.log(FtarView)
 let renderer
 let offscreen
-let ftarManagerConnection
-// let ftarManagerConnectionU
 let flexatarSDK
 async function initRender(url1, url2, calmPatUrl, livePatUrl, silentPatUrl, additionalAnimUrl, size) {
 
@@ -389,7 +389,7 @@ const rendererPromise = new Promise(resolve => {
 
 let ports = []
 let mediaPorts = []
-let canvases = []
+// let canvases = []
 let processAudio
 let checkLipSyncGl = () => { return true }
 let effectParameter = 0.6125;
@@ -397,16 +397,16 @@ let effectIsAnimated = false;
 let currentMode = 0;
 let currentEffectFtarId
 let currentEffectFtarIsMyx
-let roundOverlay = false
-let portToSendFrames
-let isLandmarkerFree = true
-let currentRetargetingHeadMotionState
-let currentCalibrationHeadMotionState
+// let roundOverlay = false
+// let portToSendFrames
+// let isLandmarkerFree = true
+// let currentRetargetingHeadMotionState
+// let currentCalibrationHeadMotionState
 
-let framesToProcess = []
-let isFrameProcessingActive = false
+// let framesToProcess = []
+// let isFrameProcessingActive = false
 
-let noFrameCounter = 0
+// let noFrameCounter = 0
 
 
 onmessage = (event) => {
@@ -499,9 +499,7 @@ onmessage = (event) => {
                 logEvent("slot2_assaigned", { id: msg.id, userId: msg.userId })
 
                 // renderer.effect = () => { return { mode: 2, parameter: effectParameter } }
-            } else if (msg.backgroundArrayBuffer) {
-
-            } else if (msg.background) {
+            }  else if (msg.background) {
                 if (msg.no) {
                     rendererPromise.then(() => {
                         renderer.addOverlay(null, { x: 0, y: 0, width: 100, height: 100, mode: "back" });
@@ -536,9 +534,6 @@ onmessage = (event) => {
                 channel.port1.close()
                 console.log("controller, closing port ", ports.length)
             } else if (msg.setMood) {
-                if (ftarManagerConnection) {
-                    ftarManagerConnection.setMood(msg.setMood)
-                }
                 rendererPromise.then(() => {
 
                     renderer.animator.isFriendly = msg.setMood.value === "friendly"
@@ -546,9 +541,6 @@ onmessage = (event) => {
 
             } else if (msg.setSpeechPattern) {
                 log("msg1.setSpeechPattern", msg.setSpeechPattern)
-                if (ftarManagerConnection) {
-                    ftarManagerConnection.setSpeechPattern(msg.setSpeechPattern)
-                }
                 rendererPromise.then(() => {
                     renderer.animator.setCurrentSpeechPattern(msg.setSpeechPattern.value)
                     for (let i = 0; i < 50; i++) {
@@ -598,9 +590,6 @@ onmessage = (event) => {
             } else if (msg1.setSize) {
                 renderer.canvas.width = msg1.setSize.width
                 renderer.canvas.height = msg1.setSize.height
-                if (ftarManagerConnection) {
-                    ftarManagerConnection.setViewportSize(msg1.setSize)
-                }
 
                 msg.mediaPort.postMessage({ canvasRatio: renderer.canvas.width / renderer.canvas.height })
 
@@ -615,7 +604,7 @@ onmessage = (event) => {
             } else if (msg1.closeMouth) {
                 renderer.speechState = [0, 0, 0.1, 0, 0]
             } else if (msg1.closing) {
-                if (msg.mediaPort === portToSendFrames) portToSendFrames = null
+                // if (msg.mediaPort === portToSendFrames) portToSendFrames = null
 
                 mediaPorts = mediaPorts.filter(fn => fn !== msg.mediaPort);
                 msg.mediaPort.close()
@@ -701,12 +690,6 @@ onmessage = (event) => {
             console.log("checkLipSyncGl", checkLipSyncGl())
             // const isContextLost = true
             const isContextLost = context.isContextLost() || checkLipSyncGl()
-            if (isContextLost) {
-                if (ftarManagerConnection) {
-                    ftarManagerConnection.close()
-                    // ftarManagerConnectionU.close()
-                }
-            }
             postMessage({ isContextLost: { value: isContextLost } })
         }
 
