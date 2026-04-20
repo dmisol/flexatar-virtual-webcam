@@ -59,6 +59,44 @@ npm install
 npm run dev
 ```
 
+### Add a Visual Layer to Any Voice Agent
+
+See also the runnable example in [ai-agent-integration](/home/naospennikov/workspace/flexatar-virtual-webcam/ai-agent-integration).
+
+This example shows a very practical product pattern: you can take an existing realtime voice agent and add a visual avatar layer on top of it with very little extra system complexity.
+
+The voice agent still does what it already does best: speech-to-speech interaction, model orchestration, and turn handling. Flexatar then takes the returned audio stream and turns it into a speaking avatar locally in the client. That means you do not need a separate avatar rendering backend, GPU rendering service, or a media pipeline that streams rendered video frames from your infrastructure to the browser.
+
+In practice, this makes the visual layer cheap to add:
+
+- no hosted rendering runtime is required for each live session
+- no rendered avatar video needs to be transported over the network
+- no additional rendering latency is introduced by a remote avatar service
+- the browser receives audio and renders the avatar locally on the user device
+- stability is high because avatar rendering continues to run locally in the client rather than depending on a separate remote rendering stack
+- failure modes are simpler because the visual layer does not require extra rendering servers, GPU workers, or video streaming infrastructure
+
+The included demo keeps the same Flexatar setup as `minimal-demo`, but instead of animating the avatar from the local microphone directly, it connects the microphone to an Inworld realtime WebRTC agent and animates the avatar from the agent's returned audio stream.
+
+Requirements:
+
+- create an Inworld account and generate an API key in the [Inworld Portal](https://platform.inworld.ai) under `Settings > API Keys`, then add the Base64 credentials as `INWORLD_API_KEY` in the project root `.env`
+- allow microphone access in the browser
+
+The Inworld agent configuration is currently hardcoded in [agent-config.js](/home/naospennikov/workspace/flexatar-virtual-webcam/ai-agent-integration/src/lib/agent-config.js).
+
+The agent connection flow in this example follows the official Inworld WebRTC quickstart:
+
+- [Inworld WebRTC Quickstart](https://docs.inworld.ai/realtime/quickstart-webrtc)
+
+Run it with:
+
+```bash
+cd ai-agent-integration
+npm install
+npm run dev
+```
+
 
 
 
@@ -107,7 +145,11 @@ The engine implementation itself is bundled in [engine.mod.js](/home/naospenniko
 
 That isolation should be described precisely. A Web Worker is sandboxed, but it is not blind: it can use the APIs available to workers, such as message passing, timers, network requests, and rendering-related APIs, and it can process any data explicitly provided to it by the host application. In other words, the engine does not get arbitrary access to the surrounding app, but it does receive only the assets, commands, and media buffers that the integration passes into it.
 
-## Automated Personal Avatar Pipeline
+## Business Ideas
+
+One useful way to think about Flexatar is not as a standalone avatar product, but as a low-cost visual layer that can be attached to many AI workflows.
+
+### Personalized AI Assistants
 
 One practical use case is a service that generates a personalized speaking assistant avatar for each user.
 
@@ -119,4 +161,36 @@ The pipeline can look like this:
 4. The resulting Flexatar is assigned to that user and stored inside your own product stack.
 5. Your assistant voice is connected to the Flexatar realtime engine, so each user sees a speaking assistant with a personalized avatar.
 
-This makes it possible to give each user an assistant that feels visually tailored to them, without depending on a hosted avatar runtime for live rendering. 
+This makes it possible to give each user an assistant that feels visually tailored to them, without depending on a hosted avatar runtime for live rendering.
+
+### Agent-As-Interviewer
+
+Another practical pattern is to use a voice agent as a scalable interviewer, screener, or negotiator, and add a speaking avatar so the interaction feels more natural than a plain form or chatbot.
+
+At a general level, the idea is simple:
+
+1. You define the questions, constraints, and evaluation criteria once.
+2. A voice agent conducts the same structured conversation with many people.
+3. Each participant gets the same flow and the same baseline quality of questioning.
+4. You receive a summary, comparison, or extracted structured data after each conversation.
+5. The avatar layer makes the interaction feel more human without adding a separate rendering backend.
+
+Short example:
+
+You need plumbing work done at home and want to compare several plumbers before choosing one. Calling ten different people yourself is tedious. Instead, you configure a voice agent to ask each plumber the same questions: availability, price model, estimated timeline, experience with the specific job, materials, and warranty terms. You then send the same agent link to ten plumbers. They each talk to the agent, and you receive a summary for every conversation, making it much easier to compare options side by side.
+
+### AI Quest Games With Personalized Storylines
+
+Flexatar can also work as a character layer for AI-native games, especially quest or narrative games where the story is generated dynamically for each player.
+
+At a general level, the idea is:
+
+1. The game stores player context, choices, history, and progression.
+2. An AI system generates or adapts the storyline, quests, dialogue, and branching events for that specific player.
+3. Character portraits can be generated with image models instead of being authored one by one by hand.
+4. Those generated character images can then be turned into speaking animated characters with Flexatar.
+5. The result is a game where dialogue scenes feel much more alive, while the rendering still happens locally on the user device.
+
+Short example:
+
+A fantasy quest game creates a different story arc for each player based on their previous choices, alliances, and play style. The king, rival hunter, merchant, or mysterious guide can all be generated as AI-made portraits, then animated with Flexatar so they speak their lines as living characters instead of static images. This makes personalized story content much more immersive without requiring a traditional animated character pipeline for every branch of the game.

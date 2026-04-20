@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flexatar AI Agent Integration</title>
+    <script type="module" src="/src/main.js"></script>
+  </head>
+  <body>
+    <div class="page">
+      <main class="panel">
+        <p class="eyebrow">AI Agent Integration</p>
+        <h1>Flexatar + Inworld WebRTC</h1>
+        <p class="copy">
+          This demo follows the Inworld WebRTC quickstart and drives the avatar
+          from the agent's returned audio track.
+        </p>
+
+        <div class="actions">
+          <button id="startButton" type="button">Start conversation</button>
+          <button id="stopButton" type="button" disabled>Stop</button>
+        </div>
+
+        <p class="note">
+          The avatar animates from the agent audio track returned by Inworld.
+          Playback is intentionally delayed a little so lip sync stays aligned.
+        </p>
+
+        <p id="status" class="status">Initializing renderer…</p>
+        <canvas id="flexatarCanvas" width="320" height="320"></canvas>
+
+        <section class="events">
+          <h2>Conversation Log</h2>
+          <pre id="eventsOutput">No events yet.</pre>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

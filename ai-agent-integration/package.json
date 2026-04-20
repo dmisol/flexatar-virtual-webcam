@@ -1,0 +1,18 @@
+{
+  "name": "ai-agent-integration",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "flexatar-easy-renderer": "*"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  }
+}
